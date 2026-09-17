@@ -3,6 +3,7 @@ using System.Linq;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
+using System.Security.Cryptography;
 using Newtonsoft.Json.Linq;
 using NXSG.Core;
 
@@ -113,6 +114,7 @@ namespace NXSG.Backend
         private const string EmissionOperation = "core.emission";
         private const string OneMinusOperation = "core.oneMinus";
         private const string ClampOperation = "core.clamp";
+        private const string RampOperation = "core.ramp";
 
         public static EmissionResult Emit(ShaderGraph graph, EmitterOptions options = null)
         {
@@ -151,6 +153,8 @@ namespace NXSG.Backend
             var shaderName = ValidateShaderName(options.ShaderName, diagnostics);
             var fallback = ValidateFallback(options, diagnostics);
             var nodes = IndexNodes(graph, diagnostics);
+            var inferredTypes = GraphTypes.Infer(graph);
+            nodes = ApplyInferredTypes(nodes, inferredTypes);
             var incoming = IndexIncoming(graph, nodes, diagnostics);
             var output = FindSingleNode(nodes, OutputOperation, diagnostics);
 
@@ -235,7 +239,8 @@ namespace NXSG.Backend
             builder.Indent++;
             builder.Line("Tags { \"RenderType\" = \"Opaque\" \"Queue\" = \"Geometry\"" + (fallback == null ? "" : " \"VRCFallback\" = \"" + fallback + "\"") + " }");
             var requiresLocalPosition = reachable.Any(id => nodes[id].Operation == ObjectUvOperation);
-            EmitForwardPass(builder, texture != null, texture == null ? "input.uv" : texture.UvExpression, requiresLocalPosition, tint, emission, threshold, softness, shadowStrength, properties, toon.Id, sourceMap);
+            var ramps = reachable.Where(id => nodes[id].Operation == RampOperation).Select(id => nodes[id]).OrderBy(node => node.Id, StringComparer.Ordinal).ToList();
+            EmitForwardPass(builder, texture != null, texture == null ? "input.uv" : texture.UvExpression, requiresLocalPosition, tint, emission, threshold, softness, shadowStrength, properties, toon.Id, sourceMap, ramps);
             if (options.IncludeShadowCaster)
             {
                 EmitShadowPass(builder, toon.Id, sourceMap);
@@ -293,6 +298,21 @@ namespace NXSG.Backend
                 result.Add(node.Id, node);
             }
 
+            return result;
+        }
+
+        private static Dictionary<string, GraphNode> ApplyInferredTypes(
+            Dictionary<string, GraphNode> nodes, Dictionary<string, string> inferred)
+        {
+            var result = new Dictionary<string, GraphNode>(nodes, StringComparer.Ordinal);
+            foreach (var pair in inferred)
+            {
+                GraphNode source;
+                if (!nodes.TryGetValue(pair.Key, out source) || !GraphTypes.IsDynamic(source.Operation)) continue;
+                var copy = new GraphNode { Id = source.Id, Operation = source.Operation, Version = source.Version, Properties = source.Properties == null ? new JObject() : (JObject)source.Properties.DeepClone() };
+                copy.Properties["valueType"] = pair.Value;
+                result[pair.Key] = copy;
+            }
             return result;
         }
 
@@ -451,7 +471,8 @@ namespace NXSG.Backend
                     operation != AddOperation && operation != SubtractOperation && operation != DivideOperation &&
                     operation != MinimumOperation && operation != MaximumOperation && operation != MixOperation && operation != EmissionOperation &&
                     operation != OneMinusOperation && operation != ClampOperation && operation != UvRotateOperation &&
-                    operation != PolarUvOperation && operation != ObjectUvOperation && operation != WorldUvOperation)
+                    operation != PolarUvOperation && operation != ObjectUvOperation && operation != WorldUvOperation &&
+                    operation != RampOperation)
                 {
                     AddError(diagnostics, "backend.operation.unsupported", "nodes[" + SafeDiagnosticId(id) + "].operation", "The reachable operation is not supported by the first backend.");
                 }
@@ -571,7 +592,11 @@ namespace NXSG.Backend
                     AddError(diagnostics, "backend.albedo.missing", "nodes[" + SafeDiagnosticId(toon.Id) + "].albedo", "Connect a color, texture, or procedural branch to Toon albedo.");
                 return new ColorInfo("(0,0,0,1)", "fixed4(0,0,0,1)");
             }
-            var result = ResolveColorExpression(nodes[connection.From.NodeId], nodes, incoming, parameters,
+            var source = nodes[connection.From.NodeId];
+            if (IsScalarOutput(source, connection.From.PortId, nodes, incoming, parameters, new HashSet<string>(StringComparer.Ordinal)))
+                return new ColorInfo("(1,1,1,1)", PromoteScalar(ResolveScalarExpression(source, nodes, incoming, parameters,
+                    new HashSet<string>(StringComparer.Ordinal), diagnostics)), null, true);
+            var result = ResolveColorExpression(source, nodes, incoming, parameters,
                 new HashSet<string>(StringComparer.Ordinal), diagnostics);
             return result ?? new ColorInfo("(0,0,0,1)", "fixed4(0,0,0,1)");
         }
@@ -624,6 +649,8 @@ namespace NXSG.Backend
             HashSet<string> visiting,
             List<Diagnostic> diagnostics)
         {
+            if (node.Operation != NoiseOperation && IsScalarOutput(node, "value", nodes, incoming, parameters, new HashSet<string>(StringComparer.Ordinal)))
+                return new ColorInfo("(1,1,1,1)", PromoteScalar(ResolveScalarExpression(node, nodes, incoming, parameters, visiting, diagnostics)), null, true);
             if (!visiting.Add(node.Id))
             {
                 AddError(diagnostics, "backend.expression.cycle", "nodes[" + SafeDiagnosticId(node.Id) + "]", "A color expression contains a cycle.");
@@ -690,6 +717,9 @@ namespace NXSG.Backend
         {
             GraphConnection edge;
             if (!incoming.TryGetValue(PortKey(node.Id, port), out edge)) return fallback;
+            if (IsScalarOutput(nodes[edge.From.NodeId], edge.From.PortId, nodes, incoming, parameters,
+                new HashSet<string>(StringComparer.Ordinal)))
+                return PromoteScalar(ResolveScalarExpression(nodes[edge.From.NodeId], nodes, incoming, parameters, visiting, diagnostics));
             return ResolveColorExpression(nodes[edge.From.NodeId], nodes, incoming, parameters, visiting, diagnostics)?.ShaderExpression ?? fallback;
         }
 
@@ -853,7 +883,8 @@ namespace NXSG.Backend
             ScalarInfo shadowStrength,
             List<MaterialProperty> materialProperties,
             string toonNodeId,
-            List<SourceMapEntry> sourceMap)
+            List<SourceMapEntry> sourceMap,
+            List<GraphNode> ramps)
         {
             builder.Line("Pass");
             builder.Line("{");
@@ -915,6 +946,12 @@ namespace NXSG.Backend
                 builder.Line("float2 NXSG_PolarUv(float2 source, float2 center, float radialScale, float angleScale) { float2 delta = source - center; float angle = dot(delta, delta) > 1e-12 ? atan2(delta.y, delta.x) : 0.0; return float2(length(delta) * 2.0 * radialScale, (angle / 6.283185307179586 + 0.5) * angleScale); }");
             if (RequiresColorHelper(tint, emission, "NXSG_SafeDivide"))
                 builder.Line("float4 NXSG_SafeDivide(float4 a, float4 b) { float4 denominator = max(abs(b), 1e-5); denominator = (b < 0 ? -denominator : denominator); return a / denominator; }");
+            if (RequiresColorHelper(tint, emission, "NXSG_Splat"))
+                builder.Line("float4 NXSG_Splat(float value) { return float4(value,value,value,value); }");
+            if (RequiresCoordinateHelper(textureUv, tint, emission, "NXSG_SafeDivideScalar"))
+                builder.Line("float NXSG_SafeDivideScalar(float a, float b) { float d=max(abs(b),1e-5); return a/(b<0 ? -d : d); }");
+            for (var i = 0; i < ramps.Count; i++)
+                builder.Line(RampHelper(ramps[i]));
             builder.Line("fixed4 frag(v2f input) : SV_Target { UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input); half3 normalWS = normalize(input.normalWS); half3 lightDirection = normalize(UnityWorldSpaceLightDir(input.positionWS)); half ndotl = saturate(dot(normalWS, lightDirection)); half softness = max(" + HlslValue(softness) + ", 0.001h); half toonBand = smoothstep(" + HlslValue(threshold) + " - softness, " + HlslValue(threshold) + " + softness, ndotl); half shadow = SHADOW_ATTENUATION(input); shadow = lerp(1.0h, shadow, saturate(" + HlslValue(shadowStrength) + ")); half3 ambient = ShadeSH9(half4(normalWS, 1.0h)); half3 direct = _LightColor0.rgb * lerp(0.35h, 1.0h, toonBand) * shadow; fixed4 textureColor = " + colorExpression + "; return fixed4(textureColor.rgb * (ambient + direct) + (" + HlslValue(emission) + ").rgb, 1.0h); }");
             end = builder.LineNumber;
             sourceMap.Add(new SourceMapEntry { NodeId = toonNodeId, PortId = "surface", StartLine = start, EndLine = end });
@@ -1031,9 +1068,61 @@ namespace NXSG.Backend
                 }
             }
             else if (node.Operation == NoiseOperation) expression = NoiseExpression(node, nodes, incoming, parameters, visiting, diagnostics);
+            else if (node.Operation == RampOperation)
+            {
+                var value = ScalarInput(node, "value", "0", nodes, incoming, parameters, visiting, diagnostics);
+                expression = RampName(node) + "((" + value + "))";
+            }
+            else if (node.Operation == OneMinusOperation || node.Operation == ClampOperation)
+                expression = node.Operation == OneMinusOperation ? "(1 - " + ScalarInput(node, "color", "0", nodes, incoming, parameters, visiting, diagnostics) + ")" : "saturate(" + ScalarInput(node, "color", "0", nodes, incoming, parameters, visiting, diagnostics) + ")";
+            else if (node.Operation == AddOperation || node.Operation == SubtractOperation || node.Operation == MultiplyOperation ||
+                node.Operation == DivideOperation || node.Operation == MinimumOperation || node.Operation == MaximumOperation || node.Operation == MixOperation)
+            {
+                var leftFallback = node.Operation == MultiplyOperation || node.Operation == DivideOperation ? "1" : "0";
+                var rightFallback = node.Operation == AddOperation || node.Operation == SubtractOperation || node.Operation == MinimumOperation || node.Operation == MaximumOperation ? "0" : "1";
+                var left = ScalarInput(node, "a", leftFallback, nodes, incoming, parameters, visiting, diagnostics);
+                var right = ScalarInput(node, "b", rightFallback, nodes, incoming, parameters, visiting, diagnostics);
+                if (node.Operation == MixOperation)
+                    expression = "lerp(" + left + "," + right + ",saturate(" + ScalarInput(node, "factor", FloatLiteral(PropertyFloat(node, "factor", .5f)), nodes, incoming, parameters, visiting, diagnostics) + "))";
+                else if (node.Operation == AddOperation) expression = "(" + left + " + " + right + ")";
+                else if (node.Operation == SubtractOperation) expression = "(" + left + " - " + right + ")";
+                else if (node.Operation == DivideOperation) expression = "NXSG_SafeDivideScalar(" + left + "," + right + ")";
+                else if (node.Operation == MinimumOperation) expression = "min(" + left + "," + right + ")";
+                else if (node.Operation == MaximumOperation) expression = "max(" + left + "," + right + ")";
+                else expression = "(" + left + " * " + right + ")";
+            }
             if (expression == null) AddError(diagnostics, "backend.scalar.expression", "nodes[" + SafeDiagnosticId(node.Id) + "]", "The node cannot produce a supported scalar expression.");
             visiting.Remove(node.Id);
             return expression ?? "0";
+        }
+
+        private static string PromoteScalar(string expression)
+        {
+            return "NXSG_Splat(" + expression + ")";
+        }
+
+        private static bool IsScalarOutput(GraphNode node, string port,
+            Dictionary<string, GraphNode> nodes, Dictionary<string, GraphConnection> incoming,
+            Dictionary<string, GraphParameter> parameters, HashSet<string> visiting)
+        {
+            if (node == null || !visiting.Add(node.Id)) return false;
+            if (node.Operation == ValueOperation || node.Operation == TimeOperation ||
+                (node.Operation == NoiseOperation && port == "value") || node.Operation == RampOperation)
+                return true;
+            if (GraphTypes.IsDynamic(node.Operation) && string.Equals(PropertyString(node, "valueType"), "float", StringComparison.OrdinalIgnoreCase))
+                return true;
+            if (node.Operation == ParameterOperation)
+            {
+                GraphParameter parameter;
+                var id = PropertyString(node, "parameterId");
+                return id != null && parameters.TryGetValue(id, out parameter) && parameter.Type == GraphValueType.Float;
+            }
+            if (node.Operation == ConstantOperation)
+                return string.Equals(PropertyString(node, "valueType"), "float", StringComparison.OrdinalIgnoreCase) ||
+                    (node.Properties != null && node.Properties["value"] != null &&
+                     (node.Properties["value"].Type == JTokenType.Float || node.Properties["value"].Type == JTokenType.Integer));
+            visiting.Remove(node.Id);
+            return false;
         }
 
         private static string Vector2Literal(GraphNode node, string property, float x, float y)
@@ -1049,6 +1138,52 @@ namespace NXSG.Backend
         }
 
         private static string FloatLiteral(float value) { return value.ToString("R", CultureInfo.InvariantCulture); }
+        private static string RampName(GraphNode node)
+        {
+            using (var sha = SHA256.Create())
+            {
+                var bytes = sha.ComputeHash(Encoding.UTF8.GetBytes(node.Id ?? string.Empty));
+                var text = new StringBuilder(16);
+                for (var i = 0; i < 8; i++) text.Append(bytes[i].ToString("x2", CultureInfo.InvariantCulture));
+                return "NXSG_Ramp_" + text;
+            }
+        }
+
+        private static string RampHelper(GraphNode node)
+        {
+            var points = new List<float[]>();
+            var array = node.Properties == null ? null : node.Properties["points"] as JArray;
+            if (array != null)
+            {
+                for (var i = 0; i < array.Count && points.Count < 16; i++)
+                {
+                    var point = array[i] as JArray;
+                    float x, y;
+                    if (point != null && point.Count >= 2 && TryReadFloat(point[0], out x) && TryReadFloat(point[1], out y))
+                        points.Add(new[] { x, y });
+                }
+            }
+            if (points.Count == 0) { points.Add(new[] { 0f, 0f }); points.Add(new[] { 1f, 1f }); }
+            if (points.Count == 1) points.Add(new[] { 1f, 1f });
+            var b = new StringBuilder();
+            b.Append("float ").Append(RampName(node)).Append("(float v) { float black=")
+                .Append(FloatLiteral(PropertyFloat(node, "blackPoint", 0f))).Append("; float white=")
+                .Append(FloatLiteral(PropertyFloat(node, "whitePoint", 1f))).Append("; float smooth=")
+                .Append(FloatLiteral(PropertyFloat(node, "smoothness", 0f))).Append("; float t; ");
+            b.Append("if (abs(white-black)<1e-6) t=step(black,v); else t=saturate((v-black)/(white-black)); float y;");
+            b.Append("if (t <= ").Append(FloatLiteral(points[0][0])).Append(") y=").Append(FloatLiteral(points[0][1])).Append(";");
+            for (var i = 1; i < points.Count; i++)
+            {
+                var x0 = points[i - 1][0]; var y0 = points[i - 1][1];
+                var x1 = points[i][0]; var y1 = points[i][1];
+                b.Append(" else if (t <= ").Append(FloatLiteral(x1)).Append(") { float q=saturate((t-")
+                    .Append(FloatLiteral(x0)).Append(")/").Append(FloatLiteral(Math.Max(x1 - x0, 1e-6f))).Append("); q=lerp(q,q*q*(3-2*q),saturate(smooth)); y=lerp(")
+                    .Append(FloatLiteral(y0)).Append(",").Append(FloatLiteral(y1)).Append(",q); }");
+            }
+            b.Append(" else y=").Append(FloatLiteral(points[points.Count - 1][1])).Append("; return y; }");
+            return b.ToString();
+        }
+
         private static bool RequiresNoise(ColorInfo a, ColorInfo b) { return a != null && (a.ShaderExpression.Contains("NXSG_ValueNoise") || b.ShaderExpression.Contains("NXSG_ValueNoise")); }
         private static bool RequiresCoordinateHelper(string textureUv, ColorInfo a, ColorInfo b, string helper)
         {

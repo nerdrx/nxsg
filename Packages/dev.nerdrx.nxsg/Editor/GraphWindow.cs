@@ -19,6 +19,8 @@ namespace NXSG.Editor
         [SerializeField] Material contextMaterial;
         [SerializeField] string selected;
         [SerializeField] List<string> selection = new List<string>();
+        [SerializeField] string nodeSearch = "";
+        [SerializeField] List<string> expandedNodeCategories = new List<string> { "Coordinates" };
         readonly Dictionary<string, Vector2> dragOrigins = new Dictionary<string, Vector2>();
         VisualElement marquee;
         bool boxSelecting;
@@ -33,6 +35,8 @@ namespace NXSG.Editor
         string pendingNode, pendingPort;
         string lastPaste;
         int pasteCount;
+        Dictionary<string, string> inferredTypes = new Dictionary<string, string>();
+        readonly Dictionary<string, Gradient> wireGradients = new Dictionary<string, Gradient>();
         readonly List<SocketView> sockets = new List<SocketView>();
         bool wiring, wireMoved, pendingOutput;
         VisualElement spawnMenu;
@@ -421,6 +425,7 @@ namespace NXSG.Editor
             if (layer == null) return;
             CancelWire();
             layer.Clear(); nodes.Clear(); sockets.Clear();
+            inferredTypes = GraphTypes.Infer(graph);
             if (graph != null)
                 foreach (var node in graph.Nodes)
                 {
@@ -499,6 +504,9 @@ namespace NXSG.Editor
                     return new[] { "core.add", "core.subtract", "core.multiply", "core.divide", "core.minimum", "core.maximum", "core.mix" };
                 case "core.oneMinus": case "core.clamp":
                     return new[] { "core.oneMinus", "core.clamp" };
+                case "core.uv0": case "core.objectUV": case "core.worldUV": case "core.uvTransform":
+                case "core.uvScroll": case "core.uvRotate": case "core.polarUV":
+                    return new[] { "core.uv0", "core.objectUV", "core.worldUV", "core.uvTransform", "core.uvScroll", "core.uvRotate", "core.polarUV" };
                 default: return Array.Empty<string>();
             }
         }
@@ -529,6 +537,7 @@ namespace NXSG.Editor
                 // Preserve dormant controls so switching back restores the user's settings.
                 foreach (var property in NodeCatalog.Create(operation).Properties.Properties())
                     if (node.Properties[property.Name] == null) node.Properties[property.Name] = property.Value.DeepClone();
+                inferredTypes = GraphTypes.Infer(graph);
                 removed = graph.Connections.RemoveAll(edge =>
                 {
                     if (edge.From.NodeId != nodeId && edge.To.NodeId != nodeId) return false;
@@ -536,7 +545,7 @@ namespace NXSG.Editor
                     var to = graph.Nodes.FirstOrDefault(n => n.Id == edge.To.NodeId);
                     return from == null || to == null || !Ports(from.Operation, true).Contains(edge.From.PortId)
                         || !Ports(to.Operation, false).Contains(edge.To.PortId)
-                        || PortType(from, edge.From.PortId) != PortType(to, edge.To.PortId);
+                        || !GraphTypes.Compatible(PortType(from, edge.From.PortId), PortType(to, edge.To.PortId));
                 });
             });
             if (removed > 0) SetStatus("Changed to " + Title(operation) + " · disconnected " + removed + " incompatible wire(s). Undo restores them.");
@@ -599,7 +608,11 @@ namespace NXSG.Editor
                     wireStart = evt.position; wirePosition = layer.WorldToLocal(evt.position);
                     canvas.CapturePointer(evt.pointerId);
                     foreach (var other in sockets.Where(s => s.output != output))
-                        other.dot.style.opacity = other.type == type && other.node != node.Id ? 1f : .3f;
+                    {
+                        var otherNode = graph.Nodes.First(n => n.Id == other.node);
+                        var compatible = output ? CanOffer(node, port, otherNode, other.port) : CanOffer(otherNode, other.port, node, port);
+                        other.dot.style.opacity = compatible && other.node != node.Id ? 1f : .3f;
+                    }
                     layer.MarkDirtyRepaint();
                     SetStatus("Drag to a matching socket, or empty space to add a node. Esc cancels.");
                 }
@@ -627,7 +640,7 @@ namespace NXSG.Editor
                 case "core.noise": case "core.texture2D": return new Color(.46f, .25f, .10f);
                 case "core.constant": return new Color(.40f, .34f, .10f);
                 case "core.subtract": case "core.divide": case "core.minimum": case "core.maximum":
-                case "core.value": case "core.time": case "core.add": case "core.mix": case "core.oneMinus": case "core.clamp": case "core.multiply": return new Color(.28f, .33f, .38f);
+                case "core.ramp": case "core.value": case "core.time": case "core.add": case "core.mix": case "core.oneMinus": case "core.clamp": case "core.multiply": return new Color(.28f, .33f, .38f);
                 case "core.emission": case "core.toonSurface": return new Color(.13f, .37f, .24f);
                 case "core.output": return new Color(.39f, .19f, .20f);
                 default: return new Color(.28f, .28f, .28f);
@@ -647,20 +660,45 @@ namespace NXSG.Editor
             inspector.Clear();
             previewHost = new VisualElement { style = { marginBottom = 10 } };
             inspector.Add(previewHost); RefreshPreviewPanel();
-            inspector.Add(new Label("NX SHADER GRAPH") { style = { unityFontStyleAndWeight = FontStyle.Bold, fontSize = 16, marginBottom = 12 } });
-            var search = new ToolbarSearchField(); inspector.Add(search);
-            var choices = new VisualElement(); inspector.Add(choices);
+            var library = new VisualElement { name = "node-library", style = { marginTop = 14 } };
+            library.Add(new Label("ADD NODES") { style = { unityFontStyleAndWeight = FontStyle.Bold, fontSize = 13, marginBottom = 8 } });
+            var search = new ToolbarSearchField { name = "node-search", tooltip = "Search nodes, descriptions, or categories" };
+            search.SetValueWithoutNotify(nodeSearch); library.Add(search);
+            var choices = new VisualElement(); library.Add(choices);
             Action<string> filter = query =>
             {
                 choices.Clear();
-                foreach (var operation in NodeCatalog.All.Where(op => op != "core.parameter"))
-                    if ((Title(operation) + " " + operation + " " + Aliases(operation)).IndexOf(query ?? "", StringComparison.OrdinalIgnoreCase) >= 0)
+                var searching = !string.IsNullOrWhiteSpace(query);
+                var matches = NodeCatalog.All.Where(op => op != "core.parameter" &&
+                    (!searching || (Title(op) + " " + op + " " + Aliases(op) + " " + NodeCatalog.Category(op) + " " + NodeCatalog.Description(op))
+                        .IndexOf(query.Trim(), StringComparison.OrdinalIgnoreCase) >= 0)).ToList();
+                foreach (var category in new[] { "Inputs", "Coordinates", "Textures", "Math", "Surface" })
+                {
+                    var operations = matches.Where(op => NodeCatalog.Category(op) == category).ToList();
+                    if (operations.Count == 0) continue;
+                    var group = new Foldout { name = "category-" + category, text = category + "  ·  " + operations.Count,
+                        value = searching || expandedNodeCategories.Contains(category), style = {
+                            marginTop = 6, paddingTop = 4, paddingBottom = 4, paddingRight = 4,
+                            borderLeftWidth = 3, borderLeftColor = NodeColor(operations[0]),
+                            backgroundColor = new Color(.14f, .14f, .14f), borderTopRightRadius = 4, borderBottomRightRadius = 4 } };
+                    group.RegisterValueChangedCallback(evt =>
+                    {
+                        if (!string.IsNullOrWhiteSpace(nodeSearch)) return;
+                        expandedNodeCategories.Remove(category);
+                        if (evt.newValue) expandedNodeCategories.Add(category);
+                    });
+                    foreach (var operation in operations)
                     {
                         var op = operation;
-                        choices.Add(new Button(() => AddNode(op)) { text = "+ " + Title(op), tooltip = NodeCatalog.Description(op) });
+                        group.Add(new Button(() => AddNode(op)) { text = "+  " + Title(op), tooltip = NodeCatalog.Description(op),
+                            style = { height = 25, unityTextAlign = TextAnchor.MiddleLeft, paddingLeft = 8, marginTop = 2, marginBottom = 2 } });
                     }
+                    choices.Add(group);
+                }
+                if (matches.Count == 0) choices.Add(new Label("No matching nodes. Try ‘UV’, ‘blend’, or ‘color’.")
+                    { style = { whiteSpace = WhiteSpace.Normal, marginTop = 8 } });
             };
-            search.RegisterValueChangedCallback(evt => filter(evt.newValue)); filter("");
+            search.RegisterValueChangedCallback(evt => { nodeSearch = evt.newValue; filter(nodeSearch); }); filter(nodeSearch);
             if (selection.Count > 1)
             {
                 inspector.Add(new Label(selection.Count + " nodes selected") { style = { marginTop = 15 } });
@@ -670,6 +708,8 @@ namespace NXSG.Editor
             if (node != null)
             {
                 inspector.Add(new Label(Title(node.Operation)) { style = { marginTop = 15, unityFontStyleAndWeight = FontStyle.Bold } });
+                if (GraphTypes.IsDynamic(node.Operation)) inspector.Add(new Label("Automatic type: " + (inferredTypes.TryGetValue(node.Id, out var inferred) && inferred == "float" ? "Number" : "Color"))
+                    { style = { color = new Color(.7f, .8f, .9f), marginBottom = 4 } });
                 inspector.Add(new Label(NodeCatalog.Description(node.Operation)) { style = { whiteSpace = WhiteSpace.Normal, marginBottom = 6 } });
                 if (node.Operation == "core.constant")
                 {
@@ -696,6 +736,7 @@ namespace NXSG.Editor
                 }
                 switch (node.Operation)
                 {
+                    case "core.ramp": AddNumber(node, "blackPoint", "Black point", 0); AddNumber(node, "whitePoint", "White point", 1); AddNumber(node, "smoothness", "Smoothing (0–1)", 0); AddRampCurve(node); break;
                     case "core.value": AddNumber(node, "value", "Value", 0); break;
                     case "core.time": AddNumber(node, "speed", "Speed", 1); AddNumber(node, "offset", "Offset", 0); break;
                     case "core.uvTransform": AddVector(node, "tiling", "Tiling", Vector2.one); AddVector(node, "offset", "Offset", Vector2.zero); break;
@@ -709,6 +750,42 @@ namespace NXSG.Editor
                 inspector.Add(new Button(() => Edit("Disconnect node", () => graph.Connections.RemoveAll(e => e.From.NodeId == selected || e.To.NodeId == selected))) { text = "Disconnect node" });
                 inspector.Add(new Button(DeleteSelection) { text = "Delete node" });
             }
+            inspector.Add(library);
+        }
+
+        void AddRampCurve(GraphNode node)
+        {
+            var points = node.Properties["points"] as JArray ?? new JArray(new JArray(0, 0), new JArray(1, 1));
+            var curve = new AnimationCurve(points.Select(point => new Keyframe((float)point[0], (float)point[1])).ToArray());
+            for (var i = 0; i < curve.length; i++)
+            {
+                AnimationUtility.SetKeyLeftTangentMode(curve, i, AnimationUtility.TangentMode.Linear);
+                AnimationUtility.SetKeyRightTangentMode(curve, i, AnimationUtility.TangentMode.Linear);
+            }
+            var field = new CurveField("Ramp curve") { value = curve, ranges = new Rect(0, 0, 1, 1),
+                tooltip = "Click to move/add curve points. 2–16 points, input/output 0–1. Segments are linear; the Smoothing control rounds transitions." };
+            field.RegisterValueChangedCallback(evt =>
+            {
+                var keys = evt.newValue?.keys;
+                if (keys == null || keys.Length < 2 || keys.Length > 16 || keys.Any(k => float.IsNaN(k.time) || float.IsNaN(k.value)
+                    || float.IsInfinity(k.time) || float.IsInfinity(k.value) || k.time < 0 || k.time > 1 || k.value < 0 || k.value > 1)
+                    || keys.Zip(keys.Skip(1), (a, b) => b.time - a.time).Any(gap => gap < .000001f))
+                { field.SetValueWithoutNotify(curve); SetStatus("Use 2–16 distinct curve points inside the 0–1 square."); return; }
+                Undo.RegisterCompleteObjectUndo(session, "Change Ramp curve");
+                node.Properties["points"] = new JArray(keys.Select(k => new JArray(k.time, k.value)));
+                curve = new AnimationCurve(keys);
+                for (var i = 0; i < curve.length; i++)
+                {
+                    AnimationUtility.SetKeyLeftTangentMode(curve, i, AnimationUtility.TangentMode.Linear);
+                    AnimationUtility.SetKeyRightTangentMode(curve, i, AnimationUtility.TangentMode.Linear);
+                }
+                field.SetValueWithoutNotify(curve);
+                session.json = GraphJson.Serialize(graph, true); hasUnsavedChanges = true; EditorUtility.SetDirty(session);
+                QueueLivePreview();
+                SetStatus("Unsaved Ramp curve · preview updates after a short pause.");
+            });
+            inspector.Add(field);
+            inspector.Add(new Button(() => Edit("Reset Ramp curve", () => node.Properties["points"] = new JArray(new JArray(0, 0), new JArray(1, 1)))) { text = "Reset curve" });
         }
 
         void AddFactor(GraphNode node)
@@ -801,8 +878,36 @@ namespace NXSG.Editor
             if (reachable.Contains(fromId)) { SetStatus("That connection would create a cycle."); return; }
             var from = graph.Nodes.First(n => n.Id == fromId);
             var to = graph.Nodes.First(n => n.Id == toId);
-            if (PortType(from, fromPort) != PortType(to, toPort)) { SetStatus("Socket types do not match. Use matching color, UV or surface sockets."); return; }
+            if (!CanConnectTypes(from, fromPort, to, toPort)) { SetStatus("That connection would make incompatible types. Numbers can become colors; colors cannot become numbers automatically."); return; }
             Edit("Connect nodes", () => AddConnection(fromId, fromPort, toId, toPort));
+        }
+
+        bool CanOffer(GraphNode from, string fromPort, GraphNode to, string toPort)
+        {
+            var fromType = PortType(from, fromPort); var toType = PortType(to, toPort);
+            return GraphTypes.Compatible(fromType, toType)
+                || (GraphTypes.IsDynamic(to.Operation) && toPort != "factor" && (fromType == "float" || fromType == "color"))
+                || (GraphTypes.IsDynamic(from.Operation) && (toType == "float" || toType == "color"));
+        }
+
+        bool CanConnectTypes(GraphNode from, string fromPort, GraphNode to, string toPort)
+        {
+            var trial = new ShaderGraph { Nodes = graph.Nodes, Parameters = graph.Parameters,
+                Connections = graph.Connections.Where(e => e.To.NodeId != to.Id || e.To.PortId != toPort).ToList() };
+            trial.Connections.Add(new GraphConnection { From = new GraphPortRef { NodeId = from.Id, PortId = fromPort },
+                To = new GraphPortRef { NodeId = to.Id, PortId = toPort } });
+            var types = GraphTypes.Infer(trial);
+            if (!GraphTypes.Compatible(GraphTypes.PortType(trial, from, fromPort, types), GraphTypes.PortType(trial, to, toPort, types))) return false;
+            foreach (var edge in graph.Connections)
+            {
+                if (edge.To.NodeId == to.Id && edge.To.PortId == toPort) continue;
+                var source = graph.Nodes.FirstOrDefault(n => n.Id == edge.From.NodeId);
+                var target = graph.Nodes.FirstOrDefault(n => n.Id == edge.To.NodeId);
+                if (source == null || target == null) continue;
+                if (GraphTypes.Compatible(PortType(source, edge.From.PortId), PortType(target, edge.To.PortId))
+                    && !GraphTypes.Compatible(GraphTypes.PortType(trial, source, edge.From.PortId, types), GraphTypes.PortType(trial, target, edge.To.PortId, types))) return false;
+            }
+            return true;
         }
 
         void AddConnection(string from, string fromPort, string to, string toPort)
@@ -835,7 +940,7 @@ namespace NXSG.Editor
                 var candidate = new GraphNode { Operation = operation };
                 foreach (var port in Ports(operation, !output))
                 {
-                    if (PortType(candidate, port) != type) continue;
+                    if (!(output ? CanOffer(source, endpointPort, candidate, port) : CanOffer(candidate, port, source, endpointPort))) continue;
                     var op = operation; var compatiblePort = port;
                     menuOptions.Add(new Button(() => Edit("Add connected " + Title(op), () =>
                     {
@@ -1006,16 +1111,31 @@ namespace NXSG.Editor
                 var from = sockets.FirstOrDefault(s => s.output && s.node == edge.From.NodeId && s.port == edge.From.PortId);
                 var to = sockets.FirstOrDefault(s => !s.output && s.node == edge.To.NodeId && s.port == edge.To.PortId);
                 if (from == null || to == null) continue;
-                painter.strokeColor = SocketColor(from.type);
+                painter.strokeGradient = WireGradient(from.type, to.type);
                 DrawWire(painter, layer.WorldToLocal(from.hit.worldBound.center), layer.WorldToLocal(to.hit.worldBound.center));
             }
             var pending = sockets.FirstOrDefault(s => s.output == pendingOutput && s.node == pendingNode && s.port == pendingPort);
             if (pending != null)
             {
-                painter.strokeColor = SocketColor(pending.type);
+                var target = sockets.FirstOrDefault(s => s.output != pendingOutput && s.hit.worldBound.Contains(layer.LocalToWorld(wirePosition)));
+                painter.strokeGradient = pendingOutput ? WireGradient(pending.type, target?.type ?? pending.type)
+                    : WireGradient(target?.type ?? pending.type, pending.type);
                 var socketPosition = layer.WorldToLocal(pending.hit.worldBound.center);
                 DrawWire(painter, pendingOutput ? socketPosition : wirePosition, pendingOutput ? wirePosition : socketPosition);
             }
+        }
+
+        Gradient WireGradient(string from, string to)
+        {
+            var key = from + ":" + to;
+            if (!wireGradients.TryGetValue(key, out var gradient))
+            {
+                gradient = new Gradient();
+                gradient.SetKeys(new[] { new GradientColorKey(SocketColor(from), 0), new GradientColorKey(SocketColor(to), 1) },
+                    new[] { new GradientAlphaKey(1, 0), new GradientAlphaKey(1, 1) });
+                wireGradients[key] = gradient;
+            }
+            return gradient;
         }
 
         static void DrawWire(Painter2D painter, Vector2 a, Vector2 b)
@@ -1028,7 +1148,7 @@ namespace NXSG.Editor
         void SetStatus(string message) { if (status != null) status.text = message; }
         static string Title(string operation) { return NodeCatalog.Title(operation); }
         static string Aliases(string operation) { return NodeCatalog.Aliases(operation); }
-        static string PortType(GraphNode node, string port) { return NodeCatalog.PortType(node, port); }
+        string PortType(GraphNode node, string port) { return GraphTypes.PortType(graph, node, port, inferredTypes); }
         static string[] Ports(string operation, bool output)
         {
             // Normal-map authoring is still unsupported by the current backend.

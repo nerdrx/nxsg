@@ -110,4 +110,4 @@ Linux is our primary authoring and validation environment. Record the Linux Edit
 
 ### More nodes
 
-There are now **24 nodes**, including Polar UVs, object/world planar mapping, animated UV rotation, Noise, Emission, and color math. Math-node headers let you switch operations while retaining compatible wires. Mix has a bounded 0–1 Factor slider. See the [node guide](docs/NODES.md) and [Animated Palette example](Packages/dev.nerdrx.nxsg/Samples~/Animated%20Palette.nxsg).
+There are now **25 nodes**, including Polar UVs, object/world planar mapping, animated UV rotation, Noise, Emission, and color math. Math and UV headers let you switch operations while retaining compatible wires. Math adapts automatically to numbers/colors; Ramp reshapes noise masks with black/white controls and curve points. The searchable sidebar groups nodes by category. Mix has a bounded 0–1 Factor slider. See the [node guide](docs/NODES.md) and [Animated Palette example](Packages/dev.nerdrx.nxsg/Samples~/Animated%20Palette.nxsg).

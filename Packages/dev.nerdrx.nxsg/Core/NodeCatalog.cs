@@ -9,7 +9,7 @@ namespace NXSG.Core
     {
         private static readonly string[] Operations =
         {
-            "core.polarUV", "core.uvRotate", "core.objectUV", "core.worldUV",
+            "core.ramp", "core.polarUV", "core.uvRotate", "core.objectUV", "core.worldUV",
             "core.value", "core.time", "core.uvTransform", "core.uvScroll", "core.noise",
             "core.add", "core.subtract", "core.divide", "core.minimum", "core.maximum", "core.mix", "core.emission", "core.oneMinus", "core.clamp",
             "core.constant", "core.parameter", "core.uv0", "core.texture2D", "core.multiply",
@@ -18,6 +18,7 @@ namespace NXSG.Core
 
         private static readonly Dictionary<string, string[]> Inputs = new Dictionary<string, string[]>(StringComparer.Ordinal)
         {
+            ["core.ramp"] = new[] { "value" },
             ["core.polarUV"] = new[] { "uv" }, ["core.uvRotate"] = new[] { "uv", "angle" },
             ["core.objectUV"] = new string[0], ["core.worldUV"] = new string[0],
             ["core.value"] = new string[0], ["core.time"] = new string[0],
@@ -35,6 +36,7 @@ namespace NXSG.Core
 
         private static readonly Dictionary<string, string[]> Outputs = new Dictionary<string, string[]>(StringComparer.Ordinal)
         {
+            ["core.ramp"] = new[] { "value" },
             ["core.polarUV"] = new[] { "uv" }, ["core.uvRotate"] = new[] { "uv" },
             ["core.objectUV"] = new[] { "uv" }, ["core.worldUV"] = new[] { "uv" },
             ["core.value"] = new[] { "value" }, ["core.time"] = new[] { "value" },
@@ -52,6 +54,22 @@ namespace NXSG.Core
 
         public static IEnumerable<string> All { get { return Operations; } }
         public static bool IsKnown(string operation) { return operation != null && Inputs.ContainsKey(operation); }
+        public static string Category(string operation)
+        {
+            switch (operation)
+            {
+                case "core.ramp": return "Math";
+                case "core.uv0": case "core.uvTransform": case "core.uvScroll": case "core.uvRotate":
+                case "core.polarUV": case "core.objectUV": case "core.worldUV": return "Coordinates";
+                case "core.value": case "core.time": case "core.constant": case "core.parameter": return "Inputs";
+                case "core.texture2D": case "core.noise": return "Textures";
+                case "core.add": case "core.subtract": case "core.multiply": case "core.divide":
+                case "core.minimum": case "core.maximum": case "core.mix": case "core.oneMinus":
+                case "core.clamp": return "Math";
+                case "core.emission": case "core.toonSurface": case "core.output": return "Surface";
+                default: return "Other";
+            }
+        }
         public static string[] Ports(string operation, bool output)
         {
             string[] ports;
@@ -61,6 +79,7 @@ namespace NXSG.Core
         {
             switch (operation)
             {
+                case "core.ramp": return "Ramp";
                 case "core.polarUV": return "Polar UVs";
                 case "core.uvRotate": return "Rotate UVs";
                 case "core.objectUV": return "Object Planar UVs";
@@ -82,6 +101,7 @@ namespace NXSG.Core
         {
             switch (operation)
             {
+                case "core.ramp": return "Reshape a number or noise mask with black/white points and a curve. Connect Noise value here to control its contrast.";
                 case "core.polarUV": return "Wrap coordinates around a center: U is distance, V is angle. Useful for rings and radial patterns.";
                 case "core.uvRotate": return "Rotate texture coordinates around a center, in degrees. Connect Time to angle to spin them.";
                 case "core.objectUV": return "Project using the mesh's local X/Z position. Moves with the object; use UV Transform to adjust scale.";
@@ -91,20 +111,20 @@ namespace NXSG.Core
                 case "core.uvTransform": return "Scale and shift texture coordinates to control tiling and placement.";
                 case "core.uvScroll": return "Move texture coordinates over time, like flowing water or scrolling stripes.";
                 case "core.noise": return "Create a smooth random grayscale pattern that can move over time.";
-                case "core.add": return "Add two colors together to brighten or combine them.";
-                case "core.subtract": return "Subtract B from A for each color channel.";
-                case "core.divide": return "Divide A by B for each color channel. Very small divisors are limited to avoid division by zero.";
+                case "core.add": return "Add two numbers or colors together to brighten or combine them.";
+                case "core.subtract": return "Subtract B from A, using numbers or color channels.";
+                case "core.divide": return "Divide A by B, using numbers or color channels. Very small divisors are limited to avoid division by zero.";
                 case "core.minimum": return "Choose the lower value from A and B for each color channel.";
                 case "core.maximum": return "Choose the higher value from A and B for each color channel.";
-                case "core.mix": return "Blend two colors: factor 0 gives A, 1 gives B, and 0.5 mixes them equally.";
+                case "core.mix": return "Blend two numbers or colors: factor 0 gives A, 1 gives B, and 0.5 mixes them equally.";
                 case "core.emission": return "Add color that stays bright without lighting. Connect it to Toon Surface's emission input.";
-                case "core.oneMinus": return "Invert colors or masks (1 minus input): black becomes white, and white becomes black.";
+                case "core.oneMinus": return "Invert numbers, colors or masks (1 minus input): black becomes white, and white becomes black.";
                 case "core.clamp": return "Keep each color channel between 0 and 1. Values outside that range are clipped.";
                 case "core.constant": return "Choose a solid color to use on its own or combine with other nodes.";
                 case "core.parameter": return "Read a declared property that can control your material.";
                 case "core.uv0": return "The mesh's first texture coordinates: where each part of an image lands on the mesh.";
                 case "core.texture2D": return "Read an image using texture coordinates and output its color.";
-                case "core.multiply": return "Multiply two colors to tint or darken them. White keeps the other color unchanged.";
+                case "core.multiply": return "Multiply numbers or colors. Use colors to tint or darken. White keeps the other color unchanged.";
                 case "core.toonSurface": return "Give your base color cartoon-style lighting, with an optional emission input.";
                 case "core.output": return "The final surface of your shader. Connect a Toon Surface here.";
                 default: return string.Empty;
@@ -114,6 +134,7 @@ namespace NXSG.Core
         {
             switch (operation)
             {
+                case "core.ramp": return "gradient contrast remap levels curve mask threshold";
                 case "core.polarUV": return "polar radial circle rings angle radius texture coordinates";
                 case "core.uvRotate": return "rotation spin pivot texture coordinates";
                 case "core.objectUV": return "local object space planar projection mapping xz";
@@ -137,6 +158,7 @@ namespace NXSG.Core
             if (node == null || port == null) return null;
             switch (node.Operation)
             {
+                case "core.ramp": return port == "value" ? "float" : null;
                 case "core.polarUV": case "core.objectUV": case "core.worldUV": return port == "uv" ? "vector2" : null;
                 case "core.uvRotate": return port == "uv" ? "vector2" : (port == "angle" ? "float" : null);
                 case "core.value": case "core.time": return port == "value" ? "float" : null;
@@ -162,6 +184,7 @@ namespace NXSG.Core
             var node = new GraphNode { Id = Guid.NewGuid().ToString("N"), Operation = operation };
             switch (operation)
             {
+                case "core.ramp": node.Properties["blackPoint"] = 0.0; node.Properties["whitePoint"] = 1.0; node.Properties["smoothness"] = 0.0; node.Properties["points"] = new JArray(Vector(0, 0), Vector(1, 1)); break;
                 case "core.polarUV": node.Properties["center"] = Vector(.5, .5); node.Properties["radialScale"] = 1.0; node.Properties["angleScale"] = 1.0; break;
                 case "core.uvRotate": node.Properties["center"] = Vector(.5, .5); node.Properties["angle"] = 0.0; break;
                 case "core.value": node.Properties["value"] = 0.0; break;

@@ -44,12 +44,15 @@ internal static class Program
     private static int Main()
     {
         NodePackChecks.Run(Assert);
+        DynamicTypeChecks.Run(Assert);
         CheckClipboard();
         var fixtures = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../../Tests/Fixtures"));
         var example = GraphJson.Parse(File.ReadAllText(Path.Combine(fixtures, "../../Packages/dev.nerdrx.nxsg/Samples~/Animated Palette.nxsg")));
         Assert(GraphValidator.Validate(example).IsValid && ShaderEmitter.Emit(example).Succeeded, "animated palette example validates and emits");
         var polarExample = GraphJson.Parse(File.ReadAllText(Path.Combine(fixtures, "../../Packages/dev.nerdrx.nxsg/Samples~/Polar Palette.nxsg")));
         Assert(GraphValidator.Validate(polarExample).IsValid && ShaderEmitter.Emit(polarExample).Succeeded, "polar palette example validates and emits");
+        var rampExample = GraphJson.Parse(File.ReadAllText(Path.Combine(fixtures, "../../Packages/dev.nerdrx.nxsg/Samples~/Noise Ramp.nxsg")));
+        Assert(GraphValidator.Validate(rampExample).IsValid && ShaderEmitter.Emit(rampExample).Succeeded, "noise ramp example validates and emits");
         var defaultGraph = Load(fixtures, "default-texture-toon-output.nxsg");
         Assert(GraphValidator.Validate(defaultGraph).IsValid, "default graph validates");
         Assert(GraphValidator.Validate(GraphJson.Parse(GraphJson.Serialize(defaultGraph))).IsValid, "default graph round trips");

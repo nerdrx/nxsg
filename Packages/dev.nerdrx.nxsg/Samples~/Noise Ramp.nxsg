@@ -1,0 +1,253 @@
+{
+  "format": "nxsg",
+  "schemaVersion": 1,
+  "graphId": "noise-ramp-example",
+  "nodes": [
+    {
+      "id": "time",
+      "operation": "core.time",
+      "version": 1,
+      "properties": {
+        "speed": 0.35,
+        "offset": 0
+      }
+    },
+    {
+      "id": "noise",
+      "operation": "core.noise",
+      "version": 1,
+      "properties": {
+        "scale": 5,
+        "speed": 1
+      }
+    },
+    {
+      "id": "warm",
+      "operation": "core.constant",
+      "version": 1,
+      "properties": {
+        "valueType": "color",
+        "value": [
+          1,
+          0.08,
+          0.02,
+          1
+        ]
+      }
+    },
+    {
+      "id": "cool",
+      "operation": "core.constant",
+      "version": 1,
+      "properties": {
+        "valueType": "color",
+        "value": [
+          0.03,
+          0.35,
+          1,
+          1
+        ]
+      }
+    },
+    {
+      "id": "mix",
+      "operation": "core.mix",
+      "version": 1,
+      "properties": {
+        "factor": 0.5
+      }
+    },
+    {
+      "id": "glow",
+      "operation": "core.emission",
+      "version": 1,
+      "properties": {
+        "strength": 0.3
+      }
+    },
+    {
+      "id": "toon",
+      "operation": "core.toonSurface",
+      "version": 1,
+      "properties": {}
+    },
+    {
+      "id": "output",
+      "operation": "core.output",
+      "version": 1,
+      "properties": {}
+    },
+    {
+      "id": "ramp",
+      "operation": "core.ramp",
+      "version": 1,
+      "properties": {
+        "blackPoint": 0.2,
+        "whitePoint": 0.8,
+        "smoothness": 0.5,
+        "points": [
+          [
+            0,
+            0
+          ],
+          [
+            0.4,
+            0.15
+          ],
+          [
+            0.65,
+            0.9
+          ],
+          [
+            1,
+            1
+          ]
+        ]
+      }
+    }
+  ],
+  "connections": [
+    {
+      "id": "time-value-noise-time",
+      "from": {
+        "nodeId": "time",
+        "portId": "value"
+      },
+      "to": {
+        "nodeId": "noise",
+        "portId": "time"
+      }
+    },
+    {
+      "id": "ramp-value-mix-factor",
+      "from": {
+        "nodeId": "ramp",
+        "portId": "value"
+      },
+      "to": {
+        "nodeId": "mix",
+        "portId": "factor"
+      }
+    },
+    {
+      "id": "warm-value-mix-a",
+      "from": {
+        "nodeId": "warm",
+        "portId": "value"
+      },
+      "to": {
+        "nodeId": "mix",
+        "portId": "a"
+      }
+    },
+    {
+      "id": "cool-value-mix-b",
+      "from": {
+        "nodeId": "cool",
+        "portId": "value"
+      },
+      "to": {
+        "nodeId": "mix",
+        "portId": "b"
+      }
+    },
+    {
+      "id": "mix-value-toon-albedo",
+      "from": {
+        "nodeId": "mix",
+        "portId": "value"
+      },
+      "to": {
+        "nodeId": "toon",
+        "portId": "albedo"
+      }
+    },
+    {
+      "id": "mix-value-glow-color",
+      "from": {
+        "nodeId": "mix",
+        "portId": "value"
+      },
+      "to": {
+        "nodeId": "glow",
+        "portId": "color"
+      }
+    },
+    {
+      "id": "glow-color-toon-emission",
+      "from": {
+        "nodeId": "glow",
+        "portId": "color"
+      },
+      "to": {
+        "nodeId": "toon",
+        "portId": "emission"
+      }
+    },
+    {
+      "id": "toon-surface-output-surface",
+      "from": {
+        "nodeId": "toon",
+        "portId": "surface"
+      },
+      "to": {
+        "nodeId": "output",
+        "portId": "surface"
+      }
+    },
+    {
+      "id": "noise-value-ramp-value",
+      "from": {
+        "nodeId": "noise",
+        "portId": "value"
+      },
+      "to": {
+        "nodeId": "ramp",
+        "portId": "value"
+      }
+    }
+  ],
+  "parameters": [],
+  "resources": [],
+  "patterns": [],
+  "layout": {
+    "nodes": {
+      "time": {
+        "x": 0,
+        "y": 30
+      },
+      "noise": {
+        "x": 210,
+        "y": 30
+      },
+      "warm": {
+        "x": 0,
+        "y": 240
+      },
+      "cool": {
+        "x": 0,
+        "y": 380
+      },
+      "mix": {
+        "x": 610,
+        "y": 200
+      },
+      "glow": {
+        "x": 820,
+        "y": 370
+      },
+      "toon": {
+        "x": 850,
+        "y": 150
+      },
+      "output": {
+        "x": 1050,
+        "y": 150
+      },
+      "ramp": {
+        "x": 410,
+        "y": 30
+      }
+    }
+  }
+}

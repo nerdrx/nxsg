@@ -5,3 +5,5 @@ Copy `Animated Palette.nxsg` into your project's Assets folder, open it, and cho
 Noise currently animates by moving through a smooth noise field. It is not true 4D noise. This is a PC Built-In prototype; mobile and live VRChat validation remain separate.
 
 `Polar Palette.nxsg` adds Rotate UVs and Polar UVs before the noise. The spin Time node uses degrees per second; the other Time node moves the noise. Polar mapping has an angular seam. Both samples are also available in the development project's `Assets/NXSGExamples`.
+
+`Noise Ramp.nxsg` routes Noise through a numeric Ramp before Mix. Adjust the Ramp black/white points, curve, and smoothing to reshape the mask.

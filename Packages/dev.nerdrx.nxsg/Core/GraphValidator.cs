@@ -82,7 +82,7 @@ namespace NXSG.Core
             ValidateParameters(parameters, diagnostics, cancellationToken);
             ValidateResources(resources, diagnostics, cancellationToken);
             ValidatePatterns(patterns, diagnostics, cancellationToken);
-            ValidateConnections(connections, nodeById, parameters, diagnostics, cancellationToken);
+            ValidateConnections(graph, connections, nodeById, GraphTypes.Infer(graph), diagnostics, cancellationToken);
             DetectCycle(connections, nodeById, diagnostics);
             return new ValidationResult(diagnostics);
         }
@@ -130,6 +130,7 @@ namespace NXSG.Core
                 case "core.time": numeric = new[] { "speed", "offset" }; break;
                 case "core.noise": numeric = new[] { "scale", "speed" }; break;
                 case "core.mix": numeric = new[] { "factor" }; break;
+                case "core.ramp": numeric = new[] { "blackPoint", "whitePoint", "smoothness" }; break;
                 case "core.emission": numeric = new[] { "strength" }; break;
                 case "core.uvTransform": vectors = new[] { "tiling", "offset" }; break;
                 case "core.polarUV": vectors = new[] { "center" }; numeric = new[] { "radialScale", "angleScale" }; break;
@@ -139,6 +140,40 @@ namespace NXSG.Core
             }
             if (numeric != null) foreach (var name in numeric) CheckNumber(node.Properties[name], path + ".properties." + name, diagnostics);
             if (vectors != null) foreach (var name in vectors) CheckVector2(node.Properties[name], path + ".properties." + name, diagnostics);
+            if (node.Operation == "core.ramp") CheckRampPoints(node.Properties["points"], path + ".properties.points", diagnostics);
+        }
+
+        private static void CheckRampPoints(JToken token, string path, List<Diagnostic> diagnostics)
+        {
+            if (token == null) return;
+            var points = token as JArray;
+            if (points == null || points.Count < 2 || points.Count > 16)
+            {
+                Add(diagnostics, DiagnosticSeverity.Error, "property.type", path, "Ramp points must contain 2 to 16 [x, y] pairs.");
+                return;
+            }
+            double previousX = -1.0;
+            for (var i = 0; i < points.Count; i++)
+            {
+                var point = points[i] as JArray;
+                var pointPath = path + "[" + i.ToString(CultureInfo.InvariantCulture) + "]";
+                if (point == null || point.Count != 2)
+                {
+                    Add(diagnostics, DiagnosticSeverity.Error, "property.type", pointPath, "Ramp point must be a two-number pair.");
+                    continue;
+                }
+                CheckNumber(point[0], pointPath + "[0]", diagnostics);
+                CheckNumber(point[1], pointPath + "[1]", diagnostics);
+                if (point[0].Type != JTokenType.Integer && point[0].Type != JTokenType.Float) continue;
+                if (point[1].Type != JTokenType.Integer && point[1].Type != JTokenType.Float) continue;
+                var x = point[0].Value<double>();
+                var y = point[1].Value<double>();
+                if (x < 0 || x > 1 || y < 0 || y > 1)
+                    Add(diagnostics, DiagnosticSeverity.Error, "value.range", pointPath, "Ramp point values must be between 0 and 1.");
+                if (i > 0 && x <= previousX)
+                    Add(diagnostics, DiagnosticSeverity.Error, "value.order", pointPath + "[0]", "Ramp point x values must be strictly increasing.");
+                previousX = x;
+            }
         }
 
         private static void CheckNumber(JToken token, string path, List<Diagnostic> diagnostics)
@@ -270,9 +305,9 @@ namespace NXSG.Core
             active.Remove(id);
         }
 
-        private static void ValidateConnections(List<GraphConnection> connections,
-            Dictionary<string, GraphNode> nodes, List<GraphParameter> parameters,
-            List<Diagnostic> diagnostics, CancellationToken cancellationToken)
+        private static void ValidateConnections(ShaderGraph graph, List<GraphConnection> connections,
+            Dictionary<string, GraphNode> nodes,
+            Dictionary<string, string> inferred, List<Diagnostic> diagnostics, CancellationToken cancellationToken)
         {
             var ids = new HashSet<string>(StringComparer.Ordinal);
             var inputPorts = new HashSet<string>(StringComparer.Ordinal);
@@ -318,9 +353,9 @@ namespace NXSG.Core
                         "Connection references a port that is not declared by its operation.");
                     continue;
                 }
-                var fromType = GetPortType(fromNode, connection.From.PortId, false, parameters);
-                var toType = GetPortType(toNode, connection.To.PortId, true, parameters);
-                if (fromType.HasValue && toType.HasValue && !IsCompatible(fromType.Value, toType.Value))
+                var fromType = GraphTypes.PortType(graph, fromNode, connection.From.PortId, inferred);
+                var toType = GraphTypes.PortType(graph, toNode, connection.To.PortId, inferred);
+                if (fromType != null && toType != null && !GraphTypes.Compatible(fromType, toType))
                 {
                     Add(diagnostics, DiagnosticSeverity.Error, "connection.type", path,
                         "Connection socket types are incompatible.");
@@ -347,7 +382,7 @@ namespace NXSG.Core
             foreach (var connection in connections)
             {
                 if (connection == null || connection.From == null || connection.To == null ||
-                    !outgoing.ContainsKey(connection.From.NodeId) || !indegree.ContainsKey(connection.To.NodeId))
+                    !outgoing.ContainsKey(connection.From.NodeId ?? string.Empty) || !indegree.ContainsKey(connection.To.NodeId ?? string.Empty))
                 {
                     continue;
                 }

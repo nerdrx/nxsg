@@ -1,6 +1,6 @@
 # Built-in node pack
 
-The canvas now offers 24 nodes. Socket color indicates data type: yellow color, gray scalar, blue UV coordinates, green surface. Drag from either end; compatible-node menus and clipboard operations use the same core catalog.
+The canvas now offers 25 nodes. Socket color indicates data type: yellow color, gray scalar, blue UV coordinates, green surface. Drag from either end; compatible-node menus and clipboard operations use the same core catalog.
 
 ## New nodes
 
@@ -14,16 +14,17 @@ The canvas now offers 24 nodes. Socket color indicates data type: yellow color, 
 | Object Planar UVs | UV output | Local mesh X/Z coordinates; follows object transforms, not an undeformed skin bind pose. |
 | World Planar UVs | UV output | World X/Z coordinates; objects move through the pattern. |
 | UV Scroll | UV, scalar time → UV | Speed (0.1,0); unconnected time uses shader time |
+| Ramp | number → number | Black point 0, white point 1, smoothing 0; 2–16 editable curve points, initially a straight 0–1 line |
 | Noise | UV, scalar time → grayscale color and scalar value | Scale 5, speed 1; unconnected UV/time use UV0/shader time |
-| Add | colors A/B → color | Missing inputs are black |
-| Subtract | colors A/B → color | A minus B; missing inputs are black |
-| Divide | colors A/B → color | A divided by B; missing inputs are white. Denominator magnitude is at least 0.00001; zero uses positive sign. |
-| Minimum | colors A/B → color | Lower value of each channel; missing inputs are black |
-| Maximum | colors A/B → color | Higher value of each channel; missing inputs are black |
-| Mix | colors A/B, scalar factor → color | Missing A is black, B is white, factor is 0.5; a 0–1 slider with numeric entry controls factor, and connected values clamp to 0–1 |
+| Add | numbers/colors A/B → matching result | Missing inputs are black |
+| Subtract | numbers/colors A/B → matching result | A minus B; missing inputs are black |
+| Divide | numbers/colors A/B → matching result | A divided by B; missing inputs are white. Denominator magnitude is at least 0.00001; zero uses positive sign. |
+| Minimum | numbers/colors A/B → matching result | Lower value of each channel; missing inputs are black |
+| Maximum | numbers/colors A/B → matching result | Higher value of each channel; missing inputs are black |
+| Mix | numbers/colors A/B, scalar factor → matching result | Missing A is black, B is white, factor is 0.5; a 0–1 slider with numeric entry controls factor, and connected values clamp to 0–1 |
 | Emission | color, scalar strength → color | White and strength 1 by default; connect to Toon Surface's emission socket |
-| Invert | color → color | Inverts components; missing input is black |
-| Clamp | color → color | Clamps components to 0–1; missing input is black |
+| Invert | number/color → matching result | Inverts components; missing input is black |
+| Clamp | number/color → matching result | Clamps components to 0–1; missing input is black |
 
 The original UV Coordinates, Texture, Color, Multiply, Toon Surface, and Output remain available. Multiply uses white for missing inputs. Connected factor/strength sockets override their inspector defaults.
 
@@ -57,3 +58,21 @@ Click a math node's title (marked ▾) to switch between **Add, Subtract, Multip
 ## Live material preview
 
 The toolbar's **Live preview** switch controls a temporary material preview at the top of the sidebar. Changes settle for 0.45 seconds before compiling; moving nodes alone does not recompile. A failed graph keeps the last successful preview and shows a diagnostic. Preview shaders/materials exist only in memory and are disposed when replaced or the window closes. Opening from a material uses its property values without changing it. **Build for VRChat** remains the explicit action that saves the graph and updates generated assets. This is a material preview, not a preview on every node or an automatic scene-material update.
+
+## Automatic math types and wire colors
+
+Add, Subtract, Multiply, Divide, Minimum, Maximum, Mix, Invert, and Clamp infer their number/color type from connected operands. Numeric inputs yield a number; adding a color operand yields a color. Numbers can feed color inputs by repeating the value in all four channels. Color-to-number conversion is not implicit. UV vectors and surfaces remain separate types. The selected-node panel shows the current automatic type. A number-to-color wire fades from gray at its source to yellow at its destination.
+
+An empty math chain connected to a numeric socket also becomes numeric. Otherwise, unconnected math keeps its previous default color behavior. The editor rejects a new connection if its type change would break an existing numeric consumer. Disconnecting or Undo recomputes types; inferred types are not serialized into the graph.
+
+## Ramp: shape a noise mask
+
+Connect **Noise value → Ramp value → Mix factor**. Black/white points remap the input, and clicking the curve lets you move or add 2–16 points inside the 0–1 square. Smoothing blends each linear segment toward a smooth transition. Curve tangent handles are normalized to linear; smoothing is controlled by the explicit Smoothing field. Equal black/white points make a threshold; reversing them inverts the input mapping. Beyond the curve's first/last point, output holds the endpoint value. **Reset curve** restores the straight mapping.
+
+Try `Assets/NXSGExamples/Noise Ramp.nxsg`, also shipped under `Samples~`. Ramp outputs a number; it is not a multi-color gradient node.
+
+## Sidebar and UV switching
+
+The Add menu has collapsible **Inputs, Coordinates, Textures, Math, Surface** categories. Search includes names, aliases, descriptions, and category names, and opens matching categories. Search and expansion state survive normal editor rebuilds. Selected-node controls are above the library.
+
+All seven UV/coordinate headers also offer the operation dropdown. Compatible UV wires and settings survive switching; unavailable inputs are disconnected and can be restored with Undo.

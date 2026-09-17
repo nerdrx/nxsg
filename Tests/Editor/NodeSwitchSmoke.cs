@@ -7,6 +7,8 @@ using NXSG.Core;
 using NXSG.Editor;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.UIElements;
+using UnityEditor.UIElements;
 
 // Run in an isolated Unity project with NXSG installed; never on a user's graph.
 public static class NodeSwitchSmoke
@@ -62,7 +64,16 @@ public static class NodeSwitchSmoke
     {
         foreach (var old in Resources.FindObjectsOfTypeAll<GraphWindow>()) { old.DiscardChanges(); old.Close(); }
         window = ScriptableObject.CreateInstance<GraphWindow>(); window.Show(); window.position = new Rect(0, 0, 1100, 700);
+        typeof(GraphWindow).GetField("livePreview", Private).SetValue(window, false);
         BuildGraph(); EditorApplication.update += Tick;
+    }
+
+    static void ConnectThroughEditor(string from, string fromPort, string to, string toPort)
+    {
+        typeof(GraphWindow).GetField("pendingNode", Private).SetValue(window, from);
+        typeof(GraphWindow).GetField("pendingPort", Private).SetValue(window, fromPort);
+        typeof(GraphWindow).GetField("pendingOutput", Private).SetValue(window, true);
+        Invoke("Connect", to, toPort, false);
     }
 
     static void Tick()
@@ -107,7 +118,55 @@ public static class NodeSwitchSmoke
             {
                 Undo.PerformUndo();
                 Require(Node("invert").Operation == "core.oneMinus" && Wire("a-to-invert", "a", "value", "invert", "color"), "Undo did not restore Invert");
-                Debug.Log("NXSG NODE SWITCH CHECK PASSED: Mix/Add factor-wire undo, property preservation, Invert/Clamp identity and wires");
+                foreach (var pair in new[] { new[] { "uv", "core.uv0" }, new[] { "scroll", "core.uvScroll" }, new[] { "tex", "core.texture2D" } })
+                { var node = NodeCatalog.Create(pair[1]); node.Id = pair[0]; Graph.Nodes.Add(node); }
+                Graph.Connections.Add(Connection("uv-scroll", "uv", "uv", "scroll", "uv"));
+                Graph.Connections.Add(Connection("time-scroll", "factorValue", "value", "scroll", "time"));
+                Graph.Connections.Add(Connection("scroll-tex", "scroll", "uv", "tex", "uv"));
+                SetBaseline(); Invoke("Rebuild");
+                Invoke("SwitchOperation", "scroll", "core.polarUV");
+                Require(Wire("uv-scroll", "uv", "uv", "scroll", "uv") && Wire("scroll-tex", "scroll", "uv", "tex", "uv"), "UV switch lost compatible wires");
+                Require(!Graph.Connections.Any(e => e.Id == "time-scroll"), "UV switch retained unavailable time socket");
+                Require(Node("scroll").Properties["center"] is JArray, "Polar defaults missing");
+            }
+            else if (phase == 5)
+            {
+                Undo.PerformUndo();
+                Require(Node("scroll").Operation == "core.uvScroll" && Wire("time-scroll", "factorValue", "value", "scroll", "time"), "UV switch Undo failed");
+                Invoke("SwitchOperation", "scroll", "core.worldUV");
+                Require(!Graph.Connections.Any(e => e.To.NodeId == "scroll") && Wire("scroll-tex", "scroll", "uv", "tex", "uv"), "World UV switch did not retain only output");
+                var inspector = (VisualElement)Field("inspector");
+                var library = inspector.Q<VisualElement>("node-library");
+                Require(library.Query<Foldout>().ToList().Count == 5, "Node categories missing");
+                var math = library.Q<Foldout>("category-Math"); math.value = true;
+                Invoke("RebuildInspector");
+                inspector = (VisualElement)Field("inspector");
+                Require(inspector.Q<Foldout>("category-Math").value, "Category state lost after rebuild");
+                var search = inspector.Q<ToolbarSearchField>("node-search"); search.value = "polar";
+                library = inspector.Q<VisualElement>("node-library");
+                Require(library.Query<Foldout>().ToList().Count == 1 && library.Q<Foldout>().value && library.Q<Foldout>().Query<Button>().ToList().Count == 1, "Search did not reveal only Polar UVs");
+                search.value = "no-such-node-xyz";
+                Require(library.Query<Foldout>().ToList().Count == 0, "Empty search left node choices");
+                foreach (var pair in new[] { new[] { "auto", "core.add" }, new[] { "num", "core.value" }, new[] { "ramp", "core.ramp" } })
+                { var node = NodeCatalog.Create(pair[1]); node.Id = pair[0]; Graph.Nodes.Add(node); }
+                Invoke("Rebuild");
+            }
+            else if (phase == 6)
+            {
+                ConnectThroughEditor("num", "value", "auto", "a");
+                Require(GraphTypes.Infer(Graph)["auto"] == "float", "Math did not switch to number");
+                ConnectThroughEditor("auto", "value", "ramp", "value");
+                var count = Graph.Connections.Count;
+                ConnectThroughEditor("a", "value", "auto", "b");
+                Require(Graph.Connections.Count == count, "Color connection broke a downstream numeric consumer");
+                Graph.Connections.RemoveAll(e => e.To.NodeId == "ramp"); Invoke("Rebuild");
+                ConnectThroughEditor("a", "value", "auto", "b");
+                Require(GraphTypes.Infer(Graph)["auto"] == "color", "Mixed math did not switch to color");
+                var gradient = (Gradient)typeof(GraphWindow).GetMethod("WireGradient", Private).Invoke(window, new object[] { "float", "color" });
+                Require(gradient.Evaluate(0) != gradient.Evaluate(1), "Wire type gradient has identical endpoints");
+                Invoke("SelectNode", "ramp", false);
+                Require(((VisualElement)Field("inspector")).Q<CurveField>() != null, "Ramp curve control missing");
+                Debug.Log("NXSG NODE SWITCH CHECK PASSED: UV/math switching, Undo, categories, automatic types, compatible connections, gradients, and Ramp controls");
                 EditorApplication.update -= Tick; window.DiscardChanges(); window.Close(); EditorApplication.Exit(0);
             }
             phase++;
