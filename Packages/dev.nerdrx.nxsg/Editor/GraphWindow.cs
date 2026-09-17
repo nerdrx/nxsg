@@ -17,6 +17,12 @@ namespace NXSG.Editor
         [SerializeField] string sourcePath;
         [SerializeField] string diskSource;
         [SerializeField] string selected;
+        [SerializeField] List<string> selection = new List<string>();
+        readonly Dictionary<string, Vector2> dragOrigins = new Dictionary<string, Vector2>();
+        VisualElement marquee;
+        bool boxSelecting;
+        Vector2 boxStart;
+        string[] boxInitial;
         [SerializeField] Vector2 pan = new Vector2(30, 70);
         [SerializeField] float zoom = 1;
         ShaderGraph graph;
@@ -24,6 +30,18 @@ namespace NXSG.Editor
         Label status;
         readonly Dictionary<string, VisualElement> nodes = new Dictionary<string, VisualElement>();
         string pendingNode, pendingPort;
+        readonly List<SocketView> sockets = new List<SocketView>();
+        bool wiring, wireMoved, pendingOutput;
+        VisualElement spawnMenu;
+        int wirePointer;
+        Vector2 wireStart, wirePosition;
+
+        sealed class SocketView
+        {
+            public string node, port, type;
+            public bool output;
+            public VisualElement hit, dot;
+        }
         Material preview;
         UnityEditor.Editor previewEditor;
         bool dragging, panning;
@@ -53,6 +71,7 @@ namespace NXSG.Editor
 
         void OnDisable()
         {
+            CancelWire();
             Undo.undoRedoPerformed -= Restore;
             ClearPreview();
         }
@@ -62,7 +81,7 @@ namespace NXSG.Editor
         public void CreateGUI()
         {
             rootVisualElement.Clear();
-            rootVisualElement.style.backgroundColor = new Color(.035f, .03f, .045f);
+            rootVisualElement.style.backgroundColor = new Color(.055f, .055f, .055f);
             var toolbar = new Toolbar();
             toolbar.Add(new ToolbarButton(NewGraph) { text = "New" });
             toolbar.Add(new ToolbarButton(() =>
@@ -83,6 +102,12 @@ namespace NXSG.Editor
             layer = new VisualElement { style = { position = UnityEngine.UIElements.Position.Absolute, width = 4000, height = 4000 } };
             layer.generateVisualContent += DrawEdges;
             canvas.Add(layer);
+            marquee = new VisualElement { pickingMode = PickingMode.Ignore, style = {
+                position = UnityEngine.UIElements.Position.Absolute, display = DisplayStyle.None,
+                backgroundColor = new Color(.65f, .75f, .85f, .12f),
+                borderLeftWidth = 1, borderRightWidth = 1, borderTopWidth = 1, borderBottomWidth = 1,
+                borderLeftColor = Color.white, borderRightColor = Color.white, borderTopColor = Color.white, borderBottomColor = Color.white } };
+            canvas.Add(marquee);
             canvas.RegisterCallback<PointerDownEvent>(CanvasDown);
             canvas.RegisterCallback<PointerMoveEvent>(CanvasMove);
             canvas.RegisterCallback<PointerUpEvent>(CanvasUp);
@@ -97,15 +122,15 @@ namespace NXSG.Editor
             });
             canvas.RegisterCallback<KeyDownEvent>(evt =>
             {
-                if (evt.keyCode == KeyCode.Escape) { pendingNode = null; SetStatus("Connection cancelled."); }
+                if (evt.keyCode == KeyCode.Escape) { CancelBox(true); CancelWire(); SetStatus("Cancelled."); evt.StopPropagation(); }
                 if (evt.keyCode == KeyCode.Delete || evt.keyCode == KeyCode.Backspace) DeleteSelection();
                 if (evt.actionKey && evt.keyCode == KeyCode.S) { SaveGraph(); evt.StopPropagation(); }
             });
             body.Add(canvas);
-            inspector = new VisualElement { style = { width = 270, paddingLeft = 12, paddingRight = 12, paddingTop = 12, backgroundColor = new Color(.08f, .065f, .10f) } };
+            inspector = new VisualElement { style = { width = 270, paddingLeft = 12, paddingRight = 12, paddingTop = 12, backgroundColor = new Color(.10f, .10f, .10f) } };
             body.Add(inspector);
             rootVisualElement.Add(body);
-            status = new Label("Create or open a graph. Middle-drag pans; wheel zooms. Click output then input to connect.")
+            status = new Label("Create or open a graph. Drag empty space to box-select; Shift adds. Middle-drag pans; wheel zooms. Drag between matching sockets in either direction. Drop on empty space to add a node. Esc cancels.")
             { style = { whiteSpace = WhiteSpace.Normal, paddingLeft = 10, paddingTop = 6, paddingBottom = 6 } };
             rootVisualElement.Add(status);
             rootVisualElement.RegisterCallback<KeyDownEvent>(evt =>
@@ -130,7 +155,7 @@ namespace NXSG.Editor
             if (!CanDiscard()) return;
             graph = GraphSamples.CreateDefault();
             graph.GraphId = Guid.NewGuid().ToString("N");
-            sourcePath = null; diskSource = null; selected = null;
+            sourcePath = null; diskSource = null; selected = null; selection.Clear();
             session.json = GraphJson.Serialize(graph, true);
             Undo.ClearUndo(session);
             hasUnsavedChanges = true;
@@ -147,7 +172,7 @@ namespace NXSG.Editor
                 CheckEditableShape(parsed);
                 graph = parsed; sourcePath = Path.GetFullPath(path); diskSource = source;
                 session.json = GraphJson.Serialize(parsed, true);
-                Undo.ClearUndo(session); selected = null; hasUnsavedChanges = false;
+                Undo.ClearUndo(session); selected = null; selection.Clear(); hasUnsavedChanges = false;
                 ClearPreview(); Rebuild(); SetStatus(Path.GetFileName(path));
             }
             catch (Exception exception) { SetStatus(exception.Message); }
@@ -255,25 +280,34 @@ namespace NXSG.Editor
         void Rebuild()
         {
             if (layer == null) return;
-            layer.Clear(); nodes.Clear();
+            CancelWire();
+            layer.Clear(); nodes.Clear(); sockets.Clear();
             if (graph != null)
                 foreach (var node in graph.Nodes)
                 {
                     var position = Position(node.Id);
-                    var box = new VisualElement { focusable = true, style = { position = UnityEngine.UIElements.Position.Absolute, left = position.x, top = position.y, width = 175, backgroundColor = node.Id == selected ? new Color(.25f, .08f, .43f) : new Color(.12f, .10f, .16f), borderTopLeftRadius = 8, borderTopRightRadius = 8, borderBottomLeftRadius = 8, borderBottomRightRadius = 8, paddingBottom = 8 } };
-                    var title = new Label(Title(node.Operation)) { style = { paddingLeft = 12, paddingTop = 10, paddingBottom = 10, unityFontStyleAndWeight = FontStyle.Bold, backgroundColor = new Color(.30f, .025f, .58f) } };
+                    var box = new VisualElement { focusable = true, style = { position = UnityEngine.UIElements.Position.Absolute, left = position.x, top = position.y, width = 175, backgroundColor = new Color(.14f, .14f, .14f), borderLeftWidth = 2, borderRightWidth = 2, borderTopWidth = 2, borderBottomWidth = 2, borderTopLeftRadius = 8, borderTopRightRadius = 8, borderBottomLeftRadius = 8, borderBottomRightRadius = 8, paddingBottom = 8 } };
+                    var title = new Label(Title(node.Operation)) { style = { paddingLeft = 12, paddingTop = 10, paddingBottom = 10, unityFontStyleAndWeight = FontStyle.Bold, backgroundColor = NodeColor(node.Operation) } };
                     box.Add(title);
                     title.RegisterCallback<PointerDownEvent>(evt =>
                     {
                         if (evt.button != 0) return;
-                        selected = node.Id; dragging = true; pointerStart = evt.position; origin = Position(node.Id);
+                        SelectNode(node.Id, evt.shiftKey || selection.Contains(node.Id));
+                        dragging = true; pointerStart = evt.position;
+                        dragOrigins.Clear();
+                        foreach (var id in selection) dragOrigins[id] = Position(id);
                         title.CapturePointer(evt.pointerId); RebuildInspector(); evt.StopPropagation();
                     });
                     title.RegisterCallback<PointerMoveEvent>(evt =>
                     {
                         if (!dragging || selected != node.Id || !title.HasPointerCapture(evt.pointerId)) return;
-                        var point = origin + ((Vector2)evt.position - pointerStart) / zoom;
-                        SetPosition(node.Id, point); box.style.left = point.x; box.style.top = point.y;
+                        var delta = ((Vector2)evt.position - pointerStart) / zoom;
+                        foreach (var pair in dragOrigins)
+                        {
+                            var point = pair.Value + delta;
+                            SetPosition(pair.Key, point);
+                            nodes[pair.Key].style.left = point.x; nodes[pair.Key].style.top = point.y;
+                        }
                         layer.MarkDirtyRepaint(); evt.StopPropagation();
                     });
                     title.RegisterCallback<PointerUpEvent>(evt =>
@@ -285,20 +319,111 @@ namespace NXSG.Editor
                         session.json = GraphJson.Serialize(graph, true); hasUnsavedChanges = true; EditorUtility.SetDirty(session);
                         canvas.Focus(); evt.StopPropagation();
                     });
-                    foreach (var port in Ports(node.Operation, false))
-                    {
-                        var input = port;
-                        box.Add(new Button(() => Connect(node.Id, input)) { text = "●  " + input, tooltip = "Input: " + input });
-                    }
-                    foreach (var port in Ports(node.Operation, true))
-                    {
-                        var output = port;
-                        box.Add(new Button(() => { pendingNode = node.Id; pendingPort = output; selected = node.Id; RebuildInspector(); SetStatus("Choose an input for " + Title(node.Operation) + "." + output); }) { text = output + "  ●", tooltip = "Output: " + output });
-                    }
-                    box.RegisterCallback<FocusInEvent>(_ => { selected = node.Id; RebuildInspector(); });
+                    foreach (var port in Ports(node.Operation, false)) AddSocket(box, node, port, false);
+                    foreach (var port in Ports(node.Operation, true)) AddSocket(box, node, port, true);
+                    box.RegisterCallback<FocusInEvent>(_ => { if (!selection.Contains(node.Id)) SelectNode(node.Id); });
+                    box.RegisterCallback<PointerDownEvent>(evt => { if (evt.button == 0) SelectNode(node.Id, evt.shiftKey || selection.Contains(node.Id)); });
                     layer.Add(box); nodes[node.Id] = box;
                 }
+            selection.RemoveAll(id => !nodes.ContainsKey(id));
+            UpdateSelectionOutline();
             TransformCanvas(); RebuildInspector();
+        }
+
+        void SelectNode(string id, bool additive = false)
+        {
+            if (!additive) selection.Clear();
+            if (id != null && !selection.Contains(id)) selection.Add(id);
+            selected = id;
+            UpdateSelectionOutline();
+            RebuildInspector();
+        }
+
+        void UpdateSelectionOutline()
+        {
+            foreach (var pair in nodes)
+            {
+                var outline = selection.Contains(pair.Key) ? new Color(.94f, .94f, .94f) : Color.clear;
+                pair.Value.style.borderLeftColor = outline;
+                pair.Value.style.borderRightColor = outline;
+                pair.Value.style.borderTopColor = outline;
+                pair.Value.style.borderBottomColor = outline;
+            }
+        }
+
+        void AddSocket(VisualElement box, GraphNode node, string port, bool output)
+        {
+            var type = PortType(node, port);
+            var row = new VisualElement { style = { height = 28, justifyContent = Justify.Center } };
+            row.Add(new Label(port) { pickingMode = PickingMode.Ignore, style = {
+                marginLeft = 16, marginRight = 16,
+                unityTextAlign = output ? TextAnchor.MiddleRight : TextAnchor.MiddleLeft } });
+            var hit = new VisualElement { tooltip = (output ? "Output" : "Input") + ": " + port + " (" + type + ") — drag or click to connect",
+                style = { position = UnityEngine.UIElements.Position.Absolute, top = 1, width = 26, height = 26,
+                    alignItems = Align.Center, justifyContent = Justify.Center } };
+            if (output) hit.style.right = -13; else hit.style.left = -13;
+            var dot = new VisualElement { pickingMode = PickingMode.Ignore, style = {
+                width = 14, height = 14, backgroundColor = SocketColor(type),
+                borderTopLeftRadius = 7, borderTopRightRadius = 7, borderBottomLeftRadius = 7, borderBottomRightRadius = 7,
+                borderLeftWidth = 2, borderRightWidth = 2, borderTopWidth = 2, borderBottomWidth = 2,
+                borderLeftColor = Color.black, borderRightColor = Color.black, borderTopColor = Color.black, borderBottomColor = Color.black } };
+            hit.Add(dot); row.Add(hit); box.Add(row);
+            var socket = new SocketView { node = node.Id, port = port, type = type, output = output, hit = hit, dot = dot };
+            sockets.Add(socket);
+            hit.RegisterCallback<PointerDownEvent>(evt =>
+            {
+                if (evt.button != 0) return;
+                canvas.Focus(); SelectNode(node.Id);
+                if (pendingNode != null && pendingOutput != output)
+                {
+                    Connect(node.Id, port, output);
+                    CancelWire();
+                }
+                else
+                {
+                    CancelWire();
+                    pendingNode = node.Id; pendingPort = port; pendingOutput = output;
+                    wiring = true; wireMoved = false; wirePointer = evt.pointerId;
+                    wireStart = evt.position; wirePosition = layer.WorldToLocal(evt.position);
+                    canvas.CapturePointer(evt.pointerId);
+                    foreach (var other in sockets.Where(s => s.output != output))
+                        other.dot.style.opacity = other.type == type && other.node != node.Id ? 1f : .3f;
+                    layer.MarkDirtyRepaint();
+                    SetStatus("Drag to a matching socket, or empty space to add a node. Esc cancels.");
+                }
+                evt.StopPropagation(); evt.PreventDefault();
+            });
+            hit.RegisterCallback<GeometryChangedEvent>(_ => layer.MarkDirtyRepaint());
+        }
+
+        void CancelWire()
+        {
+            wiring = false;
+            spawnMenu?.RemoveFromHierarchy(); spawnMenu = null;
+            if (canvas != null && canvas.HasPointerCapture(wirePointer)) canvas.ReleasePointer(wirePointer);
+            pendingNode = null; pendingPort = null;
+            foreach (var socket in sockets) socket.dot.style.opacity = 1f;
+            layer?.MarkDirtyRepaint();
+        }
+
+        static Color NodeColor(string operation)
+        {
+            switch (operation)
+            {
+                case "core.uv0": return new Color(.16f, .32f, .52f);
+                case "core.texture2D": return new Color(.46f, .25f, .10f);
+                case "core.constant": return new Color(.40f, .34f, .10f);
+                case "core.multiply": return new Color(.28f, .33f, .38f);
+                case "core.toonSurface": return new Color(.13f, .37f, .24f);
+                case "core.output": return new Color(.39f, .19f, .20f);
+                default: return new Color(.28f, .28f, .28f);
+            }
+        }
+
+        static Color SocketColor(string type)
+        {
+            return type == "surface" ? new Color(.35f, .85f, .46f)
+                : type == "vector2" ? new Color(.45f, .65f, 1f) : new Color(1f, .78f, .25f);
         }
 
         void RebuildInspector()
@@ -319,7 +444,12 @@ namespace NXSG.Editor
                     }
             };
             search.RegisterValueChangedCallback(evt => filter(evt.newValue)); filter("");
-            var node = graph?.Nodes.FirstOrDefault(n => n.Id == selected);
+            if (selection.Count > 1)
+            {
+                inspector.Add(new Label(selection.Count + " nodes selected") { style = { marginTop = 15 } });
+                inspector.Add(new Button(DeleteSelection) { text = "Delete selected nodes" });
+            }
+            var node = selection.Count > 1 ? null : graph?.Nodes.FirstOrDefault(n => n.Id == selected);
             if (node != null)
             {
                 inspector.Add(new Label(Title(node.Operation)) { style = { marginTop = 15, unityFontStyleAndWeight = FontStyle.Bold } });
@@ -359,51 +489,115 @@ namespace NXSG.Editor
             }
         }
 
-        void AddNode(string operation)
+        GraphNode CreateNode(string operation, Vector2 position)
         {
-            Edit("Add " + Title(operation), () =>
+            var node = new GraphNode { Id = Guid.NewGuid().ToString("N"), Operation = operation };
+            if (operation == "core.constant") { node.Properties["valueType"] = "color"; node.Properties["value"] = new JArray(1, 1, 1, 1); }
+            if (operation == "core.multiply") node.Properties["valueType"] = "color";
+            if (operation == "core.texture2D")
             {
-                var node = new GraphNode { Id = Guid.NewGuid().ToString("N"), Operation = operation };
-                if (operation == "core.constant") { node.Properties["valueType"] = "color"; node.Properties["value"] = new JArray(1, 1, 1, 1); }
-                if (operation == "core.multiply") node.Properties["valueType"] = "color";
-                if (operation == "core.texture2D")
-                {
-                    var resource = new GraphResource { Id = "texture-" + node.Id, Kind = "texture2D", Uri = "builtin://white" };
-                    graph.Resources.Add(resource); node.Properties["resourceId"] = resource.Id;
-                }
-                graph.Nodes.Add(node); selected = node.Id;
-                SetPosition(node.Id, new Vector2(70 + graph.Nodes.Count * 12, 100 + graph.Nodes.Count * 12));
-            });
+                var resource = new GraphResource { Id = "texture-" + node.Id, Kind = "texture2D", Uri = "builtin://white" };
+                graph.Resources.Add(resource); node.Properties["resourceId"] = resource.Id;
+            }
+            graph.Nodes.Add(node); selected = node.Id; selection.Clear(); selection.Add(node.Id);
+            SetPosition(node.Id, position);
+            return node;
         }
 
-        void Connect(string target, string port)
+        void AddNode(string operation)
         {
-            if (pendingNode == null) { selected = target; RebuildInspector(); SetStatus("Select an output first, then this input."); return; }
-            var reachable = new HashSet<string> { target };
-            var queue = new Queue<string>(); queue.Enqueue(target);
+            Edit("Add " + Title(operation), () => CreateNode(operation, new Vector2(82 + graph.Nodes.Count * 12, 112 + graph.Nodes.Count * 12)));
+        }
+
+        void Connect(string target, string port, bool output)
+        {
+            if (pendingNode == null || pendingOutput == output) return;
+            var fromId = pendingOutput ? pendingNode : target;
+            var fromPort = pendingOutput ? pendingPort : port;
+            var toId = pendingOutput ? target : pendingNode;
+            var toPort = pendingOutput ? port : pendingPort;
+            var reachable = new HashSet<string> { toId };
+            var queue = new Queue<string>(); queue.Enqueue(toId);
             while (queue.Count > 0)
             {
                 var id = queue.Dequeue();
                 foreach (var edge in graph.Connections.Where(e => e.From.NodeId == id))
                     if (reachable.Add(edge.To.NodeId)) queue.Enqueue(edge.To.NodeId);
             }
-            if (reachable.Contains(pendingNode)) { SetStatus("That connection would create a cycle."); return; }
-            var from = graph.Nodes.First(n => n.Id == pendingNode);
-            var to = graph.Nodes.First(n => n.Id == target);
-            if (PortType(from, pendingPort) != PortType(to, port)) { SetStatus("Socket types do not match. Use matching color, UV or surface sockets."); return; }
-            Edit("Connect nodes", () =>
+            if (reachable.Contains(fromId)) { SetStatus("That connection would create a cycle."); return; }
+            var from = graph.Nodes.First(n => n.Id == fromId);
+            var to = graph.Nodes.First(n => n.Id == toId);
+            if (PortType(from, fromPort) != PortType(to, toPort)) { SetStatus("Socket types do not match. Use matching color, UV or surface sockets."); return; }
+            Edit("Connect nodes", () => AddConnection(fromId, fromPort, toId, toPort));
+        }
+
+        void AddConnection(string from, string fromPort, string to, string toPort)
+        {
+            graph.Connections.RemoveAll(e => e.To.NodeId == to && e.To.PortId == toPort);
+            graph.Connections.Add(new GraphConnection { Id = Guid.NewGuid().ToString("N"),
+                From = new GraphPortRef { NodeId = from, PortId = fromPort }, To = new GraphPortRef { NodeId = to, PortId = toPort } });
+        }
+
+        void ShowSpawnMenu(Vector2 position)
+        {
+            var endpoint = pendingNode; var endpointPort = pendingPort; var output = pendingOutput;
+            var source = graph.Nodes.First(n => n.Id == endpoint);
+            var type = PortType(source, endpointPort);
+            var graphPosition = layer.WorldToLocal(position);
+            var local = canvas.WorldToLocal(position);
+            spawnMenu = new VisualElement { style = {
+                position = UnityEngine.UIElements.Position.Absolute, width = 240,
+                left = Mathf.Clamp(local.x, 0, Mathf.Max(0, canvas.resolvedStyle.width - 240)),
+                top = Mathf.Clamp(local.y, 0, Mathf.Max(0, canvas.resolvedStyle.height - 270)),
+                backgroundColor = new Color(.18f, .18f, .18f), paddingLeft = 8, paddingRight = 8, paddingTop = 8, paddingBottom = 8 } };
+            spawnMenu.RegisterCallback<PointerDownEvent>(evt => evt.StopPropagation());
+            spawnMenu.Add(new Label("Add connected node · " + type) { style = { unityFontStyleAndWeight = FontStyle.Bold, marginBottom = 6 } });
+            var count = 0;
+            foreach (var operation in new[] { "core.uv0", "core.texture2D", "core.constant", "core.multiply", "core.toonSurface", "core.output" })
             {
-                graph.Connections.RemoveAll(e => e.To.NodeId == target && e.To.PortId == port);
-                graph.Connections.Add(new GraphConnection { Id = Guid.NewGuid().ToString("N"), From = new GraphPortRef { NodeId = pendingNode, PortId = pendingPort }, To = new GraphPortRef { NodeId = target, PortId = port } });
-                pendingNode = null;
-            });
+                if (operation == "core.output" && graph.Nodes.Any(n => n.Operation == operation)) continue;
+                var candidate = new GraphNode { Operation = operation };
+                foreach (var port in Ports(operation, !output))
+                {
+                    if (PortType(candidate, port) != type) continue;
+                    var op = operation; var compatiblePort = port;
+                    spawnMenu.Add(new Button(() => Edit("Add connected " + Title(op), () =>
+                    {
+                        var node = CreateNode(op, graphPosition - (output ? Vector2.zero : new Vector2(175, 0)));
+                        if (output) AddConnection(endpoint, endpointPort, node.Id, compatiblePort);
+                        else AddConnection(node.Id, compatiblePort, endpoint, endpointPort);
+                    })) { text = Title(op) + " · " + port });
+                    count++;
+                }
+            }
+            if (count == 0) spawnMenu.Add(new Label("No compatible nodes available."));
+            spawnMenu.Add(new Button(CancelWire) { text = "Cancel" });
+            canvas.Add(spawnMenu);
+            SetStatus("Choose a compatible node. Existing connections stay until you choose. Esc cancels.");
         }
 
         void DeleteSelection()
         {
-            if (selected == null || graph == null) return;
-            Edit("Delete node", () => { graph.Nodes.RemoveAll(n => n.Id == selected); graph.Connections.RemoveAll(e => e.From.NodeId == selected || e.To.NodeId == selected); selected = null; pendingNode = null; });
+            if (selection.Count == 0 || graph == null) return;
+            var ids = new HashSet<string>(selection);
+            Edit("Delete selected nodes", () =>
+            {
+                graph.Nodes.RemoveAll(n => ids.Contains(n.Id));
+                graph.Connections.RemoveAll(e => ids.Contains(e.From.NodeId) || ids.Contains(e.To.NodeId));
+                selected = null; selection.Clear(); pendingNode = null;
+            });
         }
+
+        void CancelBox(bool restore)
+        {
+            if (!boxSelecting) return;
+            boxSelecting = false;
+            if (restore) { selection.Clear(); selection.AddRange(boxInitial); }
+            marquee.style.display = DisplayStyle.None;
+            if (canvas.HasPointerCapture(boxPointer)) canvas.ReleasePointer(boxPointer);
+            selected = selection.LastOrDefault(); UpdateSelectionOutline(); RebuildInspector();
+        }
+        int boxPointer;
 
         Vector2 Position(string id)
         {
@@ -425,33 +619,90 @@ namespace NXSG.Editor
         {
             if (evt.button == 0 && (evt.target == canvas || evt.target == layer))
             {
-                canvas.Focus(); evt.StopPropagation(); return;
+                CancelWire(); canvas.Focus();
+                boxSelecting = true; boxPointer = evt.pointerId; boxStart = evt.position;
+                boxInitial = selection.ToArray();
+                if (!evt.shiftKey) selection.Clear();
+                boxAdditive = evt.shiftKey;
+                canvas.CapturePointer(evt.pointerId);
+                UpdateSelectionOutline(); evt.StopPropagation(); return;
             }
             if (evt.button != 2) return;
             panning = true; pointerStart = evt.position; origin = pan; canvas.CapturePointer(evt.pointerId); evt.StopPropagation();
         }
+        bool boxAdditive;
         void CanvasMove(PointerMoveEvent evt)
         {
+            if (boxSelecting)
+            {
+                var end = (Vector2)evt.position;
+                var bounds = Rect.MinMaxRect(Mathf.Min(boxStart.x, end.x), Mathf.Min(boxStart.y, end.y), Mathf.Max(boxStart.x, end.x), Mathf.Max(boxStart.y, end.y));
+                var local = canvas.WorldToLocal(bounds.position);
+                marquee.style.display = DisplayStyle.Flex;
+                marquee.style.left = local.x; marquee.style.top = local.y;
+                marquee.style.width = bounds.width; marquee.style.height = bounds.height;
+                selection.Clear();
+                if (boxAdditive) selection.AddRange(boxInitial);
+                foreach (var pair in nodes)
+                    if (bounds.Overlaps(pair.Value.worldBound) && !selection.Contains(pair.Key)) selection.Add(pair.Key);
+                UpdateSelectionOutline(); evt.StopPropagation(); return;
+            }
+            if (pendingNode != null && spawnMenu == null)
+            {
+                wirePosition = layer.WorldToLocal(evt.position);
+                if (wiring && Vector2.Distance(wireStart, evt.position) > 4) wireMoved = true;
+                layer.MarkDirtyRepaint();
+            }
             if (!panning) return;
             pan = origin + ((Vector2)evt.position - pointerStart); TransformCanvas(); evt.StopPropagation();
         }
         void CanvasUp(PointerUpEvent evt)
         {
+            if (boxSelecting && evt.pointerId == boxPointer && evt.button == 0)
+            { CancelBox(false); evt.StopPropagation(); return; }
+            if (wiring && evt.pointerId == wirePointer && evt.button == 0)
+            {
+                wiring = false;
+                canvas.ReleasePointer(evt.pointerId);
+                var target = sockets.FirstOrDefault(s => s.output != pendingOutput && s.hit.worldBound.Contains(evt.position));
+                if (target != null) { Connect(target.node, target.port, target.output); CancelWire(); }
+                else if (wireMoved)
+                {
+                    if (canvas.worldBound.Contains(evt.position) && !nodes.Values.Any(n => n.worldBound.Contains(evt.position))) ShowSpawnMenu(evt.position);
+                    else { CancelWire(); SetStatus("Connection cancelled. Drop on a socket or empty canvas."); }
+                }
+                evt.StopPropagation(); return;
+            }
             if (!panning) return;
             panning = false; canvas.ReleasePointer(evt.pointerId); evt.StopPropagation();
         }
         void DrawEdges(MeshGenerationContext context)
         {
             if (graph == null) return;
-            var painter = context.painter2D; painter.lineWidth = 3; painter.strokeColor = new Color(.65f, .33f, 1);
+            var painter = context.painter2D; painter.lineWidth = 3;
             foreach (var edge in graph.Connections)
             {
-                if (!nodes.TryGetValue(edge.From.NodeId, out var from) || !nodes.TryGetValue(edge.To.NodeId, out var to)) continue;
-                var a = new Vector2(from.resolvedStyle.left + 175, from.resolvedStyle.top + from.resolvedStyle.height - 20);
-                var b = new Vector2(to.resolvedStyle.left, to.resolvedStyle.top + 50);
-                if (float.IsNaN(a.y) || float.IsNaN(b.y)) continue;
-                painter.BeginPath(); painter.MoveTo(a); painter.BezierCurveTo(a + Vector2.right * 70, b - Vector2.right * 70, b); painter.Stroke();
+                var from = sockets.FirstOrDefault(s => s.output && s.node == edge.From.NodeId && s.port == edge.From.PortId);
+                var to = sockets.FirstOrDefault(s => !s.output && s.node == edge.To.NodeId && s.port == edge.To.PortId);
+                if (from == null || to == null) continue;
+                painter.strokeColor = SocketColor(from.type);
+                DrawWire(painter, layer.WorldToLocal(from.hit.worldBound.center), layer.WorldToLocal(to.hit.worldBound.center));
             }
+            var pending = sockets.FirstOrDefault(s => s.output == pendingOutput && s.node == pendingNode && s.port == pendingPort);
+            if (pending != null)
+            {
+                painter.strokeColor = SocketColor(pending.type);
+                var socketPosition = layer.WorldToLocal(pending.hit.worldBound.center);
+                DrawWire(painter, pendingOutput ? socketPosition : wirePosition, pendingOutput ? wirePosition : socketPosition);
+            }
+        }
+
+        static void DrawWire(Painter2D painter, Vector2 a, Vector2 b)
+        {
+            if (float.IsNaN(a.x) || float.IsNaN(a.y) || float.IsNaN(b.x) || float.IsNaN(b.y)) return;
+            var bend = Mathf.Max(45, Mathf.Abs(b.x - a.x) * .45f);
+            painter.BeginPath(); painter.MoveTo(a);
+            painter.BezierCurveTo(a + Vector2.right * bend, b - Vector2.right * bend, b); painter.Stroke();
         }
         void SetStatus(string message) { if (status != null) status.text = message; }
         static string Title(string operation)

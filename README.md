@@ -98,3 +98,11 @@ Linux is our primary authoring and validation environment. Record the Linux Edit
 <p align="center">
   Part of NX · <a href="docs/assets/README.md">Brand artwork and provenance</a>
 </p>
+
+## Canvas controls
+
+- Drag between matching colored sockets in either direction, or click each endpoint.
+- Drop a wire onto empty canvas to add a compatible node with its connection.
+- Drag empty canvas to box-select; hold Shift to add. Drag a selected title to move the group.
+- Selected nodes have a light outline. Delete removes the selection; toolbar Undo restores it.
+- Middle-drag pans, the wheel zooms, and Escape cancels the current connection or selection.
