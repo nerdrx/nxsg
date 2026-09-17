@@ -65,3 +65,9 @@ A real graphics regression check (`Tests/Editor/ColorRenderSmoke.cs`) renders a 
 ## Ten-node pack — 2026-09-17
 
 Portable checks cover each new node, default inputs, type rejection, clipboard, and the Animated Palette example. The combined graphics fixture (`NodePackRenderSmoke.Run`) compiles Time/Value, UV Transform/Scroll, a sampled texture, Noise, Mix, Add, Clamp, One Minus, and Emission together. With black albedo and no lighting, red emission remains visible; captures at deterministic times 0 and 1 differ. Both captures are in `docs/evidence`. The existing hidden UI interaction/clipboard check passes after integrating the shared node catalog. This is Unity OpenGL evidence, not a VRChat client or DX11 acceptance result.
+
+## Coordinate nodes — 2026-09-17
+
+Polar UVs, Rotate UVs, Object Planar UVs, and World Planar UVs passed portable validation/emission, typed angle connections, malformed-property rejection, clipboard preservation, disconnected-node elimination, and a 20-node coordinate-chain source-size check. The Polar Palette sample validates and emits. Coordinate helpers keep nested source expressions from expanding exponentially.
+
+`Tests/Editor/CoordinateRenderSmoke.cs` ran in a separate project under headless Gamescope with Unity 2022.3.22f1 and OpenGL. It samples an encoded UV texture through emission on an X/Z quad using a linear floating-point render target. Polar center/cardinal samples, 90-degree rotation, object-space translation invariance, and world-space translation response passed (`NXSG COORDINATE RENDER CHECK PASSED`). This checks Linux rendering, not live VRChat, stereo, skinned meshes, or Windows.

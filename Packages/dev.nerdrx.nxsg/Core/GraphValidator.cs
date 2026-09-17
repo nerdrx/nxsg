@@ -132,6 +132,8 @@ namespace NXSG.Core
                 case "core.mix": numeric = new[] { "factor" }; break;
                 case "core.emission": numeric = new[] { "strength" }; break;
                 case "core.uvTransform": vectors = new[] { "tiling", "offset" }; break;
+                case "core.polarUV": vectors = new[] { "center" }; numeric = new[] { "radialScale", "angleScale" }; break;
+                case "core.uvRotate": vectors = new[] { "center" }; numeric = new[] { "angle" }; break;
                 case "core.uvScroll": vectors = new[] { "speed" }; break;
                 default: return;
             }

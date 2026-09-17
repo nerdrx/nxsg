@@ -1,0 +1,289 @@
+{
+  "format": "nxsg",
+  "schemaVersion": 1,
+  "graphId": "polar-palette-example",
+  "nodes": [
+    {
+      "id": "time",
+      "operation": "core.time",
+      "version": 1,
+      "properties": {
+        "speed": 0.35,
+        "offset": 0
+      }
+    },
+    {
+      "id": "noise",
+      "operation": "core.noise",
+      "version": 1,
+      "properties": {
+        "scale": 5,
+        "speed": 1
+      }
+    },
+    {
+      "id": "warm",
+      "operation": "core.constant",
+      "version": 1,
+      "properties": {
+        "valueType": "color",
+        "value": [
+          1,
+          0.08,
+          0.02,
+          1
+        ]
+      }
+    },
+    {
+      "id": "cool",
+      "operation": "core.constant",
+      "version": 1,
+      "properties": {
+        "valueType": "color",
+        "value": [
+          0.03,
+          0.35,
+          1,
+          1
+        ]
+      }
+    },
+    {
+      "id": "mix",
+      "operation": "core.mix",
+      "version": 1,
+      "properties": {
+        "factor": 0.5
+      }
+    },
+    {
+      "id": "glow",
+      "operation": "core.emission",
+      "version": 1,
+      "properties": {
+        "strength": 0.3
+      }
+    },
+    {
+      "id": "toon",
+      "operation": "core.toonSurface",
+      "version": 1,
+      "properties": {}
+    },
+    {
+      "id": "output",
+      "operation": "core.output",
+      "version": 1,
+      "properties": {}
+    },
+    {
+      "id": "polar",
+      "operation": "core.polarUV",
+      "version": 1,
+      "properties": {
+        "center": [
+          0.5,
+          0.5
+        ],
+        "radialScale": 1,
+        "angleScale": 1
+      }
+    },
+    {
+      "id": "rotate",
+      "operation": "core.uvRotate",
+      "version": 1,
+      "properties": {
+        "center": [
+          0.5,
+          0.5
+        ],
+        "angle": 0
+      }
+    },
+    {
+      "id": "spin",
+      "operation": "core.time",
+      "version": 1,
+      "properties": {
+        "speed": 20,
+        "offset": 0
+      }
+    }
+  ],
+  "connections": [
+    {
+      "id": "time-value-noise-time",
+      "from": {
+        "nodeId": "time",
+        "portId": "value"
+      },
+      "to": {
+        "nodeId": "noise",
+        "portId": "time"
+      }
+    },
+    {
+      "id": "noise-value-mix-factor",
+      "from": {
+        "nodeId": "noise",
+        "portId": "value"
+      },
+      "to": {
+        "nodeId": "mix",
+        "portId": "factor"
+      }
+    },
+    {
+      "id": "warm-value-mix-a",
+      "from": {
+        "nodeId": "warm",
+        "portId": "value"
+      },
+      "to": {
+        "nodeId": "mix",
+        "portId": "a"
+      }
+    },
+    {
+      "id": "cool-value-mix-b",
+      "from": {
+        "nodeId": "cool",
+        "portId": "value"
+      },
+      "to": {
+        "nodeId": "mix",
+        "portId": "b"
+      }
+    },
+    {
+      "id": "mix-value-toon-albedo",
+      "from": {
+        "nodeId": "mix",
+        "portId": "value"
+      },
+      "to": {
+        "nodeId": "toon",
+        "portId": "albedo"
+      }
+    },
+    {
+      "id": "mix-value-glow-color",
+      "from": {
+        "nodeId": "mix",
+        "portId": "value"
+      },
+      "to": {
+        "nodeId": "glow",
+        "portId": "color"
+      }
+    },
+    {
+      "id": "glow-color-toon-emission",
+      "from": {
+        "nodeId": "glow",
+        "portId": "color"
+      },
+      "to": {
+        "nodeId": "toon",
+        "portId": "emission"
+      }
+    },
+    {
+      "id": "toon-surface-output-surface",
+      "from": {
+        "nodeId": "toon",
+        "portId": "surface"
+      },
+      "to": {
+        "nodeId": "output",
+        "portId": "surface"
+      }
+    },
+    {
+      "id": "spin-rotate",
+      "from": {
+        "nodeId": "spin",
+        "portId": "value"
+      },
+      "to": {
+        "nodeId": "rotate",
+        "portId": "angle"
+      }
+    },
+    {
+      "id": "rotate-polar",
+      "from": {
+        "nodeId": "rotate",
+        "portId": "uv"
+      },
+      "to": {
+        "nodeId": "polar",
+        "portId": "uv"
+      }
+    },
+    {
+      "id": "polar-noise",
+      "from": {
+        "nodeId": "polar",
+        "portId": "uv"
+      },
+      "to": {
+        "nodeId": "noise",
+        "portId": "uv"
+      }
+    }
+  ],
+  "parameters": [],
+  "resources": [],
+  "patterns": [],
+  "layout": {
+    "nodes": {
+      "time": {
+        "x": 600,
+        "y": 30
+      },
+      "noise": {
+        "x": 810,
+        "y": 30
+      },
+      "warm": {
+        "x": 600,
+        "y": 240
+      },
+      "cool": {
+        "x": 600,
+        "y": 380
+      },
+      "mix": {
+        "x": 1010,
+        "y": 200
+      },
+      "glow": {
+        "x": 1220,
+        "y": 370
+      },
+      "toon": {
+        "x": 1250,
+        "y": 150
+      },
+      "output": {
+        "x": 1450,
+        "y": 150
+      },
+      "spin": {
+        "x": 0,
+        "y": 30
+      },
+      "rotate": {
+        "x": 200,
+        "y": 30
+      },
+      "polar": {
+        "x": 400,
+        "y": 30
+      }
+    }
+  }
+}

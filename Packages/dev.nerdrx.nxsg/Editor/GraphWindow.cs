@@ -468,6 +468,7 @@ namespace NXSG.Editor
         {
             switch (operation)
             {
+                case "core.polarUV": case "core.uvRotate": case "core.objectUV": case "core.worldUV":
                 case "core.uvTransform": case "core.uvScroll": case "core.uv0": return new Color(.16f, .32f, .52f);
                 case "core.noise": case "core.texture2D": return new Color(.46f, .25f, .10f);
                 case "core.constant": return new Color(.40f, .34f, .10f);
@@ -540,6 +541,8 @@ namespace NXSG.Editor
                     case "core.value": AddNumber(node, "value", "Value", 0); break;
                     case "core.time": AddNumber(node, "speed", "Speed", 1); AddNumber(node, "offset", "Offset", 0); break;
                     case "core.uvTransform": AddVector(node, "tiling", "Tiling", Vector2.one); AddVector(node, "offset", "Offset", Vector2.zero); break;
+                    case "core.polarUV": AddVector(node, "center", "Center", new Vector2(.5f, .5f)); AddNumber(node, "radialScale", "Radial scale", 1); AddNumber(node, "angleScale", "Angular repeats", 1); break;
+                    case "core.uvRotate": AddVector(node, "center", "Center", new Vector2(.5f, .5f)); AddNumber(node, "angle", "Angle (degrees)", 0, "angle"); break;
                     case "core.uvScroll": AddVector(node, "speed", "Scroll speed", new Vector2(.1f, 0)); break;
                     case "core.noise": AddNumber(node, "scale", "Scale", 5); AddNumber(node, "speed", "Animation speed", 1); break;
                     case "core.mix": AddNumber(node, "factor", "Factor", .5f, "factor"); break;

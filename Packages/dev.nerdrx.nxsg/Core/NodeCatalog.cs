@@ -9,6 +9,7 @@ namespace NXSG.Core
     {
         private static readonly string[] Operations =
         {
+            "core.polarUV", "core.uvRotate", "core.objectUV", "core.worldUV",
             "core.value", "core.time", "core.uvTransform", "core.uvScroll", "core.noise",
             "core.add", "core.mix", "core.emission", "core.oneMinus", "core.clamp",
             "core.constant", "core.parameter", "core.uv0", "core.texture2D", "core.multiply",
@@ -17,6 +18,8 @@ namespace NXSG.Core
 
         private static readonly Dictionary<string, string[]> Inputs = new Dictionary<string, string[]>(StringComparer.Ordinal)
         {
+            ["core.polarUV"] = new[] { "uv" }, ["core.uvRotate"] = new[] { "uv", "angle" },
+            ["core.objectUV"] = new string[0], ["core.worldUV"] = new string[0],
             ["core.value"] = new string[0], ["core.time"] = new string[0],
             ["core.uvTransform"] = new[] { "uv" }, ["core.uvScroll"] = new[] { "uv", "time" },
             ["core.noise"] = new[] { "uv", "time" }, ["core.add"] = new[] { "a", "b" },
@@ -30,6 +33,8 @@ namespace NXSG.Core
 
         private static readonly Dictionary<string, string[]> Outputs = new Dictionary<string, string[]>(StringComparer.Ordinal)
         {
+            ["core.polarUV"] = new[] { "uv" }, ["core.uvRotate"] = new[] { "uv" },
+            ["core.objectUV"] = new[] { "uv" }, ["core.worldUV"] = new[] { "uv" },
             ["core.value"] = new[] { "value" }, ["core.time"] = new[] { "value" },
             ["core.uvTransform"] = new[] { "uv" }, ["core.uvScroll"] = new[] { "uv" },
             ["core.noise"] = new[] { "color", "value" }, ["core.add"] = new[] { "value" },
@@ -52,6 +57,10 @@ namespace NXSG.Core
         {
             switch (operation)
             {
+                case "core.polarUV": return "Polar UVs";
+                case "core.uvRotate": return "Rotate UVs";
+                case "core.objectUV": return "Object Planar UVs";
+                case "core.worldUV": return "World Planar UVs";
                 case "core.value": return "Value"; case "core.time": return "Time";
                 case "core.uvTransform": return "UV Transform"; case "core.uvScroll": return "UV Scroll";
                 case "core.noise": return "Noise"; case "core.add": return "Add"; case "core.mix": return "Mix";
@@ -67,6 +76,10 @@ namespace NXSG.Core
         {
             switch (operation)
             {
+                case "core.polarUV": return "Wrap coordinates around a center: U is distance, V is angle. Useful for rings and radial patterns.";
+                case "core.uvRotate": return "Rotate texture coordinates around a center, in degrees. Connect Time to angle to spin them.";
+                case "core.objectUV": return "Project using the mesh's local X/Z position. Moves with the object; use UV Transform to adjust scale.";
+                case "core.worldUV": return "Project using world X/Z position. Objects move through the pattern; use UV Transform to adjust scale.";
                 case "core.value": return "An adjustable number. Use it to control strength, time, or blending.";
                 case "core.time": return "Time in seconds, with speed and offset controls. Use it to animate effects.";
                 case "core.uvTransform": return "Scale and shift texture coordinates to control tiling and placement.";
@@ -91,6 +104,10 @@ namespace NXSG.Core
         {
             switch (operation)
             {
+                case "core.polarUV": return "polar radial circle rings angle radius texture coordinates";
+                case "core.uvRotate": return "rotation spin pivot texture coordinates";
+                case "core.objectUV": return "local object space planar projection mapping xz";
+                case "core.worldUV": return "world space planar projection mapping xz";
                 case "core.value": return "constant scalar"; case "core.time": return "clock animation";
                 case "core.uvTransform": return "scale offset tiling"; case "core.uvScroll": return "pan animate";
                 case "core.noise": return "procedural random"; case "core.add": return "plus sum";
@@ -108,6 +125,8 @@ namespace NXSG.Core
             if (node == null || port == null) return null;
             switch (node.Operation)
             {
+                case "core.polarUV": case "core.objectUV": case "core.worldUV": return port == "uv" ? "vector2" : null;
+                case "core.uvRotate": return port == "uv" ? "vector2" : (port == "angle" ? "float" : null);
                 case "core.value": case "core.time": return port == "value" ? "float" : null;
                 case "core.uvTransform": case "core.uvScroll": return port == "uv" ? "vector2" : (port == "time" ? "float" : null);
                 case "core.noise": return port == "uv" ? "vector2" : (port == "time" ? "float" : (port == "value" ? "float" : (port == "color" ? "color" : null)));
@@ -130,6 +149,8 @@ namespace NXSG.Core
             var node = new GraphNode { Id = Guid.NewGuid().ToString("N"), Operation = operation };
             switch (operation)
             {
+                case "core.polarUV": node.Properties["center"] = Vector(.5, .5); node.Properties["radialScale"] = 1.0; node.Properties["angleScale"] = 1.0; break;
+                case "core.uvRotate": node.Properties["center"] = Vector(.5, .5); node.Properties["angle"] = 0.0; break;
                 case "core.value": node.Properties["value"] = 0.0; break;
                 case "core.time": node.Properties["speed"] = 1.0; node.Properties["offset"] = 0.0; break;
                 case "core.uvTransform": node.Properties["tiling"] = Vector(1, 1); node.Properties["offset"] = Vector(0, 0); break;

@@ -99,6 +99,10 @@ namespace NXSG.Backend
         private const string TimeOperation = "core.time";
         private const string UvTransformOperation = "core.uvTransform";
         private const string UvScrollOperation = "core.uvScroll";
+        private const string UvRotateOperation = "core.uvRotate";
+        private const string PolarUvOperation = "core.polarUV";
+        private const string ObjectUvOperation = "core.objectUV";
+        private const string WorldUvOperation = "core.worldUV";
         private const string NoiseOperation = "core.noise";
         private const string AddOperation = "core.add";
         private const string MixOperation = "core.mix";
@@ -226,7 +230,8 @@ namespace NXSG.Backend
             builder.Line("{");
             builder.Indent++;
             builder.Line("Tags { \"RenderType\" = \"Opaque\" \"Queue\" = \"Geometry\"" + (fallback == null ? "" : " \"VRCFallback\" = \"" + fallback + "\"") + " }");
-            EmitForwardPass(builder, texture != null, texture == null ? "input.uv" : texture.UvExpression, tint, emission, threshold, softness, shadowStrength, properties, toon.Id, sourceMap);
+            var requiresLocalPosition = reachable.Any(id => nodes[id].Operation == ObjectUvOperation);
+            EmitForwardPass(builder, texture != null, texture == null ? "input.uv" : texture.UvExpression, requiresLocalPosition, tint, emission, threshold, softness, shadowStrength, properties, toon.Id, sourceMap);
             if (options.IncludeShadowCaster)
             {
                 EmitShadowPass(builder, toon.Id, sourceMap);
@@ -440,7 +445,8 @@ namespace NXSG.Backend
                     operation != ParameterOperation && operation != ValueOperation && operation != TimeOperation &&
                     operation != UvTransformOperation && operation != UvScrollOperation && operation != NoiseOperation &&
                     operation != AddOperation && operation != MixOperation && operation != EmissionOperation &&
-                    operation != OneMinusOperation && operation != ClampOperation)
+                    operation != OneMinusOperation && operation != ClampOperation && operation != UvRotateOperation &&
+                    operation != PolarUvOperation && operation != ObjectUvOperation && operation != WorldUvOperation)
                 {
                     AddError(diagnostics, "backend.operation.unsupported", "nodes[" + SafeDiagnosticId(id) + "].operation", "The reachable operation is not supported by the first backend.");
                 }
@@ -826,6 +832,7 @@ namespace NXSG.Backend
             ShaderBuilder builder,
             bool hasTexture,
             string textureUv,
+            bool requiresLocalPosition,
             ColorInfo tint,
             ColorInfo emission,
             ScalarInfo threshold,
@@ -874,10 +881,10 @@ namespace NXSG.Backend
                     : "fixed4 " + property.Name + ";");
             }
             builder.Line("struct appdata { float4 vertex : POSITION; float3 normal : NORMAL; float2 uv : TEXCOORD0; UNITY_VERTEX_INPUT_INSTANCE_ID };");
-            builder.Line("struct v2f { float4 pos : SV_POSITION; float2 uv : TEXCOORD0; half3 normalWS : TEXCOORD1; float3 positionWS : TEXCOORD2; SHADOW_COORDS(3) UNITY_VERTEX_OUTPUT_STEREO };");
+            builder.Line("struct v2f { float4 pos : SV_POSITION; float2 uv : TEXCOORD0; half3 normalWS : TEXCOORD1; float3 positionWS : TEXCOORD2;" + (requiresLocalPosition ? " float3 localPosition : TEXCOORD3;" : "") + " SHADOW_COORDS(" + (requiresLocalPosition ? "4" : "3") + ") UNITY_VERTEX_OUTPUT_STEREO };");
             var start = builder.LineNumber + 1;
             builder.Line("#line 1 \"nxsg://node/texture\"");
-            builder.Line("v2f vert(appdata v) { v2f output; UNITY_SETUP_INSTANCE_ID(v); UNITY_INITIALIZE_OUTPUT(v2f, output); UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(output); float4 positionWS = mul(unity_ObjectToWorld, v.vertex); output.pos = UnityWorldToClipPos(positionWS.xyz); output.positionWS = positionWS.xyz; output.normalWS = UnityObjectToWorldNormal(v.normal); output.uv = v.uv; TRANSFER_SHADOW(output); return output; }");
+            builder.Line("v2f vert(appdata v) { v2f output; UNITY_SETUP_INSTANCE_ID(v); UNITY_INITIALIZE_OUTPUT(v2f, output); UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(output); float4 positionWS = mul(unity_ObjectToWorld, v.vertex); output.pos = UnityWorldToClipPos(positionWS.xyz); output.positionWS = positionWS.xyz; output.normalWS = UnityObjectToWorldNormal(v.normal); output.uv = v.uv;" + (requiresLocalPosition ? " output.localPosition = v.vertex.xyz;" : "") + " TRANSFER_SHADOW(output); return output; }");
             var end = builder.LineNumber;
             sourceMap.Add(new SourceMapEntry { NodeId = toonNodeId, PortId = "vertex", StartLine = start, EndLine = end });
             start = builder.LineNumber + 1;
@@ -889,6 +896,10 @@ namespace NXSG.Backend
                 builder.Line("float NXSG_ValueNoise(float2 p) { float2 cell=floor(p); float2 f=frac(p); f=f*f*(3-2*f); return lerp(lerp(NXSG_NoiseHash(cell),NXSG_NoiseHash(cell+float2(1,0)),f.x),lerp(NXSG_NoiseHash(cell+float2(0,1)),NXSG_NoiseHash(cell+float2(1,1)),f.x),f.y); }");
                 builder.Line("fixed4 NXSG_NoiseColor(float value) { return fixed4(value,value,value,1); }");
             }
+            if (RequiresCoordinateHelper(textureUv, tint, emission, "NXSG_UvRotate"))
+                builder.Line("float2 NXSG_UvRotate(float2 source, float2 center, float angleDegrees) { float radians = angleDegrees * 0.017453292519943295; float s = sin(radians); float c = cos(radians); float2 delta = source - center; return center + float2(c * delta.x - s * delta.y, s * delta.x + c * delta.y); }");
+            if (RequiresCoordinateHelper(textureUv, tint, emission, "NXSG_PolarUv"))
+                builder.Line("float2 NXSG_PolarUv(float2 source, float2 center, float radialScale, float angleScale) { float2 delta = source - center; float angle = dot(delta, delta) > 1e-12 ? atan2(delta.y, delta.x) : 0.0; return float2(length(delta) * 2.0 * radialScale, (angle / 6.283185307179586 + 0.5) * angleScale); }");
             builder.Line("fixed4 frag(v2f input) : SV_Target { UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input); half3 normalWS = normalize(input.normalWS); half3 lightDirection = normalize(UnityWorldSpaceLightDir(input.positionWS)); half ndotl = saturate(dot(normalWS, lightDirection)); half softness = max(" + HlslValue(softness) + ", 0.001h); half toonBand = smoothstep(" + HlslValue(threshold) + " - softness, " + HlslValue(threshold) + " + softness, ndotl); half shadow = SHADOW_ATTENUATION(input); shadow = lerp(1.0h, shadow, saturate(" + HlslValue(shadowStrength) + ")); half3 ambient = ShadeSH9(half4(normalWS, 1.0h)); half3 direct = _LightColor0.rgb * lerp(0.35h, 1.0h, toonBand) * shadow; fixed4 textureColor = " + colorExpression + "; return fixed4(textureColor.rgb * (ambient + direct) + (" + HlslValue(emission) + ").rgb, 1.0h); }");
             end = builder.LineNumber;
             sourceMap.Add(new SourceMapEntry { NodeId = toonNodeId, PortId = "surface", StartLine = start, EndLine = end });
@@ -934,7 +945,8 @@ namespace NXSG.Backend
 
         private static bool IsUvOperation(string operation)
         {
-            return operation == UvOperation || operation == UvTransformOperation || operation == UvScrollOperation;
+            return operation == UvOperation || operation == UvTransformOperation || operation == UvScrollOperation ||
+                operation == UvRotateOperation || operation == PolarUvOperation || operation == ObjectUvOperation || operation == WorldUvOperation;
         }
 
         private static string ResolveUv(GraphNode node, Dictionary<string, GraphNode> nodes, Dictionary<string, GraphConnection> incoming,
@@ -959,6 +971,21 @@ namespace NXSG.Backend
                 result = "(" + source + " * " + Vector2Literal(node, "tiling", 1f, 1f) + " + " + Vector2Literal(node, "offset", 0f, 0f) + ")";
             else if (node.Operation == UvScrollOperation)
                 result = "(" + source + " + (" + ScalarInput(node, "time", "_Time.y", nodes, incoming, parameters, visiting, diagnostics) + ") * " + Vector2Literal(node, "speed", .1f, 0f) + ")";
+            else if (node.Operation == UvRotateOperation)
+            {
+                var center = Vector2Literal(node, "center", .5f, .5f);
+                var angle = ScalarInput(node, "angle", FloatLiteral(PropertyFloat(node, "angle", 0f)), nodes, incoming, parameters, visiting, diagnostics);
+                result = "NXSG_UvRotate((" + source + ")," + center + ",(" + angle + "))";
+            }
+            else if (node.Operation == PolarUvOperation)
+            {
+                var center = Vector2Literal(node, "center", .5f, .5f);
+                result = "NXSG_PolarUv((" + source + ")," + center + "," + FloatLiteral(PropertyFloat(node, "radialScale", 1f)) + "," + FloatLiteral(PropertyFloat(node, "angleScale", 1f)) + ")";
+            }
+            else if (node.Operation == ObjectUvOperation)
+                result = "input.localPosition.xz";
+            else if (node.Operation == WorldUvOperation)
+                result = "input.positionWS.xz";
             visiting.Remove(node.Id);
             return result;
         }
@@ -1008,6 +1035,12 @@ namespace NXSG.Backend
 
         private static string FloatLiteral(float value) { return value.ToString("R", CultureInfo.InvariantCulture); }
         private static bool RequiresNoise(ColorInfo a, ColorInfo b) { return a != null && (a.ShaderExpression.Contains("NXSG_ValueNoise") || b.ShaderExpression.Contains("NXSG_ValueNoise")); }
+        private static bool RequiresCoordinateHelper(string textureUv, ColorInfo a, ColorInfo b, string helper)
+        {
+            return (textureUv != null && textureUv.Contains(helper)) ||
+                (a != null && a.ShaderExpression != null && a.ShaderExpression.Contains(helper)) ||
+                (b != null && b.ShaderExpression != null && b.ShaderExpression.Contains(helper));
+        }
 
         private static LiteralValue? TryResolveLiteral(
             GraphNode node,
