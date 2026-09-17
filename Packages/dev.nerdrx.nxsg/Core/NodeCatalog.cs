@@ -55,12 +55,36 @@ namespace NXSG.Core
                 case "core.value": return "Value"; case "core.time": return "Time";
                 case "core.uvTransform": return "UV Transform"; case "core.uvScroll": return "UV Scroll";
                 case "core.noise": return "Noise"; case "core.add": return "Add"; case "core.mix": return "Mix";
-                case "core.emission": return "Emission"; case "core.oneMinus": return "One Minus";
+                case "core.emission": return "Emission"; case "core.oneMinus": return "Invert";
                 case "core.clamp": return "Clamp"; case "core.constant": return "Color";
                 case "core.parameter": return "Parameter"; case "core.uv0": return "UV Coordinates";
                 case "core.texture2D": return "Texture"; case "core.multiply": return "Multiply";
                 case "core.toonSurface": return "Toon Surface"; case "core.output": return "Output";
                 default: return operation;
+            }
+        }
+        public static string Description(string operation)
+        {
+            switch (operation)
+            {
+                case "core.value": return "An adjustable number. Use it to control strength, time, or blending.";
+                case "core.time": return "Time in seconds, with speed and offset controls. Use it to animate effects.";
+                case "core.uvTransform": return "Scale and shift texture coordinates to control tiling and placement.";
+                case "core.uvScroll": return "Move texture coordinates over time, like flowing water or scrolling stripes.";
+                case "core.noise": return "Create a smooth random grayscale pattern that can move over time.";
+                case "core.add": return "Add two colors together to brighten or combine them.";
+                case "core.mix": return "Blend two colors: factor 0 gives A, 1 gives B, and 0.5 mixes them equally.";
+                case "core.emission": return "Add color that stays bright without lighting. Connect it to Toon Surface's emission input.";
+                case "core.oneMinus": return "Invert colors or masks (1 minus input): black becomes white, and white becomes black.";
+                case "core.clamp": return "Keep each color channel between 0 and 1. Values outside that range are clipped.";
+                case "core.constant": return "Choose a solid color to use on its own or combine with other nodes.";
+                case "core.parameter": return "Read a declared property that can control your material.";
+                case "core.uv0": return "The mesh's first texture coordinates: where each part of an image lands on the mesh.";
+                case "core.texture2D": return "Read an image using texture coordinates and output its color.";
+                case "core.multiply": return "Multiply two colors to tint or darken them. White keeps the other color unchanged.";
+                case "core.toonSurface": return "Give your base color cartoon-style lighting, with an optional emission input.";
+                case "core.output": return "The final surface of your shader. Connect a Toon Surface here.";
+                default: return string.Empty;
             }
         }
         public static string Aliases(string operation)
@@ -71,7 +95,7 @@ namespace NXSG.Core
                 case "core.uvTransform": return "scale offset tiling"; case "core.uvScroll": return "pan animate";
                 case "core.noise": return "procedural random"; case "core.add": return "plus sum";
                 case "core.mix": return "lerp blend"; case "core.emission": return "glow";
-                case "core.oneMinus": return "invert"; case "core.clamp": return "saturate";
+                case "core.oneMinus": return "invert one minus"; case "core.clamp": return "saturate";
                 case "core.constant": return "rgb rgba colour";
                 case "core.multiply": return "tint darken blend";
                 case "core.toonSurface": return "anime cel cartoon shading";

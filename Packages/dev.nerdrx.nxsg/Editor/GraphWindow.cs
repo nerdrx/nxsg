@@ -499,7 +499,7 @@ namespace NXSG.Editor
                     if ((Title(operation) + " " + operation + " " + Aliases(operation)).IndexOf(query ?? "", StringComparison.OrdinalIgnoreCase) >= 0)
                     {
                         var op = operation;
-                        choices.Add(new Button(() => AddNode(op)) { text = "+ " + Title(op) });
+                        choices.Add(new Button(() => AddNode(op)) { text = "+ " + Title(op), tooltip = NodeCatalog.Description(op) });
                     }
             };
             search.RegisterValueChangedCallback(evt => filter(evt.newValue)); filter("");
@@ -665,7 +665,7 @@ namespace NXSG.Editor
                         var node = CreateNode(op, graphPosition - (output ? Vector2.zero : new Vector2(175, 0)));
                         if (output) AddConnection(endpoint, endpointPort, node.Id, compatiblePort);
                         else AddConnection(node.Id, compatiblePort, endpoint, endpointPort);
-                    })) { text = Title(op) + " · " + port });
+                    })) { text = Title(op) + " · " + port, tooltip = NodeCatalog.Description(op) });
                     count++;
                 }
             }

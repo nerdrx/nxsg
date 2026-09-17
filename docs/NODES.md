@@ -14,7 +14,7 @@ The canvas now offers 16 nodes. Socket color indicates data type: yellow color, 
 | Add | colors A/B → color | Missing inputs are black |
 | Mix | colors A/B, scalar factor → color | Missing A is black, B is white, factor is 0.5; factor clamps to 0–1 |
 | Emission | color, scalar strength → color | White and strength 1 by default; connect to Toon Surface's emission socket |
-| One Minus | color → color | Inverts components; missing input is black |
+| Invert | color → color | Inverts components; missing input is black |
 | Clamp | color → color | Clamps components to 0–1; missing input is black |
 
 The original UV Coordinates, Texture, Color, Multiply, Toon Surface, and Output remain available. Multiply uses white for missing inputs. Connected factor/strength sockets override their inspector defaults.
