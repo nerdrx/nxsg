@@ -1,6 +1,6 @@
 # Built-in node pack
 
-The canvas now offers 20 nodes. Socket color indicates data type: yellow color, gray scalar, blue UV coordinates, green surface. Drag from either end; compatible-node menus and clipboard operations use the same core catalog.
+The canvas now offers 24 nodes. Socket color indicates data type: yellow color, gray scalar, blue UV coordinates, green surface. Drag from either end; compatible-node menus and clipboard operations use the same core catalog.
 
 ## New nodes
 
@@ -16,6 +16,10 @@ The canvas now offers 20 nodes. Socket color indicates data type: yellow color, 
 | UV Scroll | UV, scalar time → UV | Speed (0.1,0); unconnected time uses shader time |
 | Noise | UV, scalar time → grayscale color and scalar value | Scale 5, speed 1; unconnected UV/time use UV0/shader time |
 | Add | colors A/B → color | Missing inputs are black |
+| Subtract | colors A/B → color | A minus B; missing inputs are black |
+| Divide | colors A/B → color | A divided by B; missing inputs are white. Denominator magnitude is at least 0.00001; zero uses positive sign. |
+| Minimum | colors A/B → color | Lower value of each channel; missing inputs are black |
+| Maximum | colors A/B → color | Higher value of each channel; missing inputs are black |
 | Mix | colors A/B, scalar factor → color | Missing A is black, B is white, factor is 0.5; a 0–1 slider with numeric entry controls factor, and connected values clamp to 0–1 |
 | Emission | color, scalar strength → color | White and strength 1 by default; connect to Toon Surface's emission socket |
 | Invert | color → color | Inverts components; missing input is black |
@@ -32,7 +36,7 @@ The original UV Coordinates, Texture, Color, Multiply, Toon Surface, and Output 
 - One **reachable** texture node per compiled graph. It can feed math, Mix, or emission. Extra disconnected texture nodes are ignored; multiple connected textures produce an explicit diagnostic.
 - Noise is smooth 2D value noise with a moving sampling position, not true evolving/4D noise.
 - Emission adds unlit color. Bloom halos depend on the world's post-processing.
-- Build updates the material; editing the graph does not yet rebuild it automatically. Shader Time animates the built shader when the rendering environment advances shader time.
+- Live preview updates unsaved edits in a temporary material after a short pause; it pauses when the window is unfocused. Build updates the saved material. Shader Time animates the built shader when the rendering environment advances shader time.
 - PC Built-In backend only; VRChat client, headset, and mobile acceptance remain separate checks.
 
 Try **Assets/NXSGExamples/Polar Palette.nxsg** in the development project for rotating radial noise. The distributable copy is in `Samples~/Polar Palette.nxsg`.
@@ -48,4 +52,8 @@ Polar UVs have an angular seam and a singular center; texture filtering can reve
 
 ## Switch math operations
 
-Click a math node's title (marked ▾) to switch between **Add, Multiply, and Mix**, or between **Invert and Clamp**. Drag the same header to move it. Keyboard users can focus the header and press Enter or Space. Node identity, position, compatible wires, and settings are retained. Inputs absent from the new operation are disconnected; the status message reports this, and Undo restores the operation and wires together. Switching back retains the previous Mix factor value, but does not automatically reconnect a removed factor wire.
+Click a math node's title (marked ▾) to switch between **Add, Subtract, Multiply, Divide, Minimum, Maximum, and Mix**, or between **Invert and Clamp**. Drag the same header to move it. Keyboard users can focus the header and press Enter or Space. Node identity, position, compatible wires, and settings are retained. Inputs absent from the new operation are disconnected; the status message reports this, and Undo restores the operation and wires together. Switching back retains the previous Mix factor value, but does not automatically reconnect a removed factor wire.
+
+## Live material preview
+
+The toolbar's **Live preview** switch controls a temporary material preview at the top of the sidebar. Changes settle for 0.45 seconds before compiling; moving nodes alone does not recompile. A failed graph keeps the last successful preview and shows a diagnostic. Preview shaders/materials exist only in memory and are disposed when replaced or the window closes. Opening from a material uses its property values without changing it. **Build for VRChat** remains the explicit action that saves the graph and updates generated assets. This is a material preview, not a preview on every node or an automatic scene-material update.

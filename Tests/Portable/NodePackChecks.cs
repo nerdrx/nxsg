@@ -68,6 +68,43 @@ public static class NodePackChecks
         CheckUvContracts(assert);
         CheckUvChains(assert);
         CheckUvDceAndClipboard(assert);
+        CheckColorMath(assert);
+    }
+
+    static void CheckColorMath(Action<bool, string> assert)
+    {
+        foreach (var operation in new[] { "core.subtract", "core.divide", "core.minimum", "core.maximum" })
+        {
+            var node = NodeCatalog.Create(operation);
+            assert(NodeCatalog.IsKnown(operation) && NodeCatalog.Ports(operation, false).SequenceEqual(new[] { "a", "b" }) &&
+                NodeCatalog.Ports(operation, true).SequenceEqual(new[] { "value" }) &&
+                NodeCatalog.PortType(node, "a") == "color" && NodeCatalog.PortType(node, "b") == "color" &&
+                NodeCatalog.PortType(node, "value") == "color", operation + " has typed color ports");
+            assert(!string.IsNullOrEmpty(NodeCatalog.Title(operation)) && !string.IsNullOrEmpty(NodeCatalog.Description(operation)) &&
+                !string.IsNullOrEmpty(NodeCatalog.Aliases(operation)), operation + " has catalog metadata");
+            var graph = new ShaderGraph { GraphId = operation };
+            node.Id = "math"; graph.Nodes.Add(node);
+            graph.Nodes.Add(new GraphNode { Id = "toon", Operation = "core.toonSurface" });
+            graph.Nodes.Add(new GraphNode { Id = "out", Operation = "core.output" });
+            Connect(graph, "math", "value", "toon", "albedo", operation + "-toon");
+            Connect(graph, "toon", "surface", "out", "surface", operation + "-out");
+            var result = ShaderEmitter.Emit(graph);
+            assert(GraphValidator.Validate(graph).IsValid && result.Succeeded, operation + " defaults validate and emit");
+            if (operation == "core.divide") assert(result.ShaderSource.Contains("NXSG_SafeDivide") && result.ShaderSource.Contains("1e-5"), "divide emits signed safe denominator helper");
+        }
+
+        var typed = new ShaderGraph { GraphId = "color-math-typed" };
+        typed.Nodes.Add(new GraphNode { Id = "a", Operation = "core.constant", Properties = new JObject { ["valueType"] = "color", ["value"] = new JArray(0.8, 0.4, 0.2, 1) } });
+        typed.Nodes.Add(new GraphNode { Id = "b", Operation = "core.constant", Properties = new JObject { ["valueType"] = "color", ["value"] = new JArray(0.2, 0.1, 0.1, 1) } });
+        typed.Nodes.Add(new GraphNode { Id = "subtract", Operation = "core.subtract" });
+        typed.Nodes.Add(new GraphNode { Id = "toon", Operation = "core.toonSurface" });
+        typed.Nodes.Add(new GraphNode { Id = "out", Operation = "core.output" });
+        Connect(typed, "a", "value", "subtract", "a", "a-subtract"); Connect(typed, "b", "value", "subtract", "b", "b-subtract");
+        Connect(typed, "subtract", "value", "toon", "albedo", "subtract-toon"); Connect(typed, "toon", "surface", "out", "surface", "toon-out");
+        assert(GraphValidator.Validate(typed).IsValid && ShaderEmitter.Emit(typed).Succeeded, "typed color math graph validates and emits");
+        var copied = GraphClipboard.Copy(typed, new[] { "a", "b", "subtract" });
+        var pasted = GraphClipboard.Paste(new ShaderGraph { GraphId = "math-paste" }, copied, 0, 0).Graph;
+        assert(pasted.Nodes.Any(n => n.Operation == "core.subtract") && pasted.Connections.Count == 2, "color math clipboard preserves typed edges");
     }
 
     static void CheckUvContracts(Action<bool, string> assert)

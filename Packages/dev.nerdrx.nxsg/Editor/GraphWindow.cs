@@ -45,6 +45,12 @@ namespace NXSG.Editor
             public bool output;
             public VisualElement hit, dot;
         }
+        [SerializeField] bool livePreview = true;
+        GraphPreview livePreviewResources;
+        VisualElement previewHost;
+        bool previewPending;
+        double previewDue, lastPreviewRepaint;
+        string previewHash, previewMessage;
         Material preview;
         UnityEditor.Editor previewEditor;
         bool dragging, panning;
@@ -70,6 +76,7 @@ namespace NXSG.Editor
                 session.hideFlags = HideFlags.HideAndDontSave;
             }
             Undo.undoRedoPerformed += Restore;
+            EditorApplication.update += UpdateLivePreview;
             Restore();
         }
 
@@ -77,10 +84,11 @@ namespace NXSG.Editor
         {
             CancelWire();
             Undo.undoRedoPerformed -= Restore;
+            EditorApplication.update -= UpdateLivePreview;
             ClearPreview();
         }
 
-        void OnFocus() { canvas?.Focus(); }
+        void OnFocus() { canvas?.Focus(); previewHash = null; QueueLivePreview(); }
 
         public void CreateGUI()
         {
@@ -102,6 +110,15 @@ namespace NXSG.Editor
             toolbar.Add(new ToolbarButton(PasteSelection) { text = "Paste", tooltip = "Paste nodes (Ctrl+V)" });
             toolbar.Add(new ToolbarButton(DuplicateSelection) { text = "Duplicate", tooltip = "Duplicate selected nodes (Ctrl+D)" });
             toolbar.Add(new ToolbarButton(Build) { text = "Build for VRChat" });
+            var liveToggle = new ToolbarToggle { text = "Live preview", value = livePreview,
+                tooltip = "Preview unsaved edits without changing your material. Pauses while this window is unfocused." };
+            liveToggle.RegisterValueChangedCallback(evt =>
+            {
+                livePreview = evt.newValue;
+                if (livePreview) { previewHash = null; QueueLivePreview(); }
+                else { previewPending = false; previewMessage = "Preview paused"; RefreshPreviewPanel(); }
+            });
+            toolbar.Add(liveToggle);
             toolbar.Add(new ToolbarButton(() => { pan = new Vector2(30, 70); zoom = 1; TransformCanvas(); }) { text = "Reset view" });
             rootVisualElement.Add(toolbar);
             identity = new Label { style = { whiteSpace = WhiteSpace.Normal, paddingLeft = 10, paddingTop = 5, paddingBottom = 5 } };
@@ -163,7 +180,7 @@ namespace NXSG.Editor
         void OnSelectionChange()
         {
             var material = Selection.activeObject as Material;
-            if (MatchesSource(material)) { contextMaterial = material; ClearPreview(); RebuildInspector(); }
+            if (MatchesSource(material)) { contextMaterial = material; ClearPreview(); QueueLivePreview(); RebuildInspector(); }
             UpdateIdentity();
         }
 
@@ -207,6 +224,7 @@ namespace NXSG.Editor
         void NewGraph()
         {
             if (!CanDiscard()) return;
+            ClearPreview();
             graph = GraphSamples.CreateDefault();
             graph.GraphId = Guid.NewGuid().ToString("N");
             sourcePath = null; diskSource = null; contextMaterial = null; selected = null; selection.Clear();
@@ -266,7 +284,7 @@ namespace NXSG.Editor
             EditorUtility.SetDirty(session);
             Rebuild();
             canvas?.Focus();
-            SetStatus("Unsaved edits · preview shows the last successful build.");
+            SetStatus(livePreview ? "Unsaved edits · live preview updates after a short pause." : "Unsaved edits · preview shows the last successful build.");
         }
 
         public bool SaveGraph()
@@ -331,8 +349,71 @@ namespace NXSG.Editor
         void ClearPreview()
         {
             if (previewEditor != null) DestroyImmediate(previewEditor);
-            if (preview != null) DestroyImmediate(preview);
-            previewEditor = null; preview = null;
+            if (livePreviewResources != null) livePreviewResources.Dispose();
+            else if (preview != null) DestroyImmediate(preview);
+            livePreviewResources = null;
+            previewEditor = null; preview = null; previewHash = null; previewMessage = null;
+        }
+
+        void QueueLivePreview()
+        {
+            if (!livePreview || graph == null) return;
+            previewPending = true;
+            previewDue = EditorApplication.timeSinceStartup + .45;
+        }
+
+        void UpdateLivePreview()
+        {
+            if (!livePreview || graph == null || focusedWindow != this || EditorApplication.isCompiling || EditorApplication.isUpdating) return;
+            var now = EditorApplication.timeSinceStartup;
+            if (previewPending && now >= previewDue)
+            {
+                previewPending = false;
+                GraphPreview candidate = null;
+                UnityEditor.Editor candidateEditor = null;
+                try
+                {
+                    var hash = GraphJson.ComputeSemanticHash(graph);
+                    if (hash != previewHash)
+                    {
+                        previewHash = hash;
+                        candidate = GraphPreview.Create(graph, contextMaterial);
+                        candidateEditor = UnityEditor.Editor.CreateEditor(candidate.Material);
+                        ClearPreview();
+                        livePreviewResources = candidate; preview = candidate.Material; previewEditor = candidateEditor;
+                        candidate = null; candidateEditor = null; previewHash = hash;
+                        previewMessage = "Live preview · " + (contextMaterial != null ? contextMaterial.name : "neutral material tint");
+                        RefreshPreviewPanel();
+                    }
+                }
+                catch (Exception exception)
+                {
+                    if (candidateEditor != null) DestroyImmediate(candidateEditor);
+                    candidate?.Dispose();
+                    previewMessage = "Preview needs attention: " + exception.Message + (preview != null ? "\nShowing the last successful preview." : "");
+                    RefreshPreviewPanel();
+                }
+            }
+            if (previewEditor != null && now - lastPreviewRepaint > .05)
+            {
+                lastPreviewRepaint = now;
+                previewHost?.MarkDirtyRepaint(); Repaint();
+            }
+        }
+
+        void RefreshPreviewPanel()
+        {
+            if (previewHost == null) return;
+            previewHost.Clear();
+            previewHost.Add(new Label(previewMessage ?? (previewEditor != null
+                ? (contextMaterial != null ? "Last build · " + contextMaterial.name : "Last build · neutral material tint")
+                : livePreview ? "Live preview waiting for a complete graph…" : "Enable Live preview to see unsaved edits."))
+                { style = { whiteSpace = WhiteSpace.Normal, marginBottom = 4 } });
+            if (previewEditor != null)
+                previewHost.Add(new IMGUIContainer(() =>
+                {
+                    if (previewEditor != null) previewEditor.OnPreviewGUI(GUILayoutUtility.GetRect(240, 220), EditorStyles.helpBox);
+                }) { style = { height = 220 } });
         }
 
         void Rebuild()
@@ -407,15 +488,15 @@ namespace NXSG.Editor
                 }
             selection.RemoveAll(id => !nodes.ContainsKey(id));
             UpdateSelectionOutline();
-            TransformCanvas(); RebuildInspector(); UpdateIdentity();
+            TransformCanvas(); RebuildInspector(); UpdateIdentity(); QueueLivePreview();
         }
 
         static string[] OperationAlternatives(string operation)
         {
             switch (operation)
             {
-                case "core.add": case "core.multiply": case "core.mix":
-                    return new[] { "core.add", "core.multiply", "core.mix" };
+                case "core.add": case "core.multiply": case "core.mix": case "core.subtract": case "core.divide": case "core.minimum": case "core.maximum":
+                    return new[] { "core.add", "core.subtract", "core.multiply", "core.divide", "core.minimum", "core.maximum", "core.mix" };
                 case "core.oneMinus": case "core.clamp":
                     return new[] { "core.oneMinus", "core.clamp" };
                 default: return Array.Empty<string>();
@@ -545,6 +626,7 @@ namespace NXSG.Editor
                 case "core.uvTransform": case "core.uvScroll": case "core.uv0": return new Color(.16f, .32f, .52f);
                 case "core.noise": case "core.texture2D": return new Color(.46f, .25f, .10f);
                 case "core.constant": return new Color(.40f, .34f, .10f);
+                case "core.subtract": case "core.divide": case "core.minimum": case "core.maximum":
                 case "core.value": case "core.time": case "core.add": case "core.mix": case "core.oneMinus": case "core.clamp": case "core.multiply": return new Color(.28f, .33f, .38f);
                 case "core.emission": case "core.toonSurface": return new Color(.13f, .37f, .24f);
                 case "core.output": return new Color(.39f, .19f, .20f);
@@ -563,6 +645,8 @@ namespace NXSG.Editor
         {
             if (inspector == null) return;
             inspector.Clear();
+            previewHost = new VisualElement { style = { marginBottom = 10 } };
+            inspector.Add(previewHost); RefreshPreviewPanel();
             inspector.Add(new Label("NX SHADER GRAPH") { style = { unityFontStyleAndWeight = FontStyle.Bold, fontSize = 16, marginBottom = 12 } });
             var search = new ToolbarSearchField(); inspector.Add(search);
             var choices = new VisualElement(); inspector.Add(choices);
@@ -586,6 +670,7 @@ namespace NXSG.Editor
             if (node != null)
             {
                 inspector.Add(new Label(Title(node.Operation)) { style = { marginTop = 15, unityFontStyleAndWeight = FontStyle.Bold } });
+                inspector.Add(new Label(NodeCatalog.Description(node.Operation)) { style = { whiteSpace = WhiteSpace.Normal, marginBottom = 6 } });
                 if (node.Operation == "core.constant")
                 {
                     var values = node.Properties["value"] as JArray;
@@ -624,14 +709,6 @@ namespace NXSG.Editor
                 inspector.Add(new Button(() => Edit("Disconnect node", () => graph.Connections.RemoveAll(e => e.From.NodeId == selected || e.To.NodeId == selected))) { text = "Disconnect node" });
                 inspector.Add(new Button(DeleteSelection) { text = "Delete node" });
             }
-            if (previewEditor != null)
-            {
-                inspector.Add(new Label(contextMaterial != null ? "Last build · " + contextMaterial.name : "Last build · neutral material tint"));
-                inspector.Add(new IMGUIContainer(() =>
-                {
-                    if (previewEditor != null) previewEditor.OnPreviewGUI(GUILayoutUtility.GetRect(240, 220), EditorStyles.helpBox);
-                }) { style = { height = 220 } });
-            }
         }
 
         void AddFactor(GraphNode node)
@@ -652,7 +729,8 @@ namespace NXSG.Editor
                 session.json = GraphJson.Serialize(graph, true);
                 hasUnsavedChanges = true; EditorUtility.SetDirty(session);
                 // Keep the active slider alive while dragging; no graph structure changed.
-                SetStatus("Unsaved edits · preview shows the last successful build.");
+                QueueLivePreview();
+                SetStatus(livePreview ? "Unsaved edits · live preview updates after a short pause." : "Unsaved edits · preview shows the last successful build.");
             });
             inspector.Add(field);
         }

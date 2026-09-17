@@ -27,7 +27,7 @@
 4. Save the graph inside `Assets`, then choose **Build for VRChat**.
 5. Find its material under `Assets/NXSGGenerated` and assign it to a mesh.
 
-The custom canvas has search/add, click-to-connect ports, drag, pan/zoom, undo/redo and save. A successful build updates the material preview; it does not upload an avatar. [Linux setup and checks](docs/DEVELOPMENT.md)
+The custom canvas has search/add, click-to-connect ports, drag, pan/zoom, undo/redo and save. Live preview shows unsaved edits in a temporary material; Build updates saved assets without uploading an avatar. [Linux setup and checks](docs/DEVELOPMENT.md)
 
 ![NXSG running in Unity on Linux](docs/assets/editor-preview.png)
 
@@ -80,7 +80,7 @@ Three Luna researchers worked in parallel, followed by a consistency review and 
 
 ## Path to a first release
 
-Live/intermediate previews, animation, fur and Patterns below are planned capabilities.
+Live material preview and basic animation nodes are available. Intermediate-node previews, AudioLink, fur and Patterns remain planned.
 
 | Stage | Deliverable | Status |
 | :--- | :--- | :--- |
@@ -110,4 +110,4 @@ Linux is our primary authoring and validation environment. Record the Linux Edit
 
 ### More nodes
 
-Value, Time, UV Transform, UV Scroll, Noise, Add, Mix, Emission, One Minus, and Clamp join the original six. See the [node guide](docs/NODES.md) and [Animated Palette example](Packages/dev.nerdrx.nxsg/Samples~/Animated%20Palette.nxsg).
+There are now **24 nodes**, including Polar UVs, object/world planar mapping, animated UV rotation, Noise, Emission, and color math. Math-node headers let you switch operations while retaining compatible wires. Mix has a bounded 0–1 Factor slider. See the [node guide](docs/NODES.md) and [Animated Palette example](Packages/dev.nerdrx.nxsg/Samples~/Animated%20Palette.nxsg).

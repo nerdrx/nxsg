@@ -105,6 +105,10 @@ namespace NXSG.Backend
         private const string WorldUvOperation = "core.worldUV";
         private const string NoiseOperation = "core.noise";
         private const string AddOperation = "core.add";
+        private const string SubtractOperation = "core.subtract";
+        private const string DivideOperation = "core.divide";
+        private const string MinimumOperation = "core.minimum";
+        private const string MaximumOperation = "core.maximum";
         private const string MixOperation = "core.mix";
         private const string EmissionOperation = "core.emission";
         private const string OneMinusOperation = "core.oneMinus";
@@ -444,7 +448,8 @@ namespace NXSG.Backend
                     operation != OutputOperation && operation != ConstantOperation && operation != MultiplyOperation &&
                     operation != ParameterOperation && operation != ValueOperation && operation != TimeOperation &&
                     operation != UvTransformOperation && operation != UvScrollOperation && operation != NoiseOperation &&
-                    operation != AddOperation && operation != MixOperation && operation != EmissionOperation &&
+                    operation != AddOperation && operation != SubtractOperation && operation != DivideOperation &&
+                    operation != MinimumOperation && operation != MaximumOperation && operation != MixOperation && operation != EmissionOperation &&
                     operation != OneMinusOperation && operation != ClampOperation && operation != UvRotateOperation &&
                     operation != PolarUvOperation && operation != ObjectUvOperation && operation != WorldUvOperation)
                 {
@@ -636,16 +641,24 @@ namespace NXSG.Backend
                 var parameter = ResolveParameterColor(node, parameters, diagnostics);
                 expression = parameter?.ShaderExpression;
             }
-            else if (node.Operation == MultiplyOperation || node.Operation == AddOperation || node.Operation == MixOperation)
+            else if (node.Operation == MultiplyOperation || node.Operation == AddOperation || node.Operation == SubtractOperation ||
+                node.Operation == DivideOperation || node.Operation == MinimumOperation || node.Operation == MaximumOperation || node.Operation == MixOperation)
             {
-                var left = ColorInput(node, "a", node.Operation == MultiplyOperation ? "fixed4(1,1,1,1)" : "fixed4(0,0,0,1)", nodes, incoming, parameters, visiting, diagnostics);
-                var right = ColorInput(node, "b", node.Operation == AddOperation ? "fixed4(0,0,0,1)" : "fixed4(1,1,1,1)", nodes, incoming, parameters, visiting, diagnostics);
+                var leftFallback = node.Operation == MultiplyOperation || node.Operation == DivideOperation ? "fixed4(1,1,1,1)" : "fixed4(0,0,0,1)";
+                var rightFallback = node.Operation == AddOperation || node.Operation == SubtractOperation || node.Operation == MinimumOperation || node.Operation == MaximumOperation ? "fixed4(0,0,0,1)" : "fixed4(1,1,1,1)";
+                var left = ColorInput(node, "a", leftFallback, nodes, incoming, parameters, visiting, diagnostics);
+                var right = ColorInput(node, "b", rightFallback, nodes, incoming, parameters, visiting, diagnostics);
                 if (node.Operation == MixOperation)
                 {
                     var factor = ScalarInput(node, "factor", FloatLiteral(PropertyFloat(node, "factor", .5f)), nodes, incoming, parameters, visiting, diagnostics);
                     expression = "lerp(" + left + "," + right + ",saturate(" + factor + "))";
                 }
-                else expression = "(" + left + (node.Operation == AddOperation ? " + " : " * ") + right + ")";
+                else if (node.Operation == AddOperation) expression = "(" + left + " + " + right + ")";
+                else if (node.Operation == SubtractOperation) expression = "(" + left + " - " + right + ")";
+                else if (node.Operation == DivideOperation) expression = "NXSG_SafeDivide(" + left + "," + right + ")";
+                else if (node.Operation == MinimumOperation) expression = "min(" + left + "," + right + ")";
+                else if (node.Operation == MaximumOperation) expression = "max(" + left + "," + right + ")";
+                else expression = "(" + left + " * " + right + ")";
             }
             else if (node.Operation == OneMinusOperation || node.Operation == ClampOperation)
             {
@@ -900,6 +913,8 @@ namespace NXSG.Backend
                 builder.Line("float2 NXSG_UvRotate(float2 source, float2 center, float angleDegrees) { float radians = angleDegrees * 0.017453292519943295; float s = sin(radians); float c = cos(radians); float2 delta = source - center; return center + float2(c * delta.x - s * delta.y, s * delta.x + c * delta.y); }");
             if (RequiresCoordinateHelper(textureUv, tint, emission, "NXSG_PolarUv"))
                 builder.Line("float2 NXSG_PolarUv(float2 source, float2 center, float radialScale, float angleScale) { float2 delta = source - center; float angle = dot(delta, delta) > 1e-12 ? atan2(delta.y, delta.x) : 0.0; return float2(length(delta) * 2.0 * radialScale, (angle / 6.283185307179586 + 0.5) * angleScale); }");
+            if (RequiresColorHelper(tint, emission, "NXSG_SafeDivide"))
+                builder.Line("float4 NXSG_SafeDivide(float4 a, float4 b) { float4 denominator = max(abs(b), 1e-5); denominator = (b < 0 ? -denominator : denominator); return a / denominator; }");
             builder.Line("fixed4 frag(v2f input) : SV_Target { UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input); half3 normalWS = normalize(input.normalWS); half3 lightDirection = normalize(UnityWorldSpaceLightDir(input.positionWS)); half ndotl = saturate(dot(normalWS, lightDirection)); half softness = max(" + HlslValue(softness) + ", 0.001h); half toonBand = smoothstep(" + HlslValue(threshold) + " - softness, " + HlslValue(threshold) + " + softness, ndotl); half shadow = SHADOW_ATTENUATION(input); shadow = lerp(1.0h, shadow, saturate(" + HlslValue(shadowStrength) + ")); half3 ambient = ShadeSH9(half4(normalWS, 1.0h)); half3 direct = _LightColor0.rgb * lerp(0.35h, 1.0h, toonBand) * shadow; fixed4 textureColor = " + colorExpression + "; return fixed4(textureColor.rgb * (ambient + direct) + (" + HlslValue(emission) + ").rgb, 1.0h); }");
             end = builder.LineNumber;
             sourceMap.Add(new SourceMapEntry { NodeId = toonNodeId, PortId = "surface", StartLine = start, EndLine = end });
@@ -1039,6 +1054,12 @@ namespace NXSG.Backend
         {
             return (textureUv != null && textureUv.Contains(helper)) ||
                 (a != null && a.ShaderExpression != null && a.ShaderExpression.Contains(helper)) ||
+                (b != null && b.ShaderExpression != null && b.ShaderExpression.Contains(helper));
+        }
+
+        private static bool RequiresColorHelper(ColorInfo a, ColorInfo b, string helper)
+        {
+            return (a != null && a.ShaderExpression != null && a.ShaderExpression.Contains(helper)) ||
                 (b != null && b.ShaderExpression != null && b.ShaderExpression.Contains(helper));
         }
 

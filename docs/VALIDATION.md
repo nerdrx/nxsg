@@ -75,3 +75,9 @@ Polar UVs, Rotate UVs, Object Planar UVs, and World Planar UVs passed portable v
 ## Math operation switching — 2026-09-17
 
 `NodeSwitchSmoke.Run` passed in the isolated headless Unity 2022.3.22f1 editor. It exercises the editor's operation-change command, preserving node identity/layout/selection and compatible wires, removing Mix's factor connection on switching to Add, retaining the stored factor control, switching Invert to Clamp, and restoring operations/wires with one Undo. The header offers a native menu on click or Enter/Space; pointer dragging remains available. The automated check covers the command and Undo behavior, not native-menu pointer selection.
+
+## Live material preview and additional math — 2026-09-17
+
+Portable checks passed for Subtract, Divide, Minimum, and Maximum, including graph typing, defaults, and clipboard. `LivePreviewSmoke.Run` passed in hidden Unity 2022.3.22f1/OpenGL: unsaved red/green graphs render correctly, preview shader/material asset paths are empty, source context properties stay unchanged, failed graphs leave a prior preview usable, and disposal destroys preview materials. A numeric render combines all four new operations, including zero and negative denominators. Divide uses a signed minimum denominator magnitude of 0.00001 in float precision.
+
+`LivePreviewWindowSmoke.Run` also passed: the editor's timed update creates an unsaved preview, retains it on invalid edits with a visible diagnostic, refreshes for a valid change, respects pause, preserves unsaved/source state, and disposes resources when closed. The material preview pauses while its window is unfocused. Helpers use the installed editor's documented public `ShaderUtil.CreateShaderAsset(string, bool)` and `CompilePass(Material, int, bool)` APIs. No source/generated-asset writes are part of preview creation. This does not establish live VRChat, stereo, native Windows, or intermediate-node preview coverage.

@@ -11,7 +11,7 @@ namespace NXSG.Core
         {
             "core.polarUV", "core.uvRotate", "core.objectUV", "core.worldUV",
             "core.value", "core.time", "core.uvTransform", "core.uvScroll", "core.noise",
-            "core.add", "core.mix", "core.emission", "core.oneMinus", "core.clamp",
+            "core.add", "core.subtract", "core.divide", "core.minimum", "core.maximum", "core.mix", "core.emission", "core.oneMinus", "core.clamp",
             "core.constant", "core.parameter", "core.uv0", "core.texture2D", "core.multiply",
             "core.toonSurface", "core.output"
         };
@@ -23,6 +23,8 @@ namespace NXSG.Core
             ["core.value"] = new string[0], ["core.time"] = new string[0],
             ["core.uvTransform"] = new[] { "uv" }, ["core.uvScroll"] = new[] { "uv", "time" },
             ["core.noise"] = new[] { "uv", "time" }, ["core.add"] = new[] { "a", "b" },
+            ["core.subtract"] = new[] { "a", "b" }, ["core.divide"] = new[] { "a", "b" },
+            ["core.minimum"] = new[] { "a", "b" }, ["core.maximum"] = new[] { "a", "b" },
             ["core.mix"] = new[] { "a", "b", "factor" }, ["core.emission"] = new[] { "color", "strength" },
             ["core.oneMinus"] = new[] { "color" }, ["core.clamp"] = new[] { "color" },
             ["core.constant"] = new string[0], ["core.parameter"] = new string[0],
@@ -38,6 +40,8 @@ namespace NXSG.Core
             ["core.value"] = new[] { "value" }, ["core.time"] = new[] { "value" },
             ["core.uvTransform"] = new[] { "uv" }, ["core.uvScroll"] = new[] { "uv" },
             ["core.noise"] = new[] { "color", "value" }, ["core.add"] = new[] { "value" },
+            ["core.subtract"] = new[] { "value" }, ["core.divide"] = new[] { "value" },
+            ["core.minimum"] = new[] { "value" }, ["core.maximum"] = new[] { "value" },
             ["core.mix"] = new[] { "value" }, ["core.emission"] = new[] { "color" },
             ["core.oneMinus"] = new[] { "color" }, ["core.clamp"] = new[] { "color" },
             ["core.constant"] = new[] { "value" }, ["core.parameter"] = new[] { "value" },
@@ -63,7 +67,9 @@ namespace NXSG.Core
                 case "core.worldUV": return "World Planar UVs";
                 case "core.value": return "Value"; case "core.time": return "Time";
                 case "core.uvTransform": return "UV Transform"; case "core.uvScroll": return "UV Scroll";
-                case "core.noise": return "Noise"; case "core.add": return "Add"; case "core.mix": return "Mix";
+                case "core.noise": return "Noise"; case "core.add": return "Add"; case "core.subtract": return "Subtract";
+                case "core.divide": return "Divide"; case "core.minimum": return "Minimum"; case "core.maximum": return "Maximum";
+                case "core.mix": return "Mix";
                 case "core.emission": return "Emission"; case "core.oneMinus": return "Invert";
                 case "core.clamp": return "Clamp"; case "core.constant": return "Color";
                 case "core.parameter": return "Parameter"; case "core.uv0": return "UV Coordinates";
@@ -86,6 +92,10 @@ namespace NXSG.Core
                 case "core.uvScroll": return "Move texture coordinates over time, like flowing water or scrolling stripes.";
                 case "core.noise": return "Create a smooth random grayscale pattern that can move over time.";
                 case "core.add": return "Add two colors together to brighten or combine them.";
+                case "core.subtract": return "Subtract B from A for each color channel.";
+                case "core.divide": return "Divide A by B for each color channel. Very small divisors are limited to avoid division by zero.";
+                case "core.minimum": return "Choose the lower value from A and B for each color channel.";
+                case "core.maximum": return "Choose the higher value from A and B for each color channel.";
                 case "core.mix": return "Blend two colors: factor 0 gives A, 1 gives B, and 0.5 mixes them equally.";
                 case "core.emission": return "Add color that stays bright without lighting. Connect it to Toon Surface's emission input.";
                 case "core.oneMinus": return "Invert colors or masks (1 minus input): black becomes white, and white becomes black.";
@@ -111,6 +121,8 @@ namespace NXSG.Core
                 case "core.value": return "constant scalar"; case "core.time": return "clock animation";
                 case "core.uvTransform": return "scale offset tiling"; case "core.uvScroll": return "pan animate";
                 case "core.noise": return "procedural random"; case "core.add": return "plus sum";
+                case "core.subtract": return "minus difference"; case "core.divide": return "division ratio safe divide";
+                case "core.minimum": return "min lower"; case "core.maximum": return "max higher";
                 case "core.mix": return "lerp blend"; case "core.emission": return "glow";
                 case "core.oneMinus": return "invert one minus"; case "core.clamp": return "saturate";
                 case "core.constant": return "rgb rgba colour";
@@ -130,7 +142,8 @@ namespace NXSG.Core
                 case "core.value": case "core.time": return port == "value" ? "float" : null;
                 case "core.uvTransform": case "core.uvScroll": return port == "uv" ? "vector2" : (port == "time" ? "float" : null);
                 case "core.noise": return port == "uv" ? "vector2" : (port == "time" ? "float" : (port == "value" ? "float" : (port == "color" ? "color" : null)));
-                case "core.add": case "core.mix": return port == "factor" ? "float" : (port == "a" || port == "b" || port == "value" ? "color" : null);
+                case "core.add": case "core.subtract": case "core.divide": case "core.minimum": case "core.maximum": return port == "a" || port == "b" || port == "value" ? "color" : null;
+                case "core.mix": return port == "factor" ? "float" : (port == "a" || port == "b" || port == "value" ? "color" : null);
                 case "core.emission": return port == "strength" ? "float" : (port == "color" ? "color" : null);
                 case "core.oneMinus": case "core.clamp": return port == "color" ? "color" : null;
                 case "core.constant": return port == "value" ? TypeName(node.Properties == null ? null : node.Properties["valueType"]) : null;
