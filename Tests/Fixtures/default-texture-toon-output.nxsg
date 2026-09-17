@@ -1,0 +1,18 @@
+{
+  "format": "nxsg",
+  "schemaVersion": 1,
+  "graphId": "graph-main",
+  "nodes": [
+    {"id":"uv0","operation":"core.uv0","properties":{}},
+    {"id":"texture","operation":"core.texture2D","properties":{"resourceId":"white"}},
+    {"id":"toon","operation":"core.toonSurface","properties":{}},
+    {"id":"output","operation":"core.output","properties":{}}
+  ],
+  "connections": [
+    {"id":"edge-uv","from":{"nodeId":"uv0","portId":"uv"},"to":{"nodeId":"texture","portId":"uv"}},
+    {"id":"edge-color","from":{"nodeId":"texture","portId":"color"},"to":{"nodeId":"toon","portId":"albedo"}},
+    {"id":"edge-surface","from":{"nodeId":"toon","portId":"surface"},"to":{"nodeId":"output","portId":"surface"}}
+  ],
+  "resources": [{"id":"white","kind":"texture2D","uri":"builtin://white"}],
+  "layout":{"nodes":{"uv0":{"x":0,"y":80},"texture":{"x":180,"y":80},"toon":{"x":380,"y":80},"output":{"x":620,"y":80}}}
+}

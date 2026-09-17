@@ -57,3 +57,7 @@ claims. The root risk register tracks their ownership and escalation.
 ## Document verification
 
 Checked on 2026-09-17: all internal Markdown/HTML navigation and asset links resolve; 123 distinct linked source URLs responded successfully; the compatibility snapshot parses as JSON; GitHub's Markdown renderer accepts the README's banner, navigation and tables. Link reachability does not independently establish a source's technical claims. The banner was rendered and visually inspected, with its embedded NX wordmark paths compared against the canonical source. No Unity or graphics-runtime validation is claimed by these checks.
+
+## Implementation follow-through
+
+The research baseline is historical. [Current validation](VALIDATION.md) records the first native Linux Unity/editor/backend checks; [development setup](DEVELOPMENT.md) reproduces the fixture.

@@ -1,0 +1,14 @@
+{
+  "name": "NXSG.Editor",
+  "rootNamespace": "NXSG.Editor",
+  "references": [
+    "NXSG.Core",
+    "NXSG.Backend",
+    "Unity.Newtonsoft.Json"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "autoReferenced": true,
+  "noEngineReferences": false
+}

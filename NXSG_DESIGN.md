@@ -108,3 +108,7 @@ The Blender bridge is a later adapter: translate supported Blender nodes to `.nx
 - Show visual and performance consequences near the choice that causes them.
 - Treat community content, migrations, and unsupported targets as explicit, visible states.
 - Validate appearance and frame cost on representative avatars before calling an optimization or fur technique successful.
+
+## Implementation evidence
+
+The design above describes the intended product. See [current validation](docs/VALIDATION.md) and [development setup](docs/DEVELOPMENT.md) for the first Linux implementation slice and remaining limits.

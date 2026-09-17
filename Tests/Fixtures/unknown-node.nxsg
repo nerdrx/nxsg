@@ -1,0 +1,5 @@
+{
+  "format":"nxsg","schemaVersion":1,"graphId":"unknown-test",
+  "nodes":[{"id":"mystery","operation":"community.futureNoise","properties":{"seed":4.0},"packData":{"vendor":"example","version":7}}],
+  "connections":[]
+}

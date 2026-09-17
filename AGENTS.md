@@ -1,6 +1,6 @@
 # NXSG contributor guidance
 
-Read `NXSG_DESIGN.md`, `docs/DECISIONS.md`, and `docs/IMPLEMENTATION_PLAN.md` before implementation. This repository starts in the research phase; proposed features are not implemented capabilities.
+Read `NXSG_DESIGN.md`, `docs/DECISIONS.md`, and `docs/IMPLEMENTATION_PLAN.md` before implementation. This repository contains an early implementation slice. Consult docs/VALIDATION.md for exercised behavior; proposed roadmap features are not implemented capabilities.
 
 - Prefer the smallest maintainable implementation that satisfies the current milestone. Keep graph meaning independent of Unity UI types.
 - Research technical claims against primary documentation or source; record versions, source revisions, and the retrieval date. Label recommendations and unresolved assumptions.

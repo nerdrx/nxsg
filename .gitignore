@@ -15,3 +15,15 @@ work/
 # .NET build state
 bin/
 obj/
+
+# Generated local validation outputs
+DevProject/Assets/SmokeResults/
+DevProject/Assets/SmokeResults.meta
+DevProject/Assets/NXSGGenerated/
+DevProject/Assets/NXSGGenerated.meta
+*.csproj.user
+__pycache__/
+
+# Pinned VRChat fixture packages are downloaded and validated by scripts/setup-vrchat-fixture.py.
+/DevProject/Packages/com.vrchat.base/
+/DevProject/Packages/com.vrchat.avatars/

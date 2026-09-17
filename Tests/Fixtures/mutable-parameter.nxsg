@@ -1,0 +1,6 @@
+{
+  "format":"nxsg","schemaVersion":1,"graphId":"mutable-test",
+  "nodes":[{"id":"p","operation":"core.parameter","properties":{"parameterId":"tint"}}],
+  "connections":[],
+  "parameters":[{"id":"tint","name":"Tint","type":"color","binding":"animatedMaterial","defaultValue":[0,0,0,0],"exposed":true}]
+}

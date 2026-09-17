@@ -1,12 +1,14 @@
 <p align="center">
-  <img src="docs/assets/nxsg-banner.svg" width="100%" alt="NXSG — NX Shader Graph. Visual materials for VRChat. Design and research phase." />
+  <img src="docs/assets/nxsg-banner.svg" width="100%" alt="NXSG — NX Shader Graph. Visual materials for VRChat. Early Linux prototype." />
 </p>
 
 <p align="center">
-  <strong>Visual shader authoring for avatar creators. Furry materials included.</strong>
+  <strong>Visual shader authoring for avatar creators. Furry-first by design.</strong>
 </p>
 
 <p align="center">
+  <a href="docs/DEVELOPMENT.md">Try it</a> ·
+  <a href="docs/VALIDATION.md">Validation</a> ·
   <a href="NXSG_DESIGN.md">Design</a> ·
   <a href="docs/RESEARCH_INDEX.md">Research</a> ·
   <a href="docs/DECISIONS.md">Decisions</a> ·
@@ -14,8 +16,24 @@
   <a href="docs/RISK_REGISTER.md">Known risks</a>
 </p>
 
-> **Design + research · 2026-09-17**  
-> The specification and research are ready. The editor, compiler, and shaders are planned; there is no installable package yet. The banner is a concept illustration.
+> **Early prototype · Linux tested · 2026-09-17**
+> The first graph editor and toon compiler now run in Unity **2022.3.22f1**. Real Linux rendering and build-recovery checks pass. This is a development package; VRChat client/headset acceptance and the larger feature library remain ahead. The banner is a concept illustration.
+
+## Try the first slice
+
+1. Clone the repository and run `python3 scripts/setup-vrchat-fixture.py` to prepare the isolated SDK fixture.
+2. Open **DevProject** in Unity Hub with **2022.3.22f1**.
+3. Choose **Tools → NXSG → Open Graph Editor**, then **New**.
+4. Save the graph inside `Assets`, then choose **Build for VRChat**.
+5. Find its material under `Assets/NXSGGenerated` and assign it to a mesh.
+
+The custom canvas has search/add, click-to-connect ports, drag, pan/zoom, undo/redo and save. A successful build updates the material preview; it does not upload an avatar. [Linux setup and checks](docs/DEVELOPMENT.md)
+
+![NXSG running in Unity on Linux](docs/assets/editor-preview.png)
+
+*Actual prototype, including its built-material preview. Undo/Redo buttons are the supported editing controls; keyboard undo remains a known Unity/Linux gap.*
+
+**Verified so far:** bounded graph parsing, deterministic serialization and semantic hashes, mutable color expressions, generated-symbol collision checks, opaque toon rendering, stable output GUIDs, material tint/texture preservation, and rollback after two injected failures. [Evidence and remaining limits](docs/VALIDATION.md)
 
 ## From a graph to your avatar
 
@@ -42,12 +60,12 @@ Texture ───── Toon Surface ───── Output
 | Development and testing | **Linux** — native Unity Editor and local checks |
 | Shader target | **PC VRChat · Built-In forward**; validate the client graphics path separately |
 | Graph format | Portable, versioned **`.nxsg`**; Unity asset references live in an adapter |
-| Editor canvas | Custom UI Toolkit canvas and GraphView evaluated on the pinned editor |
-| Integrations | Optional AudioLink; ordinary animatable properties for VRCFury |
+| Editor canvas | Custom UI Toolkit prototype running on the pinned editor; full S03 comparison remains open |
+| Integrations | Planned: optional AudioLink and VRCFury workflow validation |
 
 Mobile avatars require VRChat-permitted SDK shaders. A future mobile adapter can map or bake supported material inputs; a cheaper custom PC shader is not automatically allowed. [Compatibility details and sources →](docs/research/PLATFORM_AND_INTEGRATIONS.md)
 
-## Research before implementation
+## A research-backed roadmap
 
 Three Luna researchers worked in parallel, followed by a consistency review and central synthesis. The record includes **16 architecture decisions**, **25 tracked risks**, source revisions, and explicit validation gates.
 
@@ -62,9 +80,11 @@ Three Luna researchers worked in parallel, followed by a consistency review and 
 
 ## Path to a first release
 
+Live/intermediate previews, animation, fur and Patterns below are planned capabilities.
+
 | Stage | Deliverable | Status |
 | :--- | :--- | :--- |
-| **01 · Foundation** | Pinned test project, portable graph, canvas comparison, toon shader | Next |
+| **01 · Foundation** | Pinned fixture, portable graph, custom canvas, toon shader | First working slice; remaining gates open |
 | **02 · Avatar workflow** | Live previews, stable builds, animation, AudioLink, VRCFury compatibility | Planned |
 | **03 · Fur + Patterns** | Measured fur techniques, direction/masks/LOD, reusable declarative groups | Planned |
 | **04 · More places to create** | Baking, mobile material mapping, Blender bridge, CLI, viewer, other backends | Later |

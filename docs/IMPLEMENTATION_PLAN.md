@@ -1,6 +1,6 @@
 # Implementation plan and acceptance gates
 
-This plan turns the research into bounded work. All programming and runtime gates below are **pending**. Research is complete enough to begin the specified spikes; it does not establish that the proposed editor or shaders work.
+This plan turns the research into bounded work. A first Linux implementation slice is running; [recorded checks](VALIDATION.md) cover core, rendering and build recovery. Full milestone acceptance below is still **pending**. Research is complete enough to begin the specified spikes; it does not establish that the proposed editor or shaders work.
 
 Read [decisions](DECISIONS.md), [risk register](RISK_REGISTER.md), and the [source snapshot](research/COMPATIBILITY_SNAPSHOT.json) first. A size of S/M/L indicates relative scope, not a time promise. Pin versions in a fresh fixture before implementation and record changes to the research baseline.
 
@@ -35,7 +35,7 @@ Create a clean **Linux Unity 2022.3.22f1** avatar fixture with VRChat Base/Avata
 
 **Pass:** the Linux fixture opens, SDK validation is available, a baseline material renders, and the same tiny core assembly loads in Linux Unity and a standalone runner. Record the working Editor API and establish the available Linux VRChat/headset route for S05. Use headless Gamescope where appropriate for unobtrusive graphics-enabled editor checks; `-nographics` is only for checks that do not render. Do not label an offscreen editor check headset validation.
 
-**Evidence:** exact versions, manifest/lock, startup/compilation logs, baseline image, environment record. Unity editor was not located in the local paths checked during research; Linux installation/licensing and the client/headset test route remain setup work, not verified capabilities.
+**Evidence:** exact versions, manifest/lock, startup/compilation logs, baseline image, environment record. The Editor was subsequently located on a mounted drive and exercised with the installed Hub licensing helper; see the validation record. Client/headset acceptance remains open.
 
 ## S01 — Freeze the smallest cross-lane contract · S · owner: core
 

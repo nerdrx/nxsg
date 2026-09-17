@@ -1,0 +1,11 @@
+{
+  "format":"nxsg","schemaVersion":1,"graphId":"cycle-test",
+  "nodes":[
+    {"id":"a","operation":"core.multiply","properties":{"valueType":"float"}},
+    {"id":"b","operation":"core.multiply","properties":{"valueType":"float"}}
+  ],
+  "connections":[
+    {"id":"ab","from":{"nodeId":"a","portId":"value"},"to":{"nodeId":"b","portId":"a"}},
+    {"id":"ba","from":{"nodeId":"b","portId":"value"},"to":{"nodeId":"a","portId":"a"}}
+  ]
+}

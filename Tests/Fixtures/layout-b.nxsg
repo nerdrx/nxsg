@@ -1,0 +1,5 @@
+{
+  "format":"nxsg","schemaVersion":1,"graphId":"layout-test",
+  "nodes":[{"id":"a","operation":"core.constant","properties":{"valueType":"float","value":1}}],
+  "connections":[],"layout":{"nodes":{"a":{"x":910,"y":420}}}
+}
