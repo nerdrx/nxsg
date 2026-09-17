@@ -136,7 +136,7 @@ namespace NXSG.Editor
                 if (evt.actionKey && evt.keyCode == KeyCode.S) { SaveGraph(); evt.StopPropagation(); }
             });
             body.Add(canvas);
-            inspector = new VisualElement { style = { width = 270, paddingLeft = 12, paddingRight = 12, paddingTop = 12, backgroundColor = new Color(.10f, .10f, .10f) } };
+            inspector = new ScrollView(ScrollViewMode.Vertical) { horizontalScrollerVisibility = ScrollerVisibility.Hidden, style = { width = 270, paddingLeft = 12, paddingRight = 12, paddingTop = 12, backgroundColor = new Color(.10f, .10f, .10f) } };
             body.Add(inspector);
             rootVisualElement.Add(body);
             status = new Label("Create or open a graph. Drag empty space to box-select; Shift adds. Middle-drag pans; wheel zooms. Drag between matching sockets in either direction. Drop on empty space to add a node. Esc cancels.")
@@ -468,11 +468,11 @@ namespace NXSG.Editor
         {
             switch (operation)
             {
-                case "core.uv0": return new Color(.16f, .32f, .52f);
-                case "core.texture2D": return new Color(.46f, .25f, .10f);
+                case "core.uvTransform": case "core.uvScroll": case "core.uv0": return new Color(.16f, .32f, .52f);
+                case "core.noise": case "core.texture2D": return new Color(.46f, .25f, .10f);
                 case "core.constant": return new Color(.40f, .34f, .10f);
-                case "core.multiply": return new Color(.28f, .33f, .38f);
-                case "core.toonSurface": return new Color(.13f, .37f, .24f);
+                case "core.value": case "core.time": case "core.add": case "core.mix": case "core.oneMinus": case "core.clamp": case "core.multiply": return new Color(.28f, .33f, .38f);
+                case "core.emission": case "core.toonSurface": return new Color(.13f, .37f, .24f);
                 case "core.output": return new Color(.39f, .19f, .20f);
                 default: return new Color(.28f, .28f, .28f);
             }
@@ -481,6 +481,7 @@ namespace NXSG.Editor
         static Color SocketColor(string type)
         {
             return type == "surface" ? new Color(.35f, .85f, .46f)
+                : type == "float" ? new Color(.80f, .82f, .85f)
                 : type == "vector2" ? new Color(.45f, .65f, 1f) : new Color(1f, .78f, .25f);
         }
 
@@ -494,7 +495,7 @@ namespace NXSG.Editor
             Action<string> filter = query =>
             {
                 choices.Clear();
-                foreach (var operation in new[] { "core.uv0", "core.texture2D", "core.constant", "core.multiply", "core.toonSurface", "core.output" })
+                foreach (var operation in NodeCatalog.All.Where(op => op != "core.parameter"))
                     if ((Title(operation) + " " + operation + " " + Aliases(operation)).IndexOf(query ?? "", StringComparison.OrdinalIgnoreCase) >= 0)
                     {
                         var op = operation;
@@ -534,6 +535,16 @@ namespace NXSG.Editor
                     }));
                     inspector.Add(field);
                 }
+                switch (node.Operation)
+                {
+                    case "core.value": AddNumber(node, "value", "Value", 0); break;
+                    case "core.time": AddNumber(node, "speed", "Speed", 1); AddNumber(node, "offset", "Offset", 0); break;
+                    case "core.uvTransform": AddVector(node, "tiling", "Tiling", Vector2.one); AddVector(node, "offset", "Offset", Vector2.zero); break;
+                    case "core.uvScroll": AddVector(node, "speed", "Scroll speed", new Vector2(.1f, 0)); break;
+                    case "core.noise": AddNumber(node, "scale", "Scale", 5); AddNumber(node, "speed", "Animation speed", 1); break;
+                    case "core.mix": AddNumber(node, "factor", "Factor", .5f, "factor"); break;
+                    case "core.emission": AddNumber(node, "strength", "Strength", 1, "strength"); break;
+                }
                 inspector.Add(new Button(() => Edit("Disconnect node", () => graph.Connections.RemoveAll(e => e.From.NodeId == selected || e.To.NodeId == selected))) { text = "Disconnect node" });
                 inspector.Add(new Button(DeleteSelection) { text = "Delete node" });
             }
@@ -547,11 +558,39 @@ namespace NXSG.Editor
             }
         }
 
+        void AddNumber(GraphNode node, string property, string label, float fallback, string input = null)
+        {
+            var token = node.Properties[property];
+            var field = new FloatField(label) { isDelayed = true, value = token != null && (token.Type == JTokenType.Float || token.Type == JTokenType.Integer) ? (float)token : fallback };
+            if (input != null)
+            {
+                field.tooltip = "Used when the " + input + " socket is unconnected.";
+                field.SetEnabled(!graph.Connections.Any(e => e.To.NodeId == node.Id && e.To.PortId == input));
+            }
+            field.RegisterValueChangedCallback(evt =>
+            {
+                if (float.IsNaN(evt.newValue) || float.IsInfinity(evt.newValue)) { SetStatus("Enter a finite number."); return; }
+                Edit("Change " + label, () => node.Properties[property] = evt.newValue);
+            });
+            inspector.Add(field);
+        }
+
+        void AddVector(GraphNode node, string property, string label, Vector2 fallback)
+        {
+            var values = node.Properties[property] as JArray;
+            var field = new Vector2Field(label) { value = values != null && values.Count == 2 ? new Vector2((float)values[0], (float)values[1]) : fallback };
+            field.RegisterValueChangedCallback(evt =>
+            {
+                var value = evt.newValue;
+                if (float.IsNaN(value.x) || float.IsInfinity(value.x) || float.IsNaN(value.y) || float.IsInfinity(value.y)) { SetStatus("Enter finite vector values."); return; }
+                Edit("Change " + label, () => node.Properties[property] = new JArray(value.x, value.y));
+            });
+            inspector.Add(field);
+        }
+
         GraphNode CreateNode(string operation, Vector2 position)
         {
-            var node = new GraphNode { Id = Guid.NewGuid().ToString("N"), Operation = operation };
-            if (operation == "core.constant") { node.Properties["valueType"] = "color"; node.Properties["value"] = new JArray(1, 1, 1, 1); }
-            if (operation == "core.multiply") node.Properties["valueType"] = "color";
+            var node = NodeCatalog.Create(operation);
             if (operation == "core.texture2D")
             {
                 var resource = new GraphResource { Id = "texture-" + node.Id, Kind = "texture2D", Uri = "builtin://white" };
@@ -610,8 +649,10 @@ namespace NXSG.Editor
                 backgroundColor = new Color(.18f, .18f, .18f), paddingLeft = 8, paddingRight = 8, paddingTop = 8, paddingBottom = 8 } };
             spawnMenu.RegisterCallback<PointerDownEvent>(evt => evt.StopPropagation());
             spawnMenu.Add(new Label("Add connected node · " + type) { style = { unityFontStyleAndWeight = FontStyle.Bold, marginBottom = 6 } });
+            var menuOptions = new ScrollView(ScrollViewMode.Vertical) { style = { maxHeight = 220 } };
+            spawnMenu.Add(menuOptions);
             var count = 0;
-            foreach (var operation in new[] { "core.uv0", "core.texture2D", "core.constant", "core.multiply", "core.toonSurface", "core.output" })
+            foreach (var operation in NodeCatalog.All.Where(op => op != "core.parameter"))
             {
                 if (operation == "core.output" && graph.Nodes.Any(n => n.Operation == operation)) continue;
                 var candidate = new GraphNode { Operation = operation };
@@ -619,7 +660,7 @@ namespace NXSG.Editor
                 {
                     if (PortType(candidate, port) != type) continue;
                     var op = operation; var compatiblePort = port;
-                    spawnMenu.Add(new Button(() => Edit("Add connected " + Title(op), () =>
+                    menuOptions.Add(new Button(() => Edit("Add connected " + Title(op), () =>
                     {
                         var node = CreateNode(op, graphPosition - (output ? Vector2.zero : new Vector2(175, 0)));
                         if (output) AddConnection(endpoint, endpointPort, node.Id, compatiblePort);
@@ -808,24 +849,13 @@ namespace NXSG.Editor
             painter.BezierCurveTo(a + Vector2.right * bend, b - Vector2.right * bend, b); painter.Stroke();
         }
         void SetStatus(string message) { if (status != null) status.text = message; }
-        static string Title(string operation)
-        {
-            switch (operation) { case "core.uv0": return "UV Coordinates"; case "core.texture2D": return "Texture"; case "core.constant": return "Color"; case "core.multiply": return "Multiply"; case "core.toonSurface": return "Toon Surface"; case "core.output": return "Output"; default: return operation + " (unavailable)"; }
-        }
-        static string Aliases(string operation) { return operation == "core.multiply" ? "tint darken blend" : operation == "core.toonSurface" ? "anime cel cartoon shading" : operation == "core.texture2D" ? "image albedo diffuse" : ""; }
-        static string PortType(GraphNode node, string port) { if (port == "surface") return "surface"; if (port == "uv") return "vector2"; return (string)node.Properties?["valueType"] ?? "color"; }
+        static string Title(string operation) { return NodeCatalog.Title(operation); }
+        static string Aliases(string operation) { return NodeCatalog.Aliases(operation); }
+        static string PortType(GraphNode node, string port) { return NodeCatalog.PortType(node, port); }
         static string[] Ports(string operation, bool output)
         {
-            switch (operation)
-            {
-                case "core.uv0": return output ? new[] { "uv" } : Array.Empty<string>();
-                case "core.texture2D": return output ? new[] { "color" } : new[] { "uv" };
-                case "core.constant": return output ? new[] { "value" } : Array.Empty<string>();
-                case "core.multiply": return output ? new[] { "value" } : new[] { "a", "b" };
-                case "core.toonSurface": return output ? new[] { "surface" } : new[] { "albedo" };
-                case "core.output": return output ? Array.Empty<string>() : new[] { "surface" };
-                default: return Array.Empty<string>();
-            }
+            // Normal-map authoring is still unsupported by the current backend.
+            return NodeCatalog.Ports(operation, output).Where(port => operation != "core.toonSurface" || port != "normal").ToArray();
         }
     }
 }

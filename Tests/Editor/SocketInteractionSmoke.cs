@@ -42,7 +42,7 @@ public static class SocketInteractionSmoke
     static void ClickMenu(string text)
     {
         var menu = (VisualElement)Field("spawnMenu");
-        var button = menu.Children().OfType<Button>().First(b => b.text == text);
+        var button = menu.Query<Button>().ToList().First(b => b.text == text);
         var position = button.worldBound.center;
         Down(button);
         using (var e = PointerUpEvent.GetPooled(new Event { type = EventType.MouseUp, button = 0, mousePosition = position })) button.SendEvent(e);

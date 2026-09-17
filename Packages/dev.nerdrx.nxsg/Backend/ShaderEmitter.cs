@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
@@ -94,6 +95,16 @@ namespace NXSG.Backend
         private const string ConstantOperation = "core.constant";
         private const string MultiplyOperation = "core.multiply";
         private const string ParameterOperation = "core.parameter";
+        private const string ValueOperation = "core.value";
+        private const string TimeOperation = "core.time";
+        private const string UvTransformOperation = "core.uvTransform";
+        private const string UvScrollOperation = "core.uvScroll";
+        private const string NoiseOperation = "core.noise";
+        private const string AddOperation = "core.add";
+        private const string MixOperation = "core.mix";
+        private const string EmissionOperation = "core.emission";
+        private const string OneMinusOperation = "core.oneMinus";
+        private const string ClampOperation = "core.clamp";
 
         public static EmissionResult Emit(ShaderGraph graph, EmitterOptions options = null)
         {
@@ -154,8 +165,9 @@ namespace NXSG.Backend
             }
 
             var parameterMap = IndexParameters(graph.Parameters, diagnostics);
-            var texture = ResolveTexture(toon, nodes, incoming, parameterMap, graph.Resources, diagnostics);
+            var texture = ResolveTexture(reachable, nodes, incoming, parameterMap, graph.Resources, diagnostics);
             var tint = ResolveColor(toon, "albedo", texture != null, nodes, incoming, parameterMap, diagnostics);
+            var emission = ResolveColor(toon, "emission", false, nodes, incoming, parameterMap, diagnostics);
             var threshold = ResolveScalar(toon, "threshold", "thresholdParameterId", 0.5f, parameterMap, properties, diagnostics);
             var softness = ResolveScalar(toon, "softness", "softnessParameterId", 0.05f, parameterMap, properties, diagnostics);
             var shadowStrength = ResolveScalar(toon, "shadowStrength", "shadowStrengthParameterId", 1.0f, parameterMap, properties, diagnostics);
@@ -214,7 +226,7 @@ namespace NXSG.Backend
             builder.Line("{");
             builder.Indent++;
             builder.Line("Tags { \"RenderType\" = \"Opaque\" \"Queue\" = \"Geometry\"" + (fallback == null ? "" : " \"VRCFallback\" = \"" + fallback + "\"") + " }");
-            EmitForwardPass(builder, texture != null, tint, threshold, softness, shadowStrength, properties, toon.Id, sourceMap);
+            EmitForwardPass(builder, texture != null, texture == null ? "input.uv" : texture.UvExpression, tint, emission, threshold, softness, shadowStrength, properties, toon.Id, sourceMap);
             if (options.IncludeShadowCaster)
             {
                 EmitShadowPass(builder, toon.Id, sourceMap);
@@ -425,7 +437,10 @@ namespace NXSG.Backend
                 var operation = nodes[id].Operation;
                 if (operation != UvOperation && operation != TextureOperation && operation != ToonOperation &&
                     operation != OutputOperation && operation != ConstantOperation && operation != MultiplyOperation &&
-                    operation != ParameterOperation)
+                    operation != ParameterOperation && operation != ValueOperation && operation != TimeOperation &&
+                    operation != UvTransformOperation && operation != UvScrollOperation && operation != NoiseOperation &&
+                    operation != AddOperation && operation != MixOperation && operation != EmissionOperation &&
+                    operation != OneMinusOperation && operation != ClampOperation)
                 {
                     AddError(diagnostics, "backend.operation.unsupported", "nodes[" + SafeDiagnosticId(id) + "].operation", "The reachable operation is not supported by the first backend.");
                 }
@@ -485,25 +500,21 @@ namespace NXSG.Backend
         }
 
         private static TextureInfo ResolveTexture(
-            GraphNode toon,
+            HashSet<string> reachable,
             Dictionary<string, GraphNode> nodes,
             Dictionary<string, GraphConnection> incoming,
             Dictionary<string, GraphParameter> parameters,
             List<GraphResource> resources,
             List<Diagnostic> diagnostics)
         {
-            GraphConnection connection;
-            if (!incoming.TryGetValue(PortKey(toon.Id, "albedo"), out connection))
+            var textures = nodes.Values.Where(n => reachable.Contains(n.Id) && n.Operation == TextureOperation).ToList();
+            if (textures.Count == 0) return null;
+            if (textures.Count > 1)
             {
+                AddError(diagnostics, "backend.texture.count", "nodes", "This backend currently supports one reachable texture node. Mix it with colors or noise; multiple texture samplers are not yet supported.");
                 return null;
             }
-
-            var node = nodes[connection.From.NodeId];
-            if (node.Operation != TextureOperation)
-            {
-                return null;
-            }
-
+            var node = textures[0];
             var resourceId = PropertyString(node, "resourceId");
             if (string.IsNullOrEmpty(resourceId) || !IsSafeId(resourceId))
             {
@@ -530,13 +541,7 @@ namespace NXSG.Backend
                 return null;
             }
 
-            GraphConnection uv;
-            if (!incoming.TryGetValue(PortKey(node.Id, "uv"), out uv) || nodes[uv.From.NodeId].Operation != UvOperation)
-            {
-                AddError(diagnostics, "backend.texture.uv", "nodes[" + SafeDiagnosticId(node.Id) + "].uv", "Texture UV must be connected to core.uv0.");
-            }
-
-            return new TextureInfo(node.Id, resourceId, resource.Uri);
+            return new TextureInfo(node.Id, resourceId, resource.Uri, ResolveUv(node, nodes, incoming, parameters, new HashSet<string>(StringComparer.Ordinal), diagnostics));
         }
 
         private static ColorInfo ResolveColor(
@@ -551,44 +556,13 @@ namespace NXSG.Backend
             GraphConnection connection;
             if (!incoming.TryGetValue(PortKey(toon.Id, inputPort), out connection))
             {
-                if (!textureExists)
-                {
-                    AddError(diagnostics, "backend.albedo.missing", "nodes[" + SafeDiagnosticId(toon.Id) + "]." + inputPort, "Toon albedo needs a texture or constant color.");
-                }
-
-                return new ColorInfo("(1,1,1,1)", "_Color");
+                if (inputPort == "albedo")
+                    AddError(diagnostics, "backend.albedo.missing", "nodes[" + SafeDiagnosticId(toon.Id) + "].albedo", "Connect a color, texture, or procedural branch to Toon albedo.");
+                return new ColorInfo("(0,0,0,1)", "fixed4(0,0,0,1)");
             }
-
-            var source = nodes[connection.From.NodeId];
-            if (source.Operation == TextureOperation)
-            {
-                return new ColorInfo("(1,1,1,1)", "_Color");
-            }
-
-            if (source.Operation == ParameterOperation)
-            {
-                var parameterColor = ResolveParameterColor(source, parameters, diagnostics);
-                return parameterColor ?? new ColorInfo("(1,1,1,1)", "_Color");
-            }
-
-            if (source.Operation == MultiplyOperation)
-            {
-                var expression = ResolveColorExpression(source, nodes, incoming, parameters,
-                    new HashSet<string>(StringComparer.Ordinal), diagnostics);
-                if (expression != null)
-                {
-                    return expression;
-                }
-            }
-
-            var literal = TryResolveLiteral(source, nodes, incoming, new HashSet<string>(StringComparer.Ordinal), diagnostics);
-            if (!literal.HasValue)
-            {
-                AddError(diagnostics, "backend.albedo.expression", "nodes[" + SafeDiagnosticId(toon.Id) + "]." + inputPort, "Albedo must be a texture or a foldable constant expression.");
-                    return new ColorInfo("(1,1,1,1)", "_Color");
-            }
-
-            return new ColorInfo(literal.Value.ToLiteral(), literal.Value.ToHlsl(), null, true);
+            var result = ResolveColorExpression(nodes[connection.From.NodeId], nodes, incoming, parameters,
+                new HashSet<string>(StringComparer.Ordinal), diagnostics);
+            return result ?? new ColorInfo("(0,0,0,1)", "fixed4(0,0,0,1)");
         }
 
         private static ColorInfo ResolveParameterColor(
@@ -645,38 +619,79 @@ namespace NXSG.Backend
                 return null;
             }
 
-            ColorInfo result = null;
+            string expression = null;
             if (node.Operation == ConstantOperation)
             {
                 LiteralValue literal;
-                if (TryReadLiteral(node.Properties == null ? null : node.Properties["value"], out literal))
-                {
-                    result = new ColorInfo(literal.ToLiteral(), literal.ToHlsl(), null, true);
-                }
+                if (TryReadLiteral(node.Properties?["value"], out literal)) expression = literal.ToHlsl();
             }
             else if (node.Operation == ParameterOperation)
             {
-                result = ResolveParameterColor(node, parameters, diagnostics);
+                var parameter = ResolveParameterColor(node, parameters, diagnostics);
+                expression = parameter?.ShaderExpression;
             }
-            else if (node.Operation == MultiplyOperation)
+            else if (node.Operation == MultiplyOperation || node.Operation == AddOperation || node.Operation == MixOperation)
             {
-                GraphConnection a;
-                GraphConnection b;
-                if (incoming.TryGetValue(PortKey(node.Id, "a"), out a) && incoming.TryGetValue(PortKey(node.Id, "b"), out b) &&
-                    nodes.ContainsKey(a.From.NodeId) && nodes.ContainsKey(b.From.NodeId))
+                var left = ColorInput(node, "a", node.Operation == MultiplyOperation ? "fixed4(1,1,1,1)" : "fixed4(0,0,0,1)", nodes, incoming, parameters, visiting, diagnostics);
+                var right = ColorInput(node, "b", node.Operation == AddOperation ? "fixed4(0,0,0,1)" : "fixed4(1,1,1,1)", nodes, incoming, parameters, visiting, diagnostics);
+                if (node.Operation == MixOperation)
                 {
-                    var left = ResolveColorExpression(nodes[a.From.NodeId], nodes, incoming, parameters, visiting, diagnostics);
-                    var right = ResolveColorExpression(nodes[b.From.NodeId], nodes, incoming, parameters, visiting, diagnostics);
-                    if (left != null && right != null)
-                    {
-                        result = new ColorInfo("(1,1,1,1)", "(" + left.ShaderExpression + " * " + right.ShaderExpression + ")", null,
-                            left.UsesBaseColor && right.UsesBaseColor);
-                    }
+                    var factor = ScalarInput(node, "factor", FloatLiteral(PropertyFloat(node, "factor", .5f)), nodes, incoming, parameters, visiting, diagnostics);
+                    expression = "lerp(" + left + "," + right + ",saturate(" + factor + "))";
                 }
+                else expression = "(" + left + (node.Operation == AddOperation ? " + " : " * ") + right + ")";
             }
-
+            else if (node.Operation == OneMinusOperation || node.Operation == ClampOperation)
+            {
+                var color = ColorInput(node, "color", "fixed4(0,0,0,1)", nodes, incoming, parameters, visiting, diagnostics);
+                expression = node.Operation == OneMinusOperation ? "(1 - " + color + ")" : "saturate(" + color + ")";
+            }
+            else if (node.Operation == EmissionOperation)
+            {
+                var color = ColorInput(node, "color", "fixed4(1,1,1,1)", nodes, incoming, parameters, visiting, diagnostics);
+                var strength = ScalarInput(node, "strength", FloatLiteral(PropertyFloat(node, "strength", 1f)), nodes, incoming, parameters, visiting, diagnostics);
+                expression = "(" + color + " * " + strength + ")";
+            }
+            else if (node.Operation == TextureOperation)
+            {
+                var uv = ResolveUv(node, nodes, incoming, parameters, visiting, diagnostics);
+                expression = "tex2D(_MainTex, (" + uv + ") * _MainTex_ST.xy + _MainTex_ST.zw)";
+            }
+            else if (node.Operation == NoiseOperation)
+                expression = "NXSG_NoiseColor(" + NoiseExpression(node, nodes, incoming, parameters, visiting, diagnostics) + ")";
+            if (expression == null)
+                AddError(diagnostics, "backend.color.expression", "nodes[" + SafeDiagnosticId(node.Id) + "]", "The node cannot produce a color expression.");
             visiting.Remove(node.Id);
-            return result;
+            return expression == null ? null : new ColorInfo("(1,1,1,1)", expression, null, true);
+        }
+
+        private static string ColorInput(GraphNode node, string port, string fallback,
+            Dictionary<string, GraphNode> nodes, Dictionary<string, GraphConnection> incoming,
+            Dictionary<string, GraphParameter> parameters, HashSet<string> visiting, List<Diagnostic> diagnostics)
+        {
+            GraphConnection edge;
+            if (!incoming.TryGetValue(PortKey(node.Id, port), out edge)) return fallback;
+            return ResolveColorExpression(nodes[edge.From.NodeId], nodes, incoming, parameters, visiting, diagnostics)?.ShaderExpression ?? fallback;
+        }
+
+        private static string ScalarInput(GraphNode node, string port, string fallback,
+            Dictionary<string, GraphNode> nodes, Dictionary<string, GraphConnection> incoming,
+            Dictionary<string, GraphParameter> parameters, HashSet<string> visiting, List<Diagnostic> diagnostics)
+        {
+            GraphConnection edge;
+            if (!incoming.TryGetValue(PortKey(node.Id, port), out edge)) return fallback;
+            return ResolveScalarExpression(nodes[edge.From.NodeId], nodes, incoming, parameters, visiting, diagnostics);
+        }
+
+        private static string NoiseExpression(GraphNode node, Dictionary<string, GraphNode> nodes,
+            Dictionary<string, GraphConnection> incoming, Dictionary<string, GraphParameter> parameters,
+            HashSet<string> visiting, List<Diagnostic> diagnostics)
+        {
+            var uv = ResolveUv(node, nodes, incoming, parameters, visiting, diagnostics);
+            var time = ScalarInput(node, "time", "_Time.y", nodes, incoming, parameters, visiting, diagnostics);
+            var scale = FloatLiteral(PropertyFloat(node, "scale", 5f));
+            var speed = FloatLiteral(PropertyFloat(node, "speed", 1f));
+            return "NXSG_ValueNoise((" + uv + ") * " + scale + " + float2(1,0.731) * (" + time + ") * " + speed + ")";
         }
 
         private static ScalarInfo ResolveScalar(
@@ -810,7 +825,9 @@ namespace NXSG.Backend
         private static void EmitForwardPass(
             ShaderBuilder builder,
             bool hasTexture,
+            string textureUv,
             ColorInfo tint,
+            ColorInfo emission,
             ScalarInfo threshold,
             ScalarInfo softness,
             ScalarInfo shadowStrength,
@@ -860,13 +877,19 @@ namespace NXSG.Backend
             builder.Line("struct v2f { float4 pos : SV_POSITION; float2 uv : TEXCOORD0; half3 normalWS : TEXCOORD1; float3 positionWS : TEXCOORD2; SHADOW_COORDS(3) UNITY_VERTEX_OUTPUT_STEREO };");
             var start = builder.LineNumber + 1;
             builder.Line("#line 1 \"nxsg://node/texture\"");
-            builder.Line("v2f vert(appdata v) { v2f output; UNITY_SETUP_INSTANCE_ID(v); UNITY_INITIALIZE_OUTPUT(v2f, output); UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(output); float4 positionWS = mul(unity_ObjectToWorld, v.vertex); output.pos = UnityWorldToClipPos(positionWS.xyz); output.positionWS = positionWS.xyz; output.normalWS = UnityObjectToWorldNormal(v.normal); output.uv = " + (hasTexture ? "TRANSFORM_TEX(v.uv, _MainTex)" : "v.uv") + "; TRANSFER_SHADOW(output); return output; }");
+            builder.Line("v2f vert(appdata v) { v2f output; UNITY_SETUP_INSTANCE_ID(v); UNITY_INITIALIZE_OUTPUT(v2f, output); UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(output); float4 positionWS = mul(unity_ObjectToWorld, v.vertex); output.pos = UnityWorldToClipPos(positionWS.xyz); output.positionWS = positionWS.xyz; output.normalWS = UnityObjectToWorldNormal(v.normal); output.uv = v.uv; TRANSFER_SHADOW(output); return output; }");
             var end = builder.LineNumber;
             sourceMap.Add(new SourceMapEntry { NodeId = toonNodeId, PortId = "vertex", StartLine = start, EndLine = end });
             start = builder.LineNumber + 1;
             builder.Line("#line 1 \"nxsg://node/toon\"");
-            var colorExpression = HlslValue(tint) + (tint.UsesBaseColor ? " * _Color" : "");
-            builder.Line("fixed4 frag(v2f input) : SV_Target { UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input); half3 normalWS = normalize(input.normalWS); half3 lightDirection = normalize(UnityWorldSpaceLightDir(input.positionWS)); half ndotl = saturate(dot(normalWS, lightDirection)); half softness = max(" + HlslValue(softness) + ", 0.001h); half toonBand = smoothstep(" + HlslValue(threshold) + " - softness, " + HlslValue(threshold) + " + softness, ndotl); half shadow = SHADOW_ATTENUATION(input); shadow = lerp(1.0h, shadow, saturate(" + HlslValue(shadowStrength) + ")); half3 ambient = ShadeSH9(half4(normalWS, 1.0h)); half3 direct = _LightColor0.rgb * lerp(0.35h, 1.0h, toonBand) * shadow; fixed4 textureColor = " + (hasTexture ? "tex2D(_MainTex, input.uv)" : "fixed4(1,1,1,1)") + " * " + colorExpression + "; return fixed4(textureColor.rgb * (ambient + direct), 1.0h); }");
+            var colorExpression = "(" + HlslValue(tint) + ") * _Color";
+            if (RequiresNoise(tint, emission))
+            {
+                builder.Line("float NXSG_NoiseHash(float2 p) { return frac(sin(dot(p,float2(127.1,311.7))) * 43758.5453); }");
+                builder.Line("float NXSG_ValueNoise(float2 p) { float2 cell=floor(p); float2 f=frac(p); f=f*f*(3-2*f); return lerp(lerp(NXSG_NoiseHash(cell),NXSG_NoiseHash(cell+float2(1,0)),f.x),lerp(NXSG_NoiseHash(cell+float2(0,1)),NXSG_NoiseHash(cell+float2(1,1)),f.x),f.y); }");
+                builder.Line("fixed4 NXSG_NoiseColor(float value) { return fixed4(value,value,value,1); }");
+            }
+            builder.Line("fixed4 frag(v2f input) : SV_Target { UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input); half3 normalWS = normalize(input.normalWS); half3 lightDirection = normalize(UnityWorldSpaceLightDir(input.positionWS)); half ndotl = saturate(dot(normalWS, lightDirection)); half softness = max(" + HlslValue(softness) + ", 0.001h); half toonBand = smoothstep(" + HlslValue(threshold) + " - softness, " + HlslValue(threshold) + " + softness, ndotl); half shadow = SHADOW_ATTENUATION(input); shadow = lerp(1.0h, shadow, saturate(" + HlslValue(shadowStrength) + ")); half3 ambient = ShadeSH9(half4(normalWS, 1.0h)); half3 direct = _LightColor0.rgb * lerp(0.35h, 1.0h, toonBand) * shadow; fixed4 textureColor = " + colorExpression + "; return fixed4(textureColor.rgb * (ambient + direct) + (" + HlslValue(emission) + ").rgb, 1.0h); }");
             end = builder.LineNumber;
             sourceMap.Add(new SourceMapEntry { NodeId = toonNodeId, PortId = "surface", StartLine = start, EndLine = end });
             builder.Line("ENDCG");
@@ -908,6 +931,83 @@ namespace NXSG.Backend
         {
             return incoming.ContainsKey(PortKey(toon.Id, "normal"));
         }
+
+        private static bool IsUvOperation(string operation)
+        {
+            return operation == UvOperation || operation == UvTransformOperation || operation == UvScrollOperation;
+        }
+
+        private static string ResolveUv(GraphNode node, Dictionary<string, GraphNode> nodes, Dictionary<string, GraphConnection> incoming,
+            Dictionary<string, GraphParameter> parameters, HashSet<string> visiting, List<Diagnostic> diagnostics)
+        {
+            GraphConnection input;
+            if (incoming.TryGetValue(PortKey(node.Id, "uv"), out input) && nodes.ContainsKey(input.From.NodeId))
+                return ResolveUvNode(nodes[input.From.NodeId], nodes, incoming, parameters, visiting, diagnostics);
+            return "input.uv";
+        }
+
+        private static string ResolveUvNode(GraphNode node, Dictionary<string, GraphNode> nodes, Dictionary<string, GraphConnection> incoming,
+            Dictionary<string, GraphParameter> parameters, HashSet<string> visiting, List<Diagnostic> diagnostics)
+        {
+            if (!visiting.Add(node.Id)) return "input.uv";
+            GraphConnection input;
+            var source = "input.uv";
+            if (incoming.TryGetValue(PortKey(node.Id, "uv"), out input) && nodes.ContainsKey(input.From.NodeId))
+                source = ResolveUvNode(nodes[input.From.NodeId], nodes, incoming, parameters, visiting, diagnostics);
+            string result = source;
+            if (node.Operation == UvTransformOperation)
+                result = "(" + source + " * " + Vector2Literal(node, "tiling", 1f, 1f) + " + " + Vector2Literal(node, "offset", 0f, 0f) + ")";
+            else if (node.Operation == UvScrollOperation)
+                result = "(" + source + " + (" + ScalarInput(node, "time", "_Time.y", nodes, incoming, parameters, visiting, diagnostics) + ") * " + Vector2Literal(node, "speed", .1f, 0f) + ")";
+            visiting.Remove(node.Id);
+            return result;
+        }
+
+        private static string ResolveScalarExpression(GraphNode node, Dictionary<string, GraphNode> nodes, Dictionary<string, GraphConnection> incoming,
+            Dictionary<string, GraphParameter> parameters, HashSet<string> visiting, List<Diagnostic> diagnostics)
+        {
+            if (!visiting.Add(node.Id))
+            {
+                AddError(diagnostics, "backend.expression.cycle", "nodes[" + SafeDiagnosticId(node.Id) + "]", "Expression cycle detected.");
+                return "0";
+            }
+            string expression = null;
+            if (node.Operation == ValueOperation) expression = FloatLiteral(PropertyFloat(node, "value", 0f));
+            else if (node.Operation == TimeOperation) expression = "(_Time.y * " + FloatLiteral(PropertyFloat(node, "speed", 1f)) + " + " + FloatLiteral(PropertyFloat(node, "offset", 0f)) + ")";
+            else if (node.Operation == ConstantOperation)
+            {
+                LiteralValue literal;
+                if (TryReadLiteral(node.Properties?["value"], out literal)) expression = FloatLiteral(literal.X);
+            }
+            else if (node.Operation == ParameterOperation)
+            {
+                var id = PropertyString(node, "parameterId"); GraphParameter parameter;
+                if (id != null && parameters.TryGetValue(id, out parameter) && parameter.Type == GraphValueType.Float)
+                {
+                    if (parameter.Binding == GraphBindingKind.Constant) expression = DefaultLiteral(parameter);
+                    else if (parameter.Binding == GraphBindingKind.Material || parameter.Binding == GraphBindingKind.AnimatedMaterial) expression = ParameterPropertyName(id);
+                }
+            }
+            else if (node.Operation == NoiseOperation) expression = NoiseExpression(node, nodes, incoming, parameters, visiting, diagnostics);
+            if (expression == null) AddError(diagnostics, "backend.scalar.expression", "nodes[" + SafeDiagnosticId(node.Id) + "]", "The node cannot produce a supported scalar expression.");
+            visiting.Remove(node.Id);
+            return expression ?? "0";
+        }
+
+        private static string Vector2Literal(GraphNode node, string property, float x, float y)
+        {
+            var token = node.Properties == null ? null : node.Properties[property] as JArray;
+            if (token != null && token.Count >= 2) { float a, b; if (TryReadFloat(token[0], out a) && TryReadFloat(token[1], out b)) return "float2(" + FloatLiteral(a) + "," + FloatLiteral(b) + ")"; }
+            return "float2(" + FloatLiteral(x) + "," + FloatLiteral(y) + ")";
+        }
+
+        private static float PropertyFloat(GraphNode node, string property, float fallback)
+        {
+            float value; return node.Properties != null && TryReadFloat(node.Properties[property], out value) ? value : fallback;
+        }
+
+        private static string FloatLiteral(float value) { return value.ToString("R", CultureInfo.InvariantCulture); }
+        private static bool RequiresNoise(ColorInfo a, ColorInfo b) { return a != null && (a.ShaderExpression.Contains("NXSG_ValueNoise") || b.ShaderExpression.Contains("NXSG_ValueNoise")); }
 
         private static LiteralValue? TryResolveLiteral(
             GraphNode node,
@@ -1140,27 +1240,7 @@ namespace NXSG.Backend
             return nodeId + "\u001f" + portId;
         }
 
-        private static IEnumerable<string> InputPorts(string operation)
-        {
-            if (operation == TextureOperation)
-            {
-                yield return "uv";
-            }
-            else if (operation == ToonOperation)
-            {
-                yield return "albedo";
-                yield return "normal";
-            }
-            else if (operation == OutputOperation)
-            {
-                yield return "surface";
-            }
-            else if (operation == MultiplyOperation)
-            {
-                yield return "a";
-                yield return "b";
-            }
-        }
+        private static IEnumerable<string> InputPorts(string operation) { return NodeCatalog.Ports(operation, false); }
 
         private static string SafeDiagnosticId(string value)
         {
@@ -1206,16 +1286,18 @@ namespace NXSG.Backend
 
         private sealed class TextureInfo
         {
-            public TextureInfo(string nodeId, string resourceId, string resourceUri)
+            public TextureInfo(string nodeId, string resourceId, string resourceUri, string uvExpression)
             {
                 NodeId = nodeId;
                 ResourceId = resourceId;
                 ResourceUri = resourceUri;
+                UvExpression = uvExpression;
             }
 
             public string NodeId { get; private set; }
             public string ResourceId { get; private set; }
             public string ResourceUri { get; private set; }
+            public string UvExpression { get; private set; }
         }
 
         private struct TraversalFrame

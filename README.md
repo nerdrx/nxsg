@@ -107,3 +107,7 @@ Linux is our primary authoring and validation environment. Record the Linux Edit
 - Selected nodes have a light outline. Delete removes the selection; toolbar Undo restores it.
 - Copy/Paste/Duplicate buttons and Ctrl+C/Ctrl+V/Ctrl+D preserve selected nodes and internal connections. Pasted nodes receive fresh IDs; Duplicate leaves the clipboard unchanged.
 - Middle-drag pans, the wheel zooms, and Escape cancels the current connection or selection.
+
+### More nodes
+
+Value, Time, UV Transform, UV Scroll, Noise, Add, Mix, Emission, One Minus, and Clamp join the original six. See the [node guide](docs/NODES.md) and [Animated Palette example](Packages/dev.nerdrx.nxsg/Samples~/Animated%20Palette.nxsg).

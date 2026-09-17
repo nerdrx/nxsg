@@ -61,3 +61,7 @@ The portable checks exercise clipboard resource/parameter remapping, cross-graph
 ## Color correctness and editing context — 2026-09-17
 
 A real graphics regression check (`Tests/Editor/ColorRenderSmoke.cs`) renders a red constant through Multiply and Toon. The sampled center pixel is RGBA(1,0,0,1); the previous comma-expression bug produced white. HLSL now uses vector constructors while ShaderLab property defaults retain tuple syntax. Graph previews opened directly use neutral material tint; opening through a material preserves that material as context. The header shows graph/material/shader identity and the window title includes the graph filename. Existing generated shaders must be rebuilt to incorporate the compiler fix.
+
+## Ten-node pack — 2026-09-17
+
+Portable checks cover each new node, default inputs, type rejection, clipboard, and the Animated Palette example. The combined graphics fixture (`NodePackRenderSmoke.Run`) compiles Time/Value, UV Transform/Scroll, a sampled texture, Noise, Mix, Add, Clamp, One Minus, and Emission together. With black albedo and no lighting, red emission remains visible; captures at deterministic times 0 and 1 differ. Both captures are in `docs/evidence`. The existing hidden UI interaction/clipboard check passes after integrating the shared node catalog. This is Unity OpenGL evidence, not a VRChat client or DX11 acceptance result.

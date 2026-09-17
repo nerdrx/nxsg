@@ -11,3 +11,5 @@
 This fixture does not open or change the interactive development project's graph, material, or scene.
 
 `ColorRenderSmoke.cs` uses the same isolated setup with `-executeMethod ColorRenderSmoke.Run`. Require `NXSG COLOR RENDER CHECK PASSED` in its log. It compiles and renders a red constant multiplied by a second color; `Assets/ColorCheck.png` records the render.
+
+`NodePackRenderSmoke.cs` uses `-executeMethod NodePackRenderSmoke.Run` in the same disposable project. Require `NXSG NODE PACK RENDER CHECK PASSED`. It renders a combined node graph at two fixed times with emission and black lighting, writing `Assets/NodePack0.png` and `Assets/NodePack1.png`.

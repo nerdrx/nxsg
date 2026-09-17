@@ -10,17 +10,6 @@ namespace NXSG.Core
 {
     public static class GraphValidator
     {
-        private static readonly HashSet<string> KnownOperations = new HashSet<string>(StringComparer.Ordinal)
-        {
-            "core.constant",
-            "core.parameter",
-            "core.uv0",
-            "core.texture2D",
-            "core.multiply",
-            "core.toonSurface",
-            "core.output"
-        };
-
         public static ValidationResult Validate(ShaderGraph graph, CancellationToken cancellationToken = default(CancellationToken))
         {
             var diagnostics = new List<Diagnostic>();
@@ -76,7 +65,7 @@ namespace NXSG.Core
                 {
                     Add(diagnostics, DiagnosticSeverity.Error, "node.operation", path + ".operation", "Node operation is required.");
                 }
-                else if (!KnownOperations.Contains(node.Operation))
+                else if (!NodeCatalog.IsKnown(node.Operation))
                 {
                     Add(diagnostics, DiagnosticSeverity.Error, "operation.unknown", path + ".operation",
                         "Unknown operation is inert and blocks affected compilation.");
@@ -106,6 +95,8 @@ namespace NXSG.Core
                 return;
             }
 
+            ValidateCatalogProperties(node, path, diagnostics);
+
             if (node.Operation == "core.constant" && node.Properties["valueType"] != null)
             {
                 ParseType(node.Properties["valueType"], path + ".properties.valueType", diagnostics);
@@ -128,6 +119,42 @@ namespace NXSG.Core
                         "Texture node must reference a declared resource.");
                 }
             }
+        }
+
+        private static void ValidateCatalogProperties(GraphNode node, string path, List<Diagnostic> diagnostics)
+        {
+            string[] numeric = null, vectors = null;
+            switch (node.Operation)
+            {
+                case "core.value": numeric = new[] { "value" }; break;
+                case "core.time": numeric = new[] { "speed", "offset" }; break;
+                case "core.noise": numeric = new[] { "scale", "speed" }; break;
+                case "core.mix": numeric = new[] { "factor" }; break;
+                case "core.emission": numeric = new[] { "strength" }; break;
+                case "core.uvTransform": vectors = new[] { "tiling", "offset" }; break;
+                case "core.uvScroll": vectors = new[] { "speed" }; break;
+                default: return;
+            }
+            if (numeric != null) foreach (var name in numeric) CheckNumber(node.Properties[name], path + ".properties." + name, diagnostics);
+            if (vectors != null) foreach (var name in vectors) CheckVector2(node.Properties[name], path + ".properties." + name, diagnostics);
+        }
+
+        private static void CheckNumber(JToken token, string path, List<Diagnostic> diagnostics)
+        {
+            if (token == null) return;
+            if (token.Type != JTokenType.Integer && token.Type != JTokenType.Float)
+            { Add(diagnostics, DiagnosticSeverity.Error, "property.type", path, "Property must be a finite number."); return; }
+            var value = token.Value<double>();
+            if (double.IsNaN(value) || double.IsInfinity(value) || Math.Abs(value) > float.MaxValue) Add(diagnostics, DiagnosticSeverity.Error, "value.nonfinite", path, "Numeric values must fit a finite shader float.");
+        }
+
+        private static void CheckVector2(JToken token, string path, List<Diagnostic> diagnostics)
+        {
+            if (token == null) return;
+            var array = token as JArray;
+            if (array == null || array.Count != 2)
+            { Add(diagnostics, DiagnosticSeverity.Error, "property.type", path, "Property must be a two-number vector."); return; }
+            CheckNumber(array[0], path + "[0]", diagnostics); CheckNumber(array[1], path + "[1]", diagnostics);
         }
 
         private static void ValidateParameters(List<GraphParameter> parameters, List<Diagnostic> diagnostics,
@@ -302,17 +329,12 @@ namespace NXSG.Core
         private static bool IsPortDefined(GraphNode node, string port, bool input)
         {
             if (node == null || string.IsNullOrWhiteSpace(node.Operation)) return false;
-            switch (node.Operation)
+            if (NodeCatalog.IsKnown(node.Operation))
             {
-                case "core.constant": return !input && port == "value";
-                case "core.parameter": return !input && port == "value";
-                case "core.uv0": return !input && port == "uv";
-                case "core.texture2D": return input ? port == "uv" : port == "color";
-                case "core.multiply": return input ? (port == "a" || port == "b") : port == "value";
-                case "core.toonSurface": return input ? (port == "albedo" || port == "normal") : port == "surface";
-                case "core.output": return input && port == "surface";
-                default: return false;
+                var ports = NodeCatalog.Ports(node.Operation, !input);
+                return ports.Contains(port, StringComparer.Ordinal);
             }
+            return false;
         }
 
         private static void DetectCycle(List<GraphConnection> connections, Dictionary<string, GraphNode> nodes,
@@ -351,6 +373,12 @@ namespace NXSG.Core
         private static GraphValueType? GetPortType(GraphNode node, string port, bool input, List<GraphParameter> parameters)
         {
             if (node == null || string.IsNullOrWhiteSpace(node.Operation)) return null;
+            if (node.Operation != "core.parameter" && node.Operation != "core.constant" && node.Operation != "core.multiply")
+            {
+                var name = NodeCatalog.PortType(node, port);
+                GraphValueType catalogType;
+                if (name != null && Enum.TryParse(name, true, out catalogType)) return catalogType;
+            }
             switch (node.Operation)
             {
                 case "core.constant":

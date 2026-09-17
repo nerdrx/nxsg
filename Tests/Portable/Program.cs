@@ -43,8 +43,11 @@ internal static class Program
 
     private static int Main()
     {
+        NodePackChecks.Run(Assert);
         CheckClipboard();
         var fixtures = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../../Tests/Fixtures"));
+        var example = GraphJson.Parse(File.ReadAllText(Path.Combine(fixtures, "../../Packages/dev.nerdrx.nxsg/Samples~/Animated Palette.nxsg")));
+        Assert(GraphValidator.Validate(example).IsValid && ShaderEmitter.Emit(example).Succeeded, "animated palette example validates and emits");
         var defaultGraph = Load(fixtures, "default-texture-toon-output.nxsg");
         Assert(GraphValidator.Validate(defaultGraph).IsValid, "default graph validates");
         Assert(GraphValidator.Validate(GraphJson.Parse(GraphJson.Serialize(defaultGraph))).IsValid, "default graph round trips");

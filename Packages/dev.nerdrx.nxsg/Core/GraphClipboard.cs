@@ -13,12 +13,6 @@ namespace NXSG.Core
         private const int MaxConnections = 4096;
         private const int MaxBytes = 1024 * 1024;
 
-        private static readonly HashSet<string> SupportedOperations = new HashSet<string>(StringComparer.Ordinal)
-        {
-            "core.constant", "core.parameter", "core.uv0", "core.texture2D",
-            "core.multiply", "core.toonSurface", "core.output"
-        };
-
         private static readonly HashSet<string> ParameterProperties = new HashSet<string>(StringComparer.Ordinal)
         {
             "parameterId", "thresholdParameterId", "softnessParameterId", "shadowStrengthParameterId"
@@ -142,7 +136,7 @@ namespace NXSG.Core
         }
 
         private static bool Finite(double value) { return !double.IsNaN(value) && !double.IsInfinity(value); }
-        private static bool SafeNode(GraphNode node) { return node != null && !string.IsNullOrWhiteSpace(node.Id) && node.Version == 1 && SupportedOperations.Contains(node.Operation) && node.Properties != null; }
+        private static bool SafeNode(GraphNode node) { return node != null && !string.IsNullOrWhiteSpace(node.Id) && node.Version == 1 && NodeCatalog.IsKnown(node.Operation) && node.Properties != null; }
         private static void AddReferences(GraphNode node, HashSet<string> parameters, HashSet<string> resources)
         {
             if (node.Properties == null) return;
