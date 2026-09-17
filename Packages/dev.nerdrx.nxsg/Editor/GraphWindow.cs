@@ -346,6 +346,18 @@ namespace NXSG.Editor
                     var position = Position(node.Id);
                     var box = new VisualElement { focusable = true, style = { position = UnityEngine.UIElements.Position.Absolute, left = position.x, top = position.y, width = 175, backgroundColor = new Color(.14f, .14f, .14f), borderLeftWidth = 2, borderRightWidth = 2, borderTopWidth = 2, borderBottomWidth = 2, borderTopLeftRadius = 8, borderTopRightRadius = 8, borderBottomLeftRadius = 8, borderBottomRightRadius = 8, paddingBottom = 8 } };
                     var title = new Label(Title(node.Operation)) { style = { paddingLeft = 12, paddingTop = 10, paddingBottom = 10, unityFontStyleAndWeight = FontStyle.Bold, backgroundColor = NodeColor(node.Operation) } };
+                    var alternatives = OperationAlternatives(node.Operation);
+                    if (alternatives.Length > 0)
+                    {
+                        title.text += " ▾";
+                        title.focusable = true;
+                        title.tooltip = "Click to change operation. Drag to move this node. Compatible wires are kept; unavailable inputs are disconnected. Undo restores them.";
+                        title.RegisterCallback<KeyDownEvent>(evt =>
+                        {
+                            if (evt.keyCode != KeyCode.Return && evt.keyCode != KeyCode.Space) return;
+                            ShowOperationMenu(node.Id); evt.StopPropagation();
+                        });
+                    }
                     box.Add(title);
                     title.RegisterCallback<PointerDownEvent>(evt =>
                     {
@@ -372,6 +384,16 @@ namespace NXSG.Editor
                     {
                         if (!title.HasPointerCapture(evt.pointerId)) return;
                         dragging = false; title.ReleasePointer(evt.pointerId);
+                        if (alternatives.Length > 0 && ((Vector2)evt.position - pointerStart).sqrMagnitude < 16)
+                        {
+                            foreach (var pair in dragOrigins)
+                            {
+                                SetPosition(pair.Key, pair.Value);
+                                nodes[pair.Key].style.left = pair.Value.x; nodes[pair.Key].style.top = pair.Value.y;
+                            }
+                            layer.MarkDirtyRepaint();
+                            ShowOperationMenu(node.Id); evt.StopPropagation(); return;
+                        }
                         Undo.IncrementCurrentGroup();
                         Undo.RegisterCompleteObjectUndo(session, "Move node");
                         session.json = GraphJson.Serialize(graph, true); hasUnsavedChanges = true; EditorUtility.SetDirty(session);
@@ -386,6 +408,57 @@ namespace NXSG.Editor
             selection.RemoveAll(id => !nodes.ContainsKey(id));
             UpdateSelectionOutline();
             TransformCanvas(); RebuildInspector(); UpdateIdentity();
+        }
+
+        static string[] OperationAlternatives(string operation)
+        {
+            switch (operation)
+            {
+                case "core.add": case "core.multiply": case "core.mix":
+                    return new[] { "core.add", "core.multiply", "core.mix" };
+                case "core.oneMinus": case "core.clamp":
+                    return new[] { "core.oneMinus", "core.clamp" };
+                default: return Array.Empty<string>();
+            }
+        }
+
+        void ShowOperationMenu(string nodeId)
+        {
+            var node = graph?.Nodes.FirstOrDefault(n => n.Id == nodeId);
+            if (node == null) return;
+            var menu = new GenericMenu();
+            foreach (var operation in OperationAlternatives(node.Operation))
+            {
+                var op = operation;
+                menu.AddItem(new GUIContent(Title(op), NodeCatalog.Description(op)), op == node.Operation,
+                    () => SwitchOperation(nodeId, op));
+            }
+            menu.ShowAsContext();
+        }
+
+        void SwitchOperation(string nodeId, string operation)
+        {
+            var node = graph?.Nodes.FirstOrDefault(n => n.Id == nodeId);
+            if (node == null || node.Operation == operation || !OperationAlternatives(node.Operation).Contains(operation)) return;
+            Undo.IncrementCurrentGroup();
+            var removed = 0;
+            Edit("Change node operation", () =>
+            {
+                node.Operation = operation;
+                // Preserve dormant controls so switching back restores the user's settings.
+                foreach (var property in NodeCatalog.Create(operation).Properties.Properties())
+                    if (node.Properties[property.Name] == null) node.Properties[property.Name] = property.Value.DeepClone();
+                removed = graph.Connections.RemoveAll(edge =>
+                {
+                    if (edge.From.NodeId != nodeId && edge.To.NodeId != nodeId) return false;
+                    var from = graph.Nodes.FirstOrDefault(n => n.Id == edge.From.NodeId);
+                    var to = graph.Nodes.FirstOrDefault(n => n.Id == edge.To.NodeId);
+                    return from == null || to == null || !Ports(from.Operation, true).Contains(edge.From.PortId)
+                        || !Ports(to.Operation, false).Contains(edge.To.PortId)
+                        || PortType(from, edge.From.PortId) != PortType(to, edge.To.PortId);
+                });
+            });
+            if (removed > 0) SetStatus("Changed to " + Title(operation) + " · disconnected " + removed + " incompatible wire(s). Undo restores them.");
         }
 
         void SelectNode(string id, bool additive = false)

@@ -45,3 +45,7 @@ Try **Assets/NXSGExamples/Polar Palette.nxsg** in the development project for ro
 - Object projection: use **Object Planar UVs** for a projection that follows object movement.
 
 Polar UVs have an angular seam and a singular center; texture filtering can reveal these. Use repeat wrapping for angular repetition. Planar projection uses X/Z only and stretches on side-facing surfaces; this is not triplanar mapping. UV operations also work with Noise. Unconnected Polar/Rotate UV inputs use UV0.
+
+## Switch math operations
+
+Click a math node's title (marked ▾) to switch between **Add, Multiply, and Mix**, or between **Invert and Clamp**. Drag the same header to move it. Keyboard users can focus the header and press Enter or Space. Node identity, position, compatible wires, and settings are retained. Inputs absent from the new operation are disconnected; the status message reports this, and Undo restores the operation and wires together. Switching back retains the previous Mix factor value, but does not automatically reconnect a removed factor wire.

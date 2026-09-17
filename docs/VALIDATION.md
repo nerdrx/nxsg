@@ -71,3 +71,7 @@ Portable checks cover each new node, default inputs, type rejection, clipboard, 
 Polar UVs, Rotate UVs, Object Planar UVs, and World Planar UVs passed portable validation/emission, typed angle connections, malformed-property rejection, clipboard preservation, disconnected-node elimination, and a 20-node coordinate-chain source-size check. The Polar Palette sample validates and emits. Coordinate helpers keep nested source expressions from expanding exponentially.
 
 `Tests/Editor/CoordinateRenderSmoke.cs` ran in a separate project under headless Gamescope with Unity 2022.3.22f1 and OpenGL. It samples an encoded UV texture through emission on an X/Z quad using a linear floating-point render target. Polar center/cardinal samples, 90-degree rotation, object-space translation invariance, and world-space translation response passed (`NXSG COORDINATE RENDER CHECK PASSED`). This checks Linux rendering, not live VRChat, stereo, skinned meshes, or Windows.
+
+## Math operation switching — 2026-09-17
+
+`NodeSwitchSmoke.Run` passed in the isolated headless Unity 2022.3.22f1 editor. It exercises the editor's operation-change command, preserving node identity/layout/selection and compatible wires, removing Mix's factor connection on switching to Add, retaining the stored factor control, switching Invert to Clamp, and restoring operations/wires with one Undo. The header offers a native menu on click or Enter/Space; pointer dragging remains available. The automated check covers the command and Undo behavior, not native-menu pointer selection.
