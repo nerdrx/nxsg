@@ -9,3 +9,5 @@
 5. Require `NXSG SOCKET CHECK PASSED` in the Editor log with no preceding exception or compile error. Gamescope's exit status alone does not establish a pass.
 
 This fixture does not open or change the interactive development project's graph, material, or scene.
+
+`ColorRenderSmoke.cs` uses the same isolated setup with `-executeMethod ColorRenderSmoke.Run`. Require `NXSG COLOR RENDER CHECK PASSED` in its log. It compiles and renders a red constant multiplied by a second color; `Assets/ColorCheck.png` records the render.

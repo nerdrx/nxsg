@@ -16,6 +16,7 @@ namespace NXSG.Editor
         [SerializeField] GraphSession session;
         [SerializeField] string sourcePath;
         [SerializeField] string diskSource;
+        [SerializeField] Material contextMaterial;
         [SerializeField] string selected;
         [SerializeField] List<string> selection = new List<string>();
         readonly Dictionary<string, Vector2> dragOrigins = new Dictionary<string, Vector2>();
@@ -27,7 +28,7 @@ namespace NXSG.Editor
         [SerializeField] float zoom = 1;
         ShaderGraph graph;
         VisualElement canvas, layer, inspector;
-        Label status;
+        Label status, identity;
         readonly Dictionary<string, VisualElement> nodes = new Dictionary<string, VisualElement>();
         string pendingNode, pendingPort;
         string lastPaste;
@@ -52,11 +53,12 @@ namespace NXSG.Editor
         [MenuItem("Tools/NXSG/Open Graph Editor")]
         public static void ShowEditor() { GetWindow<GraphWindow>("NX Shader Graph"); }
 
-        public static void Open(string path)
+        public static void Open(string path, Material material = null)
         {
             var window = GetWindow<GraphWindow>("NX Shader Graph");
             if (!window.CanDiscard()) return;
             window.LoadPath(path);
+            if (window.sourcePath == Path.GetFullPath(path)) { window.contextMaterial = material; window.UpdateIdentity(); }
         }
 
         void OnEnable()
@@ -102,6 +104,8 @@ namespace NXSG.Editor
             toolbar.Add(new ToolbarButton(Build) { text = "Build for VRChat" });
             toolbar.Add(new ToolbarButton(() => { pan = new Vector2(30, 70); zoom = 1; TransformCanvas(); }) { text = "Reset view" });
             rootVisualElement.Add(toolbar);
+            identity = new Label { style = { whiteSpace = WhiteSpace.Normal, paddingLeft = 10, paddingTop = 5, paddingBottom = 5 } };
+            rootVisualElement.Add(identity);
             var body = new VisualElement { style = { flexDirection = FlexDirection.Row, flexGrow = 1 } };
             canvas = new VisualElement { focusable = true, style = { flexGrow = 1, overflow = Overflow.Hidden } };
             layer = new VisualElement { style = { position = UnityEngine.UIElements.Position.Absolute, width = 4000, height = 4000 } };
@@ -156,6 +160,38 @@ namespace NXSG.Editor
             Rebuild();
         }
 
+        void OnSelectionChange()
+        {
+            var material = Selection.activeObject as Material;
+            if (MatchesSource(material)) { contextMaterial = material; ClearPreview(); RebuildInspector(); }
+            UpdateIdentity();
+        }
+
+        bool MatchesSource(Material material)
+        {
+            var path = GraphMaterialHeader.SourcePath(material);
+            return !string.IsNullOrEmpty(path) && !string.IsNullOrEmpty(sourcePath) && Path.GetFullPath(path) == sourcePath;
+        }
+
+        void UpdateIdentity()
+        {
+            var graphName = string.IsNullOrEmpty(sourcePath) ? "Untitled graph" : Path.GetFileName(sourcePath);
+            titleContent = new GUIContent(graphName + " — NXSG");
+            if (identity == null) return;
+            if (contextMaterial != null && !MatchesSource(contextMaterial)) contextMaterial = null;
+            if (contextMaterial == null && MatchesSource(Selection.activeObject as Material)) contextMaterial = Selection.activeObject as Material;
+            var shader = contextMaterial != null ? contextMaterial.shader : null;
+            if (shader == null && !string.IsNullOrEmpty(sourcePath))
+            {
+                var assetPath = FileUtil.GetProjectRelativePath(sourcePath);
+                var guid = AssetDatabase.AssetPathToGUID(assetPath);
+                if (!string.IsNullOrEmpty(guid)) shader = AssetDatabase.LoadAssetAtPath<Shader>("Assets/NXSGGenerated/" + guid + "/Material.shader");
+            }
+            identity.text = "Graph: " + graphName + "   •   Material: " + (contextMaterial != null ? contextMaterial.name : "none selected (neutral graph preview)")
+                + "\nShader: " + (shader != null ? shader.name : "not built yet");
+            identity.tooltip = (sourcePath ?? "Save this graph to name it.") + (contextMaterial != null ? "\n" + AssetDatabase.GetAssetPath(contextMaterial) : "");
+        }
+
         static bool IsEditingText(VisualElement element)
         {
             for (var current = element; current != null; current = current.parent)
@@ -173,7 +209,7 @@ namespace NXSG.Editor
             if (!CanDiscard()) return;
             graph = GraphSamples.CreateDefault();
             graph.GraphId = Guid.NewGuid().ToString("N");
-            sourcePath = null; diskSource = null; selected = null; selection.Clear();
+            sourcePath = null; diskSource = null; contextMaterial = null; selected = null; selection.Clear();
             session.json = GraphJson.Serialize(graph, true);
             Undo.ClearUndo(session);
             hasUnsavedChanges = true;
@@ -188,7 +224,7 @@ namespace NXSG.Editor
                 var source = File.ReadAllText(path);
                 var parsed = GraphJson.Parse(source);
                 CheckEditableShape(parsed);
-                graph = parsed; sourcePath = Path.GetFullPath(path); diskSource = source;
+                graph = parsed; sourcePath = Path.GetFullPath(path); diskSource = source; contextMaterial = null;
                 session.json = GraphJson.Serialize(parsed, true);
                 Undo.ClearUndo(session); selected = null; selection.Clear(); hasUnsavedChanges = false;
                 ClearPreview(); Rebuild(); SetStatus(Path.GetFileName(path));
@@ -257,7 +293,7 @@ namespace NXSG.Editor
                 }
                 finally { if (File.Exists(temporary)) File.Delete(temporary); }
                 diskSource = text; session.json = text; hasUnsavedChanges = false;
-                AssetDatabase.Refresh(); SetStatus("Saved " + Path.GetFileName(sourcePath));
+                AssetDatabase.Refresh(); UpdateIdentity(); SetStatus("Saved " + Path.GetFileName(sourcePath));
                 return true;
             }
             catch (Exception exception) { SetStatus(exception.Message); return false; }
@@ -280,7 +316,11 @@ namespace NXSG.Editor
             {
                 var material = GraphBuild.Build(graph, sourcePath);
                 ClearPreview();
-                preview = new Material(material) { hideFlags = HideFlags.HideAndDontSave };
+                UpdateIdentity();
+                var useContext = contextMaterial != null && contextMaterial.shader == material.shader;
+                preview = new Material(useContext ? contextMaterial : material) { hideFlags = HideFlags.HideAndDontSave };
+                // A directly opened graph uses neutral tint; a material-opened graph previews that material.
+                if (!useContext && preview.HasProperty("_Color")) preview.SetColor("_Color", Color.white);
                 previewEditor = UnityEditor.Editor.CreateEditor(preview);
                 RebuildInspector();
                 SetStatus("Built local shader + material. Preview updated. Client validation is a separate step.");
@@ -345,7 +385,7 @@ namespace NXSG.Editor
                 }
             selection.RemoveAll(id => !nodes.ContainsKey(id));
             UpdateSelectionOutline();
-            TransformCanvas(); RebuildInspector();
+            TransformCanvas(); RebuildInspector(); UpdateIdentity();
         }
 
         void SelectNode(string id, bool additive = false)
@@ -499,7 +539,7 @@ namespace NXSG.Editor
             }
             if (previewEditor != null)
             {
-                inspector.Add(new Label("Last successful build"));
+                inspector.Add(new Label(contextMaterial != null ? "Last build · " + contextMaterial.name : "Last build · neutral material tint"));
                 inspector.Add(new IMGUIContainer(() =>
                 {
                     if (previewEditor != null) previewEditor.OnPreviewGUI(GUILayoutUtility.GetRect(240, 220), EditorStyles.helpBox);

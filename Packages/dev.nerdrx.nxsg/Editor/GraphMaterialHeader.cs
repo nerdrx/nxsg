@@ -24,7 +24,7 @@ namespace NXSG.Editor
             if (GUILayout.Button(new GUIContent("Open Shader Graph", tooltip), GUILayout.Height(26)))
             {
                 if (string.IsNullOrEmpty(source)) GraphWindow.ShowEditor();
-                else GraphWindow.Open(source);
+                else GraphWindow.Open(source, material);
             }
             if (string.IsNullOrEmpty(source))
                 EditorGUILayout.HelpBox("No linked graph. Choose Open in the graph editor to select your .nxsg file.", MessageType.Info);

@@ -57,3 +57,7 @@ The custom canvas now uses edge sockets and per-operation header colors. A separ
 ## Clipboard update — 2026-09-17
 
 The portable checks exercise clipboard resource/parameter remapping, cross-graph paste, fresh IDs, layout offsets, oversize/duplicate/unresolved-reference rejection, and unchanged targets on failure. The hidden Unity interaction check also exercises Ctrl+C/V/D, copied internal wires, excluded external wires, paste Undo, clipboard preservation during Duplicate, text-field shortcut isolation, and invalid clipboard rejection. Copy/paste is limited to currently supported core node versions, 1 MiB of clipboard JSON, and 1,024 nodes per snippet.
+
+## Color correctness and editing context — 2026-09-17
+
+A real graphics regression check (`Tests/Editor/ColorRenderSmoke.cs`) renders a red constant through Multiply and Toon. The sampled center pixel is RGBA(1,0,0,1); the previous comma-expression bug produced white. HLSL now uses vector constructors while ShaderLab property defaults retain tuple syntax. Graph previews opened directly use neutral material tint; opening through a material preserves that material as context. The header shows graph/material/shader identity and the window title includes the graph filename. Existing generated shaders must be rebuilt to incorporate the compiler fix.

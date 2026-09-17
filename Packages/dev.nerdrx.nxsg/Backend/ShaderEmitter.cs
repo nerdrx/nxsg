@@ -588,7 +588,7 @@ namespace NXSG.Backend
                     return new ColorInfo("(1,1,1,1)", "_Color");
             }
 
-            return new ColorInfo(literal.Value.ToLiteral(), literal.Value.ToLiteral(), null, true);
+            return new ColorInfo(literal.Value.ToLiteral(), literal.Value.ToHlsl(), null, true);
         }
 
         private static ColorInfo ResolveParameterColor(
@@ -625,7 +625,7 @@ namespace NXSG.Backend
 
             if (parameter.Binding == GraphBindingKind.Constant)
             {
-                return new ColorInfo(parameterDefault.ToLiteral(), parameterDefault.ToLiteral(), null, true);
+                return new ColorInfo(parameterDefault.ToLiteral(), parameterDefault.ToHlsl(), null, true);
             }
 
             return new ColorInfo(parameterDefault.ToLiteral(), ParameterPropertyName(parameter.Id), parameter.Id);
@@ -651,7 +651,7 @@ namespace NXSG.Backend
                 LiteralValue literal;
                 if (TryReadLiteral(node.Properties == null ? null : node.Properties["value"], out literal))
                 {
-                    result = new ColorInfo(literal.ToLiteral(), literal.ToLiteral(), null, true);
+                    result = new ColorInfo(literal.ToLiteral(), literal.ToHlsl(), null, true);
                 }
             }
             else if (node.Operation == ParameterOperation)
@@ -1283,6 +1283,9 @@ namespace NXSG.Backend
             {
                 return new LiteralValue(X * other.X, Y * other.Y, Z * other.Z, W * other.W);
             }
+
+            // ShaderLab property defaults use tuples; executable HLSL needs a vector constructor.
+            public string ToHlsl() { return "fixed4" + ToLiteral(); }
 
             public string ToLiteral()
             {

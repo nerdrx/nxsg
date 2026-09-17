@@ -109,7 +109,7 @@ internal static class Program
         var constantGraph = CreateConstantColorGraph();
         var constantEmission = ShaderEmitter.Emit(constantGraph);
         Assert(constantEmission.Succeeded, "constant albedo graph emits");
-        Assert(constantEmission.ShaderSource.Contains("(0.2,0.3,0.4,1)"), "constant albedo is folded into emitted source");
+        Assert(constantEmission.ShaderSource.Contains("fixed4(0.2,0.3,0.4,1)"), "constant albedo is folded into emitted source");
 
         var unusedGraph = CreateConstantColorGraph();
         AddUnusedMath(unusedGraph);
