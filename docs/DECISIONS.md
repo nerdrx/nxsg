@@ -4,13 +4,15 @@ Research baseline: **2026-09-17**. These decisions guide the first implementatio
 
 ## D01 — PC avatar backend first · Selected
 
-Target Unity **2022.3.22f1**, VRChat Base/Avatars **3.10.5**, Built-In forward rendering, and Windows DX11 for initial acceptance. Recheck the official supported editor before creating the fixture. Add graphics APIs only after testing them. Android/iOS avatars require SDK-permitted shaders; a future mobile material adapter can bake/map compatible values into those shaders. It cannot promise arbitrary NXSG shader execution. Safety fallback, mobile output, and a low-cost PC quality mode are three distinct mechanisms. [Platform evidence](research/PLATFORM_AND_INTEGRATIONS.md)
+Develop and test on **Linux**, using Unity **2022.3.22f1** and VRChat Base/Avatars **3.10.5**. Target PC VRChat's Built-In shader contract. The authoring OS, the Linux Editor graphics API, generated target code and the VRChat client's graphics path are separate choices. Record the actual Linux Vulkan/OpenGL path; establish VRChat/VR testing on the available Linux setup, including Proton details if used. A Windows machine is not required for coding or Linux milestones. Native Windows portability is plausible, not verified; add a Windows smoke test later when claiming that environment is supported.
+
+Recheck the official supported editor before creating the fixture. Android/iOS avatars require SDK-permitted shaders; a future mobile material adapter can bake/map compatible values into those shaders. It cannot promise arbitrary NXSG shader execution. Safety fallback, mobile output, and a low-cost PC quality mode are three distinct mechanisms. [Platform evidence](research/PLATFORM_AND_INTEGRATIONS.md)
 
 ## D02 — Portable core, one concrete backend · Selected
 
 Use ordinary C# for the graph, validation, deterministic serialization, diagnostics, and initial ShaderLab/HLSL text generation. Keep Unity asset access, material creation, and canvas objects in an editor adapter. Start with a core assembly and editor assembly; a separate backend assembly is justified when ownership or independent testing requires it. Namespaces and clear inputs are sufficient to separate a single backend initially.
 
-Unity 2022.3 uses a C# 9 compiler with documented feature restrictions and supports .NET Standard 2.1. A conservative C# 8 subset is our source policy, not Unity's language ceiling. Confirm the actual assembly on both hosts in S00. [Unity compiler](https://docs.unity3d.com/2022.3/Documentation/Manual/CSharpCompiler.html), [API profile](https://docs.unity3d.com/2022.3/Documentation/Manual/dotnetProfileSupport.html)
+Unity 2022.3 uses a C# 9 compiler with documented feature restrictions and supports .NET Standard 2.1. A conservative C# 8 subset is our source policy, not Unity's language ceiling. Confirm the actual assembly in Linux Unity and the standalone .NET runner in S00; these are two runtimes, not two required operating systems. [Unity compiler](https://docs.unity3d.com/2022.3/Documentation/Manual/CSharpCompiler.html), [API profile](https://docs.unity3d.com/2022.3/Documentation/Manual/dotnetProfileSupport.html)
 
 **Serializer choice is provisional:** prefer the Newtonsoft JSON dependency already declared by the SDK (`com.unity.nuget.newtonsoft-json` 3.2.1) over a second serializer. Record the resolved Unity package/assembly identity and a compatible upstream package for the portable host; a rolling documentation page for package 3.2.2 is not proof of the 3.2.1 binary. Compare serialized fixtures on both hosts in S00/S02. Do not add a general serializer interface unless a second implementation is actually needed. [Compiler research](research/GRAPH_COMPILER_AND_PORTABILITY.md), [SDK package snapshot](research/COMPATIBILITY_SNAPSHOT.json)
 
@@ -41,6 +43,8 @@ Offer static switches only for immutable build choices. Do not expose a shader k
 A custom node canvas is a first-class candidate. Compare a small canvas built from Unity 2022.3 UI Toolkit primitives with an Experimental.GraphView adapter on **2022.3.22f1**. GraphView is an optional accelerator, not a required dependency. No Unity 6 Graph Toolkit or later-only APIs enter the baseline. Use the same 20/200-node fixture, interactions and reload checks to measure implementation effort, responsiveness, accessibility and maintenance exposure. Prefer the custom canvas if it meets those requirements with manageable code; the spike determines the choice.
 
 Either implementation adapts to the same graph commands. Canvas objects never define `.nxsg`; the editor maintains recoverable state, a dirty indicator, undo transactions and external-change detection. Replacing the canvas must not redesign the graph or compiler. [Editor evidence](research/EDITOR_UX_AND_PRIOR_ART.md), [custom canvas research](research/CUSTOM_CANVAS_ON_UNITY_2022.md)
+
+Linux is where the custom UI is built and used daily. Prefer Unity UI Toolkit drawing, events and clipboard APIs over platform-specific integrations; keep asset/include path casing exact, normalize serialized separators and check DPI, focus and pointer capture on the Linux desktop. This exercises the primary platform directly while preserving a straightforward later Windows port.
 
 ## D07 — Deterministic local search and progressive disclosure · Selected
 

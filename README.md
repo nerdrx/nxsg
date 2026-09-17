@@ -39,7 +39,8 @@ Texture ───── Toon Surface ───── Output
 | :--- | :--- |
 | Unity | **2022.3.22f1** — the VRChat-supported patch |
 | VRChat SDK | **Base + Avatars 3.10.5** |
-| First renderer | **PC · Built-In forward · Windows DX11** |
+| Development and testing | **Linux** — native Unity Editor and local checks |
+| Shader target | **PC VRChat · Built-In forward**; validate the client graphics path separately |
 | Graph format | Portable, versioned **`.nxsg`**; Unity asset references live in an adapter |
 | Editor canvas | Custom UI Toolkit canvas and GraphView evaluated on the pinned editor |
 | Integrations | Optional AudioLink; ordinary animatable properties for VRCFury |
@@ -68,7 +69,7 @@ Three Luna researchers worked in parallel, followed by a consistency review and 
 | **03 · Fur + Patterns** | Measured fur techniques, direction/masks/LOD, reusable declarative groups | Planned |
 | **04 · More places to create** | Baking, mobile material mapping, Blender bridge, CLI, viewer, other backends | Later |
 
-Unity imports, actual shader-variant compilation, Windows rendering, SDK validation, and headset measurements are separate gates. Research and a pretty diagram do not replace those checks.
+Linux is our primary authoring and validation environment. Record the Linux Editor graphics API and, when testing VRChat through Proton, the client and translation-layer versions. A Windows machine is not a prerequisite for development or Linux milestones. Native Windows compatibility is expected from the portable design but remains unverified until a future smoke test. Unity imports, shader compilation, SDK validation and headset measurements still establish different things.
 
 ---
 

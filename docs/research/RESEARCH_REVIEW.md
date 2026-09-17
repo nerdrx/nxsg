@@ -7,7 +7,7 @@ reports. It separates documented design fixes from implementation evidence.
 No editor, compiler, Unity import, shader render, headset, or VRChat test has
 run in this workspace.
 
-**Subsequent scope clarification:** D06/S03 now treat our own UI Toolkit canvas as a first-class candidate, with GraphView optional. The [Unity 2022.3 canvas report](CUSTOM_CANVAS_ON_UNITY_2022.md) supports a small comparison on 2022.3.22f1; it does not claim either implementation has run.
+**Subsequent scope clarification:** D06/S03 now treat our own UI Toolkit canvas as a first-class candidate, with GraphView optional. The [Unity 2022.3 canvas report](CUSTOM_CANVAS_ON_UNITY_2022.md) supports a small comparison on 2022.3.22f1; it does not claim either implementation has run. **Platform clarification:** Linux is the primary authoring, Unity-editor, and test platform; Windows is not required for coding, Linux milestones, or package release. VRChat’s Windows-first VCC guidance and `<DX11>` requirement remain factual context for the PC client contract. Native Windows and Proton routes are optional, separately labeled evidence.
 
 ## Fixes now addressed in the documents
 
@@ -85,7 +85,7 @@ generated pass structure. Any GPU timing or shell savings remain unverified.
 
 ## No remaining major contradiction found
 
-The documents now agree on Unity 2022.3.22f1, PC Built-In/DX11 first, portable
+The documents now agree on Unity 2022.3.22f1, PC Built-In/DX11 client contract first, portable
 `.nxsg` JSON, a small typed DAG, explicit color/space semantics, mutable
 bindings, declarative extensions, staged output publication, and measurement-
 gated fur. Platform policy is kept separate from shader compilation, and the

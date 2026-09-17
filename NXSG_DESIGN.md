@@ -6,6 +6,8 @@
 
 **Research update — 2026-09-17:** [Architecture decisions](docs/DECISIONS.md) and the [implementation plan](docs/IMPLEMENTATION_PLAN.md) refine this product vision. Start with PC VRChat, preserve mutable properties during optimization, and verify editor/graphics behavior before expanding scope. See the [research index](docs/RESEARCH_INDEX.md) for source-backed detail and unresolved gates.
 
+**Authoring environment:** Linux is the primary development and test platform. PC VRChat is the shader target, not a requirement to develop on Windows. Keep Windows portability in the design; native Windows verification can follow later.
+
 ## Product direction
 
 NXSG helps avatar creators build and animate materials in Unity without writing HLSL or navigating a giant panel of unrelated toggles. Its editor should feel as approachable as Blender's shader nodes: connect a texture to a toon surface, add an effect, preview it on a mesh, and choose **Build for VRChat**. The build produces a Unity shader and material containing only the features the graph uses.

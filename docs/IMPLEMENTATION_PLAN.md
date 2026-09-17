@@ -4,6 +4,8 @@ This plan turns the research into bounded work. All programming and runtime gate
 
 Read [decisions](DECISIONS.md), [risk register](RISK_REGISTER.md), and the [source snapshot](research/COMPATIBILITY_SNAPSHOT.json) first. A size of S/M/L indicates relative scope, not a time promise. Pin versions in a fresh fixture before implementation and record changes to the research baseline.
 
+**Linux is the primary development and test environment.** No Windows machine is required to begin or finish Linux milestones. The PC VRChat shader target is distinct from the authoring OS; a future native Windows smoke test qualifies Windows support rather than blocking Linux work.
+
 ## Work order
 
 ```mermaid
@@ -15,7 +17,7 @@ flowchart TD
     S02 --> MVP["MVP integration"]
     S03 --> MVP
     S04 --> MVP
-    MVP --> S05["S05: Windows DX11 and VR validation"]
+    MVP --> S05["S05: Linux client and VR validation"]
     S05 --> S06["S06: animation and optional integrations"]
     S05 --> S07["S07: fur technique comparison"]
     S02 --> S08["S08: declarative Patterns and packs"]
@@ -29,11 +31,11 @@ The standalone parser can progress while a licensed Unity fixture is being arran
 
 ## S00 — Confirm environments and dependency pins · S · owner: integration
 
-Create a clean Unity **2022.3.22f1** avatar fixture with VRChat Base/Avatars **3.10.5**, retaining project/package lock files and asset metadata. Verify downloaded archives against the listing checksums. Record OS, editor modules, graphics API, and license availability. Confirm a standalone .NET SDK is available for portable tests; the local `dotnet` command currently reports runtimes but no SDK.
+Create a clean **Linux Unity 2022.3.22f1** avatar fixture with VRChat Base/Avatars **3.10.5**, retaining project/package lock files and asset metadata. Use a Linux-capable package workflow, such as a verified VPM CLI or community vrc-get setup; the Windows VCC GUI is not required. Verify downloaded archives against the listing checksums. Record OS, editor modules, graphics API, and license availability. Confirm a standalone .NET SDK is available for portable tests; the local `dotnet` command currently reports runtimes but no SDK.
 
-**Pass:** the fixture opens, SDK validation is available, a baseline material renders, and the same tiny core assembly loads in Unity and a standalone runner. Identify a Windows DX11 environment and target headset for S05. Linux headless Gamescope is an optional unobtrusive editor check, with graphics initialization; `-nographics` is appropriate only for checks that do not render. Do not label it headset validation.
+**Pass:** the Linux fixture opens, SDK validation is available, a baseline material renders, and the same tiny core assembly loads in Linux Unity and a standalone runner. Record the working Editor API and establish the available Linux VRChat/headset route for S05. Use headless Gamescope where appropriate for unobtrusive graphics-enabled editor checks; `-nographics` is only for checks that do not render. Do not label an offscreen editor check headset validation.
 
-**Evidence:** exact versions, manifest/lock, startup/compilation logs, baseline image, environment record. Unity editor was not located in the local paths checked during research; installation/licensing and Windows/headset access remain setup work, not verified capabilities.
+**Evidence:** exact versions, manifest/lock, startup/compilation logs, baseline image, environment record. Unity editor was not located in the local paths checked during research; Linux installation/licensing and the client/headset test route remain setup work, not verified capabilities.
 
 ## S01 — Freeze the smallest cross-lane contract · S · owner: core
 
@@ -73,9 +75,11 @@ Emit an opaque Built-In forward shader with texture/tint, defined toon diffuse a
 
 An avatar creator must complete this path without editing HLSL: create graph, add texture, adjust tint/toon response, see a material preview, save/reopen, build, assign to a mesh, rebuild while retaining material settings, and understand one intentional error. Graph reload, stable asset references, and diagnostics are part of the MVP. A large node catalogue is not required to pass it.
 
-## S05 — PC rendering and VRChat acceptance · M · owner: validation
+## S05 — Linux rendering and PC VRChat acceptance · M · owner: validation
 
-Run Windows DX11 tests in the pinned Unity/SDK fixture, then VRChat Build & Test with a representative avatar. Cover both eyes, desktop view, mirrors, camera modes, blocked-shader fallback, shadows, object scale/rotation, and intended stereo paths. A synthetic Unity XR fixture can test additional stereo modes, but must not be presented as a selectable VRChat client setting.
+Run graphics-enabled tests in the pinned Linux Unity/SDK fixture, then establish VRChat Build & Test or the supported local test handoff with a representative avatar on the available Linux client setup. If VRChat runs through Proton, record Proton, DXVK/graphics translation where applicable, graphics API, client and VR runtime versions; do not assume that route is already installed or validated. Exercise actual target-variant compilation where the installed toolchain supports it, and report untested variants explicitly.
+
+Cover both eyes, desktop view, mirrors, camera modes, blocked-shader fallback, shadows, object scale/rotation, and intended stereo paths. A synthetic Unity XR fixture can test additional stereo modes, but must not be presented as a selectable VRChat client setting. Native Windows testing is an optional later portability check and becomes necessary only for an explicit verified-Windows support claim.
 
 **Pass:** matched captures show no eye mismatch or unintended lighting/fallback change; the SDK accepts the avatar; the graph and material behave in the actual client. Record headroom, GPU time where available, and missed-frame behavior under declared conditions. Do not use an FPS number from a compositor alone as material GPU timing.
 

@@ -6,7 +6,7 @@ Research baseline: **2026-09-17**. Source research identifies these risks; mitig
 | --- | --- | --- | --- | --- |
 | R01 | P0 | A cheap custom PC shader is marketed as mobile-avatar compatible. | Separate SDK-permitted mobile material generation from PC shader compilation; target validation must reject forbidden shaders. | S00/S09, integration |
 | R02 | P0 | Wrong Unity patch or drifting SDK/dependencies creates broken uploads or compilation. | Pin editor, Base/Avatars and integration tuple; record archive hashes and installed lock files; recheck official support before upgrades. | S00, integration |
-| R03 | P0 | Linux/offscreen success is treated as Windows DX11 and VRChat proof. | Separate portable tests, Linux editor checks, Windows graphics validation, SDK Build & Test, and live two-eye evidence. | S05, validation |
+| R03 | P1 | Authoring OS, shader compilation, offscreen preview and actual client behavior are confused. | Validate Linux first; record Editor API and Proton/client path if used; distinguish SDK/client/two-eye evidence. Native Windows smoke is later and only gates verified Windows claims. | S05, validation |
 | R04 | P1 | Experimental GraphView breaks core workflows, or a custom canvas becomes an oversized editor framework. | Compare both small adapters on 2022.3.22f1; measure interactions/accessibility/code owned; isolate graph model and retain recoverable dirty state. | S03, editor |
 | R05 | P0 | Saving, migration, regeneration, or an external edit loses graph/material data. | Recoverable original, explicit conflict handling, stable `.meta`, staged compile/promotion, failure recovery and material-value preservation tests. | S02/S04, core + editor |
 | R06 | P1 | Optimizer changes output by folding mutable defaults, merging incompatible expressions, or hoisting nonlinear/derivative work. | Mutability and stage/type/space/sampler identity in IR; conservative passes; compare independently expected and unoptimized results across time and poses. | S02/S04/S06, compiler |
@@ -32,7 +32,7 @@ Research baseline: **2026-09-17**. Source research identifies these risks; mitig
 
 ## Immediate unknowns requiring a spike
 
-- **Environment:** establish a licensed supported Unity fixture and Windows DX11/headset validation path. The local inspection did not find an editor in the checked locations and found no standalone .NET SDK.
+- **Environment:** establish the pinned Linux Unity fixture and available Linux client/headset validation path. The local inspection did not find an editor in the checked locations and found no standalone .NET SDK. A Windows host is not a prerequisite.
 - **Editor:** compare custom UI Toolkit canvas and GraphView; prove undo/reload recovery, keyboard interactions and responsive previews on the exact patch.
 - **Asset publication:** determine a recoverable shader/material promotion strategy that preserves Unity identities even if import fails after file writing.
 - **Shader contract:** verify actual forward/shadow/stereo/fallback behavior in Unity and VRChat, including global inputs that preview scaffolding may synthesize.
