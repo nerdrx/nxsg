@@ -53,3 +53,7 @@ See [development setup](DEVELOPMENT.md) for reproducible commands and [implement
 ## Socket interaction update — 2026-09-17
 
 The custom canvas now uses edge sockets and per-operation header colors. A separate minimal Unity 2022.3.22f1 project ran `Tests/Editor/SocketInteractionSmoke.cs` inside headless Gamescope, sending UI Toolkit pointer/key events to the real canvas. Dragging from either endpoint, click-click connection replacement, mismatched-type rejection, the compatible-node menu on empty drops, spawning and connecting in both directions, Escape cancellation, selected-node outlines, box selection, group dragging/deletion, and Undo passed. These are synthetic editor interaction checks, not a user usability study.
+
+## Clipboard update — 2026-09-17
+
+The portable checks exercise clipboard resource/parameter remapping, cross-graph paste, fresh IDs, layout offsets, oversize/duplicate/unresolved-reference rejection, and unchanged targets on failure. The hidden Unity interaction check also exercises Ctrl+C/V/D, copied internal wires, excluded external wires, paste Undo, clipboard preservation during Duplicate, text-field shortcut isolation, and invalid clipboard rejection. Copy/paste is limited to currently supported core node versions, 1 MiB of clipboard JSON, and 1,024 nodes per snippet.

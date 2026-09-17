@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using Newtonsoft.Json.Linq;
 using NXSG.Backend;
 using NXSG.Core;
@@ -9,8 +10,40 @@ internal static class Program
 {
     private static int failures;
 
+    private static void CheckClipboard()
+    {
+        var source = GraphSamples.CreateDefault();
+        source.Adapter = new JObject { ["textures"] = new JObject { ["white"] = "texture-asset-guid" } };
+        var text = GraphClipboard.Copy(source, new[] { "uv0", "texture" });
+        var target = new ShaderGraph { GraphId = "empty" };
+        var pasted = GraphClipboard.Paste(target, text, 40, 40);
+        Assert(target.Nodes.Count == 0 && pasted.Graph.Nodes.Count == 2 && pasted.Graph.Connections.Count == 1, "clipboard atomic cross-graph internal edges");
+        var texture = pasted.Graph.Nodes.Single(n => n.Operation == "core.texture2D");
+        var resource = (string)texture.Properties["resourceId"];
+        Assert(resource != "white" && pasted.Graph.Resources.Single().Id == resource && (string)pasted.Graph.Adapter["textures"][resource] == "texture-asset-guid", "clipboard remaps resource and texture binding");
+        Assert(pasted.Graph.Layout.Nodes[texture.Id].X == 220, "clipboard layout offset");
+        var again = GraphClipboard.Paste(pasted.Graph, text, 80, 80);
+        Assert(again.NodeIds.All(id => !pasted.NodeIds.Contains(id)), "clipboard fresh IDs each paste");
+        var withParameter = GraphSamples.CreateDefault();
+        withParameter.Parameters.Add(new GraphParameter { Id = "threshold", Name = "Threshold", Type = GraphValueType.Float, Binding = GraphBindingKind.Material, DefaultValue = .5 });
+        withParameter.Nodes.Single(n => n.Id == "toon").Properties["thresholdParameterId"] = "threshold";
+        var paramPaste = GraphClipboard.Paste(target, GraphClipboard.Copy(withParameter, new[] { "toon" }), 0, 0).Graph;
+        Assert((string)paramPaste.Nodes[0].Properties["thresholdParameterId"] == paramPaste.Parameters[0].Id && paramPaste.Parameters[0].Id != "threshold", "clipboard remaps parameters");
+        var before = GraphJson.Serialize(pasted.Graph);
+        Action<Action> reject = action => { try { action(); Assert(false, "invalid clipboard accepted"); } catch (GraphParseException) { } };
+        reject(() => GraphClipboard.Paste(pasted.Graph, "not json", 0, 0));
+        var duplicate = GraphJson.Parse(text); duplicate.Nodes.Add(duplicate.Nodes[0]);
+        reject(() => GraphClipboard.Paste(pasted.Graph, GraphJson.Serialize(duplicate), 0, 0));
+        var missing = GraphJson.Parse(text); missing.Resources.Clear();
+        reject(() => GraphClipboard.Paste(pasted.Graph, GraphJson.Serialize(missing), 0, 0));
+        source.Nodes[0].Properties["oversized"] = new string('x', 1024 * 1024);
+        reject(() => GraphClipboard.Copy(source, new[] { "uv0" }));
+        Assert(GraphJson.Serialize(pasted.Graph) == before, "invalid clipboard leaves target unchanged");
+    }
+
     private static int Main()
     {
+        CheckClipboard();
         var fixtures = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../../Tests/Fixtures"));
         var defaultGraph = Load(fixtures, "default-texture-toon-output.nxsg");
         Assert(GraphValidator.Validate(defaultGraph).IsValid, "default graph validates");

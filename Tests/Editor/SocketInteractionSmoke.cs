@@ -13,6 +13,8 @@ public static class SocketInteractionSmoke
 {
     static GraphWindow window;
     static int ticks, phase;
+    static string previousClipboard, copiedText;
+    static int beforePaste;
     const BindingFlags Private = BindingFlags.Instance | BindingFlags.NonPublic;
     static object Field(string name) => typeof(GraphWindow).GetField(name, Private).GetValue(window);
     static ShaderGraph Graph => (ShaderGraph)Field("graph");
@@ -45,8 +47,18 @@ public static class SocketInteractionSmoke
         Down(button);
         using (var e = PointerUpEvent.GetPooled(new Event { type = EventType.MouseUp, button = 0, mousePosition = position })) button.SendEvent(e);
     }
+    static void Key(KeyCode key)
+    {
+        using (var e = KeyDownEvent.GetPooled(new Event { type = EventType.KeyDown, keyCode = key, modifiers = EventModifiers.Control })) Canvas.SendEvent(e);
+    }
+    static void RestoreClipboard()
+    {
+        var current = EditorGUIUtility.systemCopyBuffer;
+        if (previousClipboard != null && (current == copiedText || current == "not nxsg")) EditorGUIUtility.systemCopyBuffer = previousClipboard;
+    }
     public static void Run()
     {
+        foreach (var old in Resources.FindObjectsOfTypeAll<GraphWindow>()) { old.DiscardChanges(); old.Close(); }
         window = ScriptableObject.CreateInstance<GraphWindow>();
         window.Show(); window.position = new Rect(0, 0, 1380, 820);
         typeof(GraphWindow).GetMethod("NewGraph", Private).Invoke(window, null);
@@ -142,21 +154,58 @@ public static class SocketInteractionSmoke
             else if (phase == 11)
             {
                 Require(Graph.Nodes.Count == 4 && Graph.Connections.Any(e => e.To.NodeId == "toon" && e.From.NodeId == "texture"), "Spawn undo failed to restore old connection");
+                Require(Field("pendingNode") == null, "Pending endpoint survived Undo: " + Field("pendingNode"));
                 Down(Socket("texture", "color", true)); Up(new Vector2(150, 400));
+                Require(Field("spawnMenu") != null, "Forward menu missing immediately; pending=" + Field("pendingNode") + " wiring=" + Field("wiring") + " canvas=" + Canvas.worldBound + " status=" + ((Label)Field("status")).text + " toonInput=" + Socket("toon", "albedo", false).worldBound + " textureInput=" + Socket("texture", "uv", false).worldBound);
             }
             else if (phase == 12)
             {
                 ClickMenu("Multiply · a");
             }
-            else
+            else if (phase == 13)
             {
                 Require(Graph.Nodes.Count == 5 && Graph.Connections.Any(e => e.From.NodeId == "texture" && e.To.PortId == "a"), "Spawn from output failed");
-                Debug.Log("NXSG SOCKET CHECK PASSED: drag, click-click, mismatch, empty drop, escape, selection outline, box select, group drag, group delete, undo, reverse drag, compatible spawn both directions, spawn undo");
+                typeof(GraphWindow).GetMethod("SelectNode", Private).Invoke(window, new object[] { "uv0", false });
+                typeof(GraphWindow).GetMethod("SelectNode", Private).Invoke(window, new object[] { "texture", true });
+                previousClipboard = EditorGUIUtility.systemCopyBuffer;
+                beforePaste = Graph.Nodes.Count;
+                Key(KeyCode.C); copiedText = EditorGUIUtility.systemCopyBuffer;
+                Require(copiedText.Contains("core.texture2D"), "Copy shortcut failed");
+                Key(KeyCode.V);
+                Require(Graph.Nodes.Count == beforePaste + 2, "Paste shortcut failed");
+                var ids = (System.Collections.Generic.List<string>)Field("selection");
+                Require(ids.Count == 2 && Graph.Connections.Count(e => ids.Contains(e.From.NodeId) && ids.Contains(e.To.NodeId)) == 1, "Paste did not preserve internal connection");
+                Require(!Graph.Connections.Any(e => ids.Contains(e.From.NodeId) != ids.Contains(e.To.NodeId)), "Paste copied external connection");
+            }
+            else if (phase == 14)
+            {
+                Undo.PerformUndo();
+            }
+            else if (phase == 15)
+            {
+                Require(Graph.Nodes.Count == beforePaste, "Undo paste failed");
+                typeof(GraphWindow).GetMethod("SelectNode", Private).Invoke(window, new object[] { "texture", false });
+                Key(KeyCode.D);
+                Require(Graph.Nodes.Count == beforePaste + 1 && EditorGUIUtility.systemCopyBuffer == copiedText, "Duplicate shortcut or clipboard preservation failed");
+                var textField = ((VisualElement)Field("inspector")).Q<TextField>();
+                Require(textField != null, "Search text field unavailable");
+                textField.Focus();
+                using (var e = KeyDownEvent.GetPooled(new Event { type = EventType.KeyDown, keyCode = KeyCode.D, modifiers = EventModifiers.Control })) textField.SendEvent(e);
+                Require(Graph.Nodes.Count == beforePaste + 1, "Graph shortcut intercepted text editing");
+                Canvas.Focus();
+                EditorGUIUtility.systemCopyBuffer = "not nxsg";
+                Key(KeyCode.V);
+                Require(Graph.Nodes.Count == beforePaste + 1, "Invalid clipboard mutated graph");
+                RestoreClipboard();
+            }
+            else
+            {
+                Debug.Log("NXSG SOCKET CHECK PASSED: wires both directions, connected spawn, selection, group movement, undo, Ctrl+C/V/D, clipboard preservation, invalid paste rejection");
                 window.DiscardChanges(); window.Close(); EditorApplication.Exit(0);
                 EditorApplication.update -= Tick;
             }
             phase++;
         }
-        catch (Exception e) { Debug.LogException(e); EditorApplication.update -= Tick; window.DiscardChanges(); window.Close(); EditorApplication.Exit(1); }
+        catch (Exception e) { RestoreClipboard(); Debug.LogException(e); EditorApplication.update -= Tick; window.DiscardChanges(); window.Close(); EditorApplication.Exit(1); }
     }
 }

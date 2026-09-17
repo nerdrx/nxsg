@@ -30,6 +30,8 @@ namespace NXSG.Editor
         Label status;
         readonly Dictionary<string, VisualElement> nodes = new Dictionary<string, VisualElement>();
         string pendingNode, pendingPort;
+        string lastPaste;
+        int pasteCount;
         readonly List<SocketView> sockets = new List<SocketView>();
         bool wiring, wireMoved, pendingOutput;
         VisualElement spawnMenu;
@@ -94,6 +96,9 @@ namespace NXSG.Editor
             toolbar.Add(new ToolbarButton(SaveCopy) { text = "Save as" });
             toolbar.Add(new ToolbarButton(Undo.PerformUndo) { text = "Undo" });
             toolbar.Add(new ToolbarButton(Undo.PerformRedo) { text = "Redo" });
+            toolbar.Add(new ToolbarButton(CopySelection) { text = "Copy", tooltip = "Copy selected nodes (Ctrl+C)" });
+            toolbar.Add(new ToolbarButton(PasteSelection) { text = "Paste", tooltip = "Paste nodes (Ctrl+V)" });
+            toolbar.Add(new ToolbarButton(DuplicateSelection) { text = "Duplicate", tooltip = "Duplicate selected nodes (Ctrl+D)" });
             toolbar.Add(new ToolbarButton(Build) { text = "Build for VRChat" });
             toolbar.Add(new ToolbarButton(() => { pan = new Vector2(30, 70); zoom = 1; TransformCanvas(); }) { text = "Reset view" });
             rootVisualElement.Add(toolbar);
@@ -137,12 +142,25 @@ namespace NXSG.Editor
             {
                 if (!evt.actionKey) return;
                 var element = evt.target as VisualElement;
-                if (element is TextField || element?.GetFirstAncestorOfType<TextField>() != null) return;
-                if (evt.keyCode != KeyCode.S) return;
-                if (evt.shiftKey) SaveCopy(); else SaveGraph();
+                if (IsEditingText(element) || IsEditingText(rootVisualElement.panel?.focusController.focusedElement as VisualElement)) return;
+                switch (evt.keyCode)
+                {
+                    case KeyCode.C: CopySelection(); break;
+                    case KeyCode.V: PasteSelection(); break;
+                    case KeyCode.D: DuplicateSelection(); break;
+                    case KeyCode.S: if (evt.shiftKey) SaveCopy(); else SaveGraph(); break;
+                    default: return;
+                }
                 evt.StopPropagation(); evt.PreventDefault();
             }, TrickleDown.TrickleDown);
             Rebuild();
+        }
+
+        static bool IsEditingText(VisualElement element)
+        {
+            for (var current = element; current != null; current = current.parent)
+                if (current is TextField || current.ClassListContains("unity-base-text-field")) return true;
+            return false;
         }
 
         bool CanDiscard()
@@ -574,6 +592,51 @@ namespace NXSG.Editor
             spawnMenu.Add(new Button(CancelWire) { text = "Cancel" });
             canvas.Add(spawnMenu);
             SetStatus("Choose a compatible node. Existing connections stay until you choose. Esc cancels.");
+        }
+
+        void CopySelection()
+        {
+            if (graph == null || selection.Count == 0) { SetStatus("Select nodes to copy."); return; }
+            try
+            {
+                EditorGUIUtility.systemCopyBuffer = GraphClipboard.Copy(graph, selection);
+                lastPaste = null; pasteCount = 0;
+                SetStatus("Copied " + selection.Count + " nodes and their internal connections.");
+            }
+            catch (Exception exception) { SetStatus("Copy failed: " + exception.Message); }
+        }
+
+        void PasteSelection()
+        {
+            if (graph == null) { SetStatus("Create or open a graph before pasting."); return; }
+            var text = EditorGUIUtility.systemCopyBuffer;
+            var count = text == lastPaste ? pasteCount + 1 : 1;
+            if (InsertSnippet(text, 40 * count, "Paste nodes")) { lastPaste = text; pasteCount = count; }
+        }
+
+        void DuplicateSelection()
+        {
+            if (graph == null || selection.Count == 0) { SetStatus("Select nodes to duplicate."); return; }
+            try { InsertSnippet(GraphClipboard.Copy(graph, selection), 40, "Duplicate nodes"); }
+            catch (Exception exception) { SetStatus("Duplicate failed: " + exception.Message); }
+        }
+
+        bool InsertSnippet(string text, double offset, string label)
+        {
+            try
+            {
+                // Prepare the whole edit first: invalid clipboard data cannot partially mutate this graph.
+                var pasted = GraphClipboard.Paste(graph, text, offset, offset);
+                Undo.IncrementCurrentGroup();
+                Edit(label, () =>
+                {
+                    graph = pasted.Graph;
+                    selection = pasted.NodeIds.ToList(); selected = selection.LastOrDefault();
+                });
+                SetStatus(label + ": " + selection.Count + " nodes. Undo restores the previous graph.");
+                return true;
+            }
+            catch (Exception exception) { SetStatus("Paste failed: " + exception.Message); return false; }
         }
 
         void DeleteSelection()
