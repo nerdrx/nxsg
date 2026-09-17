@@ -16,7 +16,7 @@ The canvas now offers 20 nodes. Socket color indicates data type: yellow color, 
 | UV Scroll | UV, scalar time → UV | Speed (0.1,0); unconnected time uses shader time |
 | Noise | UV, scalar time → grayscale color and scalar value | Scale 5, speed 1; unconnected UV/time use UV0/shader time |
 | Add | colors A/B → color | Missing inputs are black |
-| Mix | colors A/B, scalar factor → color | Missing A is black, B is white, factor is 0.5; factor clamps to 0–1 |
+| Mix | colors A/B, scalar factor → color | Missing A is black, B is white, factor is 0.5; a 0–1 slider with numeric entry controls factor, and connected values clamp to 0–1 |
 | Emission | color, scalar strength → color | White and strength 1 by default; connect to Toon Surface's emission socket |
 | Invert | color → color | Inverts components; missing input is black |
 | Clamp | color → color | Clamps components to 0–1; missing input is black |

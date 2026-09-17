@@ -618,7 +618,7 @@ namespace NXSG.Editor
                     case "core.uvRotate": AddVector(node, "center", "Center", new Vector2(.5f, .5f)); AddNumber(node, "angle", "Angle (degrees)", 0, "angle"); break;
                     case "core.uvScroll": AddVector(node, "speed", "Scroll speed", new Vector2(.1f, 0)); break;
                     case "core.noise": AddNumber(node, "scale", "Scale", 5); AddNumber(node, "speed", "Animation speed", 1); break;
-                    case "core.mix": AddNumber(node, "factor", "Factor", .5f, "factor"); break;
+                    case "core.mix": AddFactor(node); break;
                     case "core.emission": AddNumber(node, "strength", "Strength", 1, "strength"); break;
                 }
                 inspector.Add(new Button(() => Edit("Disconnect node", () => graph.Connections.RemoveAll(e => e.From.NodeId == selected || e.To.NodeId == selected))) { text = "Disconnect node" });
@@ -632,6 +632,29 @@ namespace NXSG.Editor
                     if (previewEditor != null) previewEditor.OnPreviewGUI(GUILayoutUtility.GetRect(240, 220), EditorStyles.helpBox);
                 }) { style = { height = 220 } });
             }
+        }
+
+        void AddFactor(GraphNode node)
+        {
+            var token = node.Properties["factor"];
+            var initial = token != null && (token.Type == JTokenType.Float || token.Type == JTokenType.Integer) ? (float)token : .5f;
+            var field = new Slider("Factor", 0, 1) { showInputField = true, value = Mathf.Clamp01(initial),
+                tooltip = "Blend amount: 0 = A, 1 = B. Connected factor values are also clamped to this range." };
+            field.SetEnabled(!graph.Connections.Any(e => e.To.NodeId == node.Id && e.To.PortId == "factor"));
+            field.RegisterValueChangedCallback(evt =>
+            {
+                if (float.IsNaN(evt.newValue) || float.IsInfinity(evt.newValue))
+                { field.SetValueWithoutNotify(Mathf.Clamp01((float?)node.Properties["factor"] ?? .5f)); return; }
+                var value = Mathf.Clamp01(evt.newValue);
+                field.SetValueWithoutNotify(value);
+                Undo.RegisterCompleteObjectUndo(session, "Change Factor");
+                node.Properties["factor"] = value;
+                session.json = GraphJson.Serialize(graph, true);
+                hasUnsavedChanges = true; EditorUtility.SetDirty(session);
+                // Keep the active slider alive while dragging; no graph structure changed.
+                SetStatus("Unsaved edits · preview shows the last successful build.");
+            });
+            inspector.Add(field);
         }
 
         void AddNumber(GraphNode node, string property, string label, float fallback, string input = null)
