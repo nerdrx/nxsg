@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 440" role="img" aria-labelledby="title desc">
+  <title id="title">NX Shader Graph</title>
+  <desc id="desc">NXSG, a visual material graph for VRChat, shown as a connected Texture, Toon, and Output flow.</desc>
+
+  <!-- True-black OLED ground; the violet surfaces stay quiet behind the message. -->
+  <rect width="1440" height="440" fill="#000000"/>
+  <path d="M714 44H1380V396H714Z M738 68H1356V372H738Z" fill="#0A0714" fill-rule="evenodd"/>
+  <path d="M714 44H1380V396H714Z" fill="none" stroke="#24103D" stroke-width="2"/>
+  <path d="M738 68H1356V372H738Z" fill="none" stroke="#160B28" stroke-width="1"/>
+  <path d="M714 44h38M714 44v38M1380 396h-38M1380 396v-38" fill="none" stroke="#7700FF" stroke-width="2"/>
+
+  <!-- Canonical NX wordmark, copied from nx-wordmark-violet.svg unchanged. -->
+  <g aria-label="NX" transform="translate(88 46) scale(.085)">
+    <g fill="#7700FF" transform="translate(-56 552) scale(1 -1)">
+      <path d="M56 0V540H230L238 368L214 370Q220 439 244.5 478.5Q269 518 306.5 535.0Q344 552 390 552Q446 552 487.5 528.0Q529 504 552.0 458.5Q575 413 575 347V0H381V280Q381 319 376.5 346.5Q372 374 358.5 388.5Q345 403 319 403Q282 403 266.0 371.0Q250 339 250 280V0Z" />
+      <path d="M551.0 0 739.0 272 553.0 540H753.0L851.0 386L947.0 540H1151.0L965.0 272L1154.0 0H954.0L855.0 160L755.0 0Z" />
+    </g>
+  </g>
+
+  <!-- Left message: readable at a compact GitHub banner width. -->
+  <text x="88" y="180" fill="#EFEAFF" font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="84" font-weight="800" letter-spacing="1">NXSG</text>
+  <text x="92" y="222" fill="#BFA8FF" font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="25" font-weight="600" letter-spacing=".4">NX Shader Graph</text>
+  <path d="M92 246H270" stroke="#7700FF" stroke-width="3"/>
+  <text x="92" y="286" fill="#EFEAFF" font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="22" font-weight="500">Visual materials for VRChat.</text>
+  <rect x="92" y="348" width="9" height="9" fill="#00E5FF"/>
+  <text x="116" y="357" fill="#8D7AA8" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="12" font-weight="700" letter-spacing="2">DESIGN + RESEARCH</text>
+
+  <!-- Abstract graph: an illustration of the idea, not a working-app screenshot. -->
+  <text x="776" y="91" fill="#6F5B87" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="11" letter-spacing="2">MATERIAL FLOW / 01</text>
+
+  <path d="M958 168H1018" fill="none" stroke="#7700FF" stroke-width="3"/>
+  <path d="M1224 184H1252V252H1160V320H1184" fill="none" stroke="#7700FF" stroke-width="3"/>
+  <circle cx="958" cy="168" r="4" fill="#00E5FF"/>
+  <circle cx="1018" cy="168" r="4" fill="#7700FF"/>
+  <circle cx="1224" cy="184" r="4" fill="#00E5FF"/>
+  <circle cx="1184" cy="320" r="4" fill="#7700FF"/>
+
+  <path d="M776 122H958L976 140V214L958 232H776L758 214V140Z" fill="#12091F" stroke="#5A20A8" stroke-width="2"/>
+  <path d="M776 122H958L976 140H776Z" fill="#24103D"/>
+  <text x="790" y="157" fill="#EFEAFF" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="15" font-weight="700" letter-spacing="1">TEXTURE</text>
+  <text x="790" y="186" fill="#A88DFF" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="12">UV0  /  MASK</text>
+  <path d="M790 202H858M868 202H930" stroke="#3A1A62" stroke-width="3"/>
+
+  <path d="M1036 122H1206L1224 140V214L1206 232H1036L1018 214V140Z" fill="#171028" stroke="#7700FF" stroke-width="2"/>
+  <path d="M1036 122H1206L1224 140H1036Z" fill="#2A1149"/>
+  <text x="1052" y="157" fill="#EFEAFF" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="15" font-weight="700" letter-spacing="1">TOON</text>
+  <text x="1052" y="186" fill="#BFA8FF" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="12">LIGHT  /  RIM</text>
+  <path d="M1052 202H1110M1120 202H1180" stroke="#4B2378" stroke-width="3"/>
+
+  <path d="M1202 278H1356L1374 296V346L1356 364H1202L1184 346V296Z" fill="#12091F" stroke="#5A20A8" stroke-width="2"/>
+  <path d="M1202 278H1356L1374 296H1202Z" fill="#24103D"/>
+  <text x="1218" y="316" fill="#EFEAFF" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="15" font-weight="700" letter-spacing="1">OUTPUT</text>
+  <text x="1218" y="342" fill="#A88DFF" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="12">BUILD  /  PREVIEW</text>
+
+  <!-- Faceted violet material cue: flat polygonal color, no gradient or glow. -->
+  <g transform="translate(1305 116)" aria-label="faceted violet material">
+    <polygon points="0,-36 27,-22 36,7 16,34 -16,34 -36,7 -27,-22" fill="#24103D" stroke="#7700FF" stroke-width="2"/>
+    <polygon points="0,-36 27,-22 5,-12 0,5 -17,-11" fill="#9A3CFF"/>
+    <polygon points="27,-22 36,7 15,1 5,-12" fill="#6E27D6"/>
+    <polygon points="36,7 16,34 2,17 15,1" fill="#3E177A"/>
+    <polygon points="16,34 -16,34 -2,17 2,17" fill="#5A20A8"/>
+    <polygon points="-16,34 -36,7 -15,1 -2,17" fill="#2B1257"/>
+    <polygon points="-36,7 -27,-22 -17,-11 -15,1" fill="#481B92"/>
+    <polygon points="-27,-22 0,-36 0,-18 -17,-11" fill="#7700FF"/>
+    <polygon points="-17,-11 5,-12 15,1 2,17 -2,17 -15,1" fill="#7700FF" opacity=".86"/>
+  </g>
+
+  <text x="1296" y="190" fill="#6F5B87" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="10" letter-spacing="1.5">SURFACE</text>
+</svg>

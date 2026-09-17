@@ -1,0 +1,59 @@
+{
+  "checkedOn": "2026-09-17",
+  "status": "research-only; no package installation or runtime validation",
+  "unity": {
+    "editor": "2022.3.22f1",
+    "source": "https://creators.vrchat.com/sdk/upgrade/current-unity-version/"
+  },
+  "vrchat": {
+    "listing": "https://vrchat.github.io/packages/index.json",
+    "base": {
+      "version": "3.10.5",
+      "url": "https://github.com/vrchat/packages/releases/download/3.10.5/com.vrchat.base-3.10.5.zip",
+      "declaredZipSHA256": "fbfb3e7a38778dcb55d7a860286819e6f0726d10d5039f61474bd1b9c629029e",
+      "unityDependencies": {
+        "com.unity.burst": "1.8.7",
+        "com.unity.collections": "2.1.4",
+        "com.unity.mathematics": "1.2.6",
+        "com.unity.nuget.newtonsoft-json": "3.2.1",
+        "com.unity.timeline": "1.7.6",
+        "com.unity.xr.management": "4.3.3",
+        "com.unity.xr.oculus": "4.0.0",
+        "com.unity.postprocessing": "3.2.2",
+        "com.unity.ugui": "1.0.0"
+      }
+    },
+    "avatars": {
+      "version": "3.10.5",
+      "requiresBase": "3.10.5",
+      "url": "https://github.com/vrchat/packages/releases/download/3.10.5/com.vrchat.avatars-3.10.5.zip",
+      "declaredZipSHA256": "03bdea0c24257070f0e7a73c9033742a1ce0f67463b12a6c2ad29608b1f33a77"
+    },
+    "archiveBytesVerified": false
+  },
+  "audiolink": {
+    "sourceCommit": "4aeb39503ce94cb250ed7570ee585e1be9cdb3aa",
+    "sourceManifestVersion": "3.1.2",
+    "source": "https://github.com/llealloo/audiolink/blob/4aeb39503ce94cb250ed7570ee585e1be9cdb3aa/Packages/com.llealloo.audiolink/package.json"
+  },
+  "vrcfury": {
+    "sourceCommit": "2863a3fea5f2a4f36808a4b7dc8f7e8f106dbc0d",
+    "sourceManifestVersion": "0.0.0",
+    "note": "Source manifest is a placeholder, not a usable release pin. Published release inspected separately; no installation test.",
+    "publishedVersion": "1.1429.0",
+    "publishedCommit": "0e1b9217bf6b491e4cada2eba4145553e89599ce",
+    "listing": "https://vcc.vrcfury.com",
+    "download": "https://vcc.vrcfury.com/download/1.1429.0",
+    "archiveBytesVerified": false,
+    "materialPropertyApiProposal": {
+      "url": "https://github.com/VRCFury/VRCFury/pull/347",
+      "state": "open",
+      "merged": false
+    }
+  },
+  "priorArt": {
+    "graphlit": {"version": "2.7.4", "commit": "59a4609b3df6668e34458dc59e926b62957d4871"},
+    "shaderGraphVRC": {"version": "1.1.1", "commit": "06f7fe1b209c11e32045883d1a6f54e37dfb5b82"},
+    "poiyomi": {"commit": "6c8000924c543f5d40f04d28ba8dd6544a071198"}
+  }
+}

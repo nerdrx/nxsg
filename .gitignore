@@ -1,0 +1,17 @@
+# Local tools and research scratch files
+work/
+.DS_Store
+*.log
+
+# Unity-generated state; preserve source assets and .meta files
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Ll]ogs/
+[Uu]ser[Ss]ettings/
+[Bb]uild/
+[Bb]uilds/
+
+# .NET build state
+bin/
+obj/
