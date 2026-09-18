@@ -53,6 +53,14 @@ internal static class Program
         Assert(GraphValidator.Validate(polarExample).IsValid && ShaderEmitter.Emit(polarExample).Succeeded, "polar palette example validates and emits");
         var rampExample = GraphJson.Parse(File.ReadAllText(Path.Combine(fixtures, "../../Packages/dev.nerdrx.nxsg/Samples~/Noise Ramp.nxsg")));
         Assert(GraphValidator.Validate(rampExample).IsValid && ShaderEmitter.Emit(rampExample).Succeeded, "noise ramp example validates and emits");
+        foreach (var effectExample in new[] { "Audio Hologram", "Noise Color Ramp", "Animated Sticker" })
+        {
+            var sample = GraphJson.Parse(File.ReadAllText(Path.Combine(fixtures,"../../Packages/dev.nerdrx.nxsg/Samples~/" + effectExample + ".nxsg")));
+            var result = ShaderEmitter.Emit(sample);
+            Assert(result.Succeeded,effectExample + " example emits: " + string.Join(";",result.Diagnostics.Select(d=>d.Message)));
+        }
+        EffectsCoreChecks.Run(Assert);
+        EffectsBackendChecks.Run(Assert);
         var defaultGraph = Load(fixtures, "default-texture-toon-output.nxsg");
         Assert(GraphValidator.Validate(defaultGraph).IsValid, "default graph validates");
         Assert(GraphValidator.Validate(GraphJson.Parse(GraphJson.Serialize(defaultGraph))).IsValid, "default graph round trips");

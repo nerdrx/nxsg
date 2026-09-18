@@ -1,0 +1,20 @@
+{
+  "format":"nxsg","schemaVersion":1,"graphId":"animated-sticker-example",
+  "nodes":[
+    {"id":"uv","operation":"core.uv0","version":1,"properties":{}},
+    {"id":"time","operation":"core.time","version":1,"properties":{"speed":0.5,"offset":0}},
+    {"id":"flip","operation":"core.flipbook","version":1,"properties":{"rows":2,"columns":2,"speed":1}},
+    {"id":"sticker","operation":"core.sticker","version":1,"properties":{"resourceId":"white","position":[0.5,0.5],"size":[0.8,0.8],"rotation":0}},
+    {"id":"base","operation":"core.constant","version":1,"properties":{"valueType":"color","value":[0.01,0.02,0.08,1]}},
+    {"id":"unlit","operation":"core.unlitSurface","version":1,"properties":{"opacity":1,"displacement":0}},
+    {"id":"output","operation":"core.output","version":1,"properties":{}}
+  ],
+  "connections":[
+    {"id":"uv-flip","from":{"nodeId":"uv","portId":"uv"},"to":{"nodeId":"flip","portId":"uv"}},
+    {"id":"time-flip","from":{"nodeId":"time","portId":"value"},"to":{"nodeId":"flip","portId":"time"}},
+    {"id":"flip-sticker","from":{"nodeId":"flip","portId":"uv"},"to":{"nodeId":"sticker","portId":"uv"}},
+    {"id":"base-sticker","from":{"nodeId":"base","portId":"value"},"to":{"nodeId":"sticker","portId":"base"}},
+    {"id":"sticker-unlit","from":{"nodeId":"sticker","portId":"color"},"to":{"nodeId":"unlit","portId":"albedo"}},
+    {"id":"unlit-output","from":{"nodeId":"unlit","portId":"surface"},"to":{"nodeId":"output","portId":"surface"}}
+  ],"parameters":[],"resources":[{"id":"white","kind":"texture2D","uri":"builtin://white"}],"patterns":[],"layout":{"nodes":{"uv":{"x":0,"y":120},"time":{"x":0,"y":320},"flip":{"x":240,"y":180},"sticker":{"x":470,"y":180},"base":{"x":240,"y":400},"unlit":{"x":720,"y":180},"output":{"x":960,"y":180}}}
+}

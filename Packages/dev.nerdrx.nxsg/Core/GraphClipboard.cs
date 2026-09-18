@@ -72,6 +72,15 @@ namespace NXSG.Core
                 parameterIds.Any(id => !snippet.Parameters.Any(p => p.Id == id)) || resourceIds.Any(id => !snippet.Resources.Any(r => r.Id == id)))
                 throw Invalid("Clipboard contains unresolved references or exceeds its limits.");
             snippet.Adapter = CloneTextures(graph.Adapter, resourceIds);
+            foreach (var group in GraphGroups.All(graph))
+            {
+                var members = GraphGroups.Members(graph, group);
+                if (members.Length > 0 && members.All(selected.Contains))
+                {
+                    var copy = GraphGroups.Add(snippet, members, (string)group["name"]);
+                    copy["collapsed"] = group["collapsed"]?.Type == JTokenType.Boolean && (bool)group["collapsed"];
+                }
+            }
             try
             {
                 var text = GraphJson.Serialize(snippet);
@@ -132,6 +141,13 @@ namespace NXSG.Core
                 var copy = Clone(edge); copy.Id = NewId(edgeIds); copy.From.NodeId = nodeMap[edge.From.NodeId]; copy.To.NodeId = nodeMap[edge.To.NodeId]; result.Connections.Add(copy);
             }
             RemapTextures(result.Adapter, snippet.Adapter, resourceMap);
+            foreach (var group in GraphGroups.All(snippet))
+            {
+                var members = GraphGroups.Members(snippet, group).Where(nodeMap.ContainsKey).Select(id => nodeMap[id]).ToArray();
+                if (members.Length == 0) continue;
+                var copy = GraphGroups.Add(result, members, (string)group["name"]);
+                copy["collapsed"] = group["collapsed"]?.Type == JTokenType.Boolean && (bool)group["collapsed"];
+            }
             return new PasteResult(result, newIds);
         }
 

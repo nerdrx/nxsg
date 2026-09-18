@@ -1,0 +1,18 @@
+{
+  "format":"nxsg","schemaVersion":1,"graphId":"noise-color-ramp-example",
+  "nodes":[
+    {"id":"uv","operation":"core.uv0","version":1,"properties":{}},
+    {"id":"noise","operation":"core.noise","version":1,"properties":{"scale":4,"speed":0.2}},
+    {"id":"shape","operation":"core.ramp","version":1,"properties":{"blackPoint":0.15,"whitePoint":0.85,"smoothness":0.2,"points":[[0,0],[0.35,0.1],[0.7,0.9],[1,1]]}},
+    {"id":"palette","operation":"core.colorRamp","version":1,"properties":{"stops":[[0,0.02,0.02,0.12,1],[0.5,0.05,0.5,1,1],[1,1,0.2,0.02,1]]}},
+    {"id":"surface","operation":"core.pbrSurface","version":1,"properties":{"opacity":1,"displacement":0,"metallic":0.1,"roughness":0.45}},
+    {"id":"output","operation":"core.output","version":1,"properties":{}}
+  ],
+  "connections":[
+    {"id":"uv-noise","from":{"nodeId":"uv","portId":"uv"},"to":{"nodeId":"noise","portId":"uv"}},
+    {"id":"noise-shape","from":{"nodeId":"noise","portId":"value"},"to":{"nodeId":"shape","portId":"value"}},
+    {"id":"shape-palette","from":{"nodeId":"shape","portId":"value"},"to":{"nodeId":"palette","portId":"value"}},
+    {"id":"palette-surface","from":{"nodeId":"palette","portId":"color"},"to":{"nodeId":"surface","portId":"albedo"}},
+    {"id":"surface-output","from":{"nodeId":"surface","portId":"surface"},"to":{"nodeId":"output","portId":"surface"}}
+  ],"parameters":[],"resources":[],"patterns":[],"layout":{"nodes":{"uv":{"x":0,"y":180},"noise":{"x":220,"y":180},"shape":{"x":440,"y":180},"palette":{"x":680,"y":180},"surface":{"x":920,"y":180},"output":{"x":1160,"y":180}}}
+}

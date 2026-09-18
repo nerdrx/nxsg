@@ -74,6 +74,8 @@ namespace NXSG.Editor
                 else material.shader = shader;
                 foreach (var property in preserved) property.Apply(material);
                 AssignTextures(graph, result, material);
+                if (material.HasProperty("_NXSG_AudioLinkPreview")) material.SetFloat("_NXSG_AudioLinkPreview",0);
+                foreach (var diagnostic in result.Diagnostics.Where(d => d.Severity == DiagnosticSeverity.Warning)) Debug.LogWarning("NXSG: " + diagnostic.Message);
                 EditorUtility.SetDirty(material);
                 AssetDatabase.SaveAssetIfDirty(material);
                 Checkpoint?.Invoke("material-promoted");
@@ -109,6 +111,7 @@ namespace NXSG.Editor
                         throw new InvalidOperationException("Texture is missing for resource '" + property.ResourceId + "'. Reassign it in the graph.");
                     material.SetTexture(property.Name, texture);
                 }
+                else if (property.ResourceUri == "builtin://white") material.SetTexture(property.Name,Texture2D.whiteTexture);
                 else if (property.ResourceUri != "builtin://white")
                     throw new InvalidOperationException("Assign a Unity texture for resource '" + property.ResourceId + "' before building.");
             }

@@ -1,6 +1,6 @@
 # Built-in node pack
 
-The canvas now offers 25 nodes. Socket color indicates data type: yellow color, gray scalar, blue UV coordinates, green surface. Drag from either end; compatible-node menus and clipboard operations use the same core catalog.
+The canvas now offers 38 visible nodes, plus hidden Parameter and Preview Vector helpers. Socket color indicates data type: yellow color, gray scalar, blue UV coordinates, cyan normals, green surface. Drag from either end; compatible-node menus and clipboard operations use the same core catalog.
 
 ## New nodes
 
@@ -34,7 +34,7 @@ The original UV Coordinates, Texture, Color, Multiply, Toon Surface, and Output 
 
 ## Current boundaries
 
-- One **reachable** texture node per compiled graph. It can feed math, Mix, or emission. Extra disconnected texture nodes are ignored; multiple connected textures produce an explicit diagnostic.
+- Reachable texture and sticker resources receive separate stable sampler properties. The first uses `_MainTex`; additional resources use `_NXSG_Tex_<hash>`. Resource assignment and runtime texture availability remain Unity material concerns.
 - Noise is smooth 2D value noise with a moving sampling position, not true evolving/4D noise.
 - Emission adds unlit color. Bloom halos depend on the world's post-processing.
 - Live preview updates unsaved edits in a temporary material after a short pause; it pauses when the window is unfocused. Build updates the saved material. Shader Time animates the built shader when the rendering environment advances shader time.
@@ -73,6 +73,46 @@ Try `Assets/NXSGExamples/Noise Ramp.nxsg`, also shipped under `Samples~`. Ramp o
 
 ## Sidebar and UV switching
 
-The Add menu has collapsible **Inputs, Coordinates, Textures, Math, Surface** categories. Search includes names, aliases, descriptions, and category names, and opens matching categories. Search and expansion state survive normal editor rebuilds. Selected-node controls are above the library.
+The Add menu has collapsible **Inputs, Coordinates, Textures, Math, Color, Animation, Surface** categories. Search includes names, aliases, descriptions, and category names, and opens matching categories. Search and expansion state survive normal editor rebuilds. Selected-node controls are above the library.
 
 All seven UV/coordinate headers also offer the operation dropdown. Compatible UV wires and settings survive switching; unavailable inputs are disconnected and can be restored with Undo.
+
+## Surface and effect nodes
+
+The extended Built-In backend supports these portable operations. Surface nodes
+produce a surface value for **Output**; effect nodes produce typed values that
+can feed a surface or another effect.
+
+| Node | Contract | Backend caveat |
+|---|---|---|
+| Unlit Surface | Albedo, emission, opacity, displacement → surface | Ignores scene lighting. Base opacity is cutout via Cutoff; a Shell layer uses transparency. |
+| PBR Surface | Albedo, metallic, roughness, normal, emission, opacity → surface | Uses Unity Built-In BRDF with main light, spherical-harmonic ambient, and one reflection probe. No ForwardAdd or lightmap pass is emitted. |
+| Fresnel | Scalar output; power control | View-dependent rim factor; power is clamped by shader math. |
+| Color Ramp | Value → color | 2–8 ordered RGBA stops, linear interpolation. Native gradient editing; output holds endpoint colors outside the stop range. |
+| Layer | Base, overlay, mask → color | Mask is clamped to 0–1. |
+| Sticker | Base color, UV, mask → color | `resourceId` binds a separate texture property; multiple sticker and texture resources are allowed. |
+| Dissolve | Value, threshold → mask and edge; edge-width control | Surface integration must use opacity/cutoff semantics; it is not a geometry deletion pass. |
+| Flipbook | UV, time → UV | Rows, columns, and speed select animated cells. |
+| UV Distort | UV, strength → UV | Procedural distortion is target-specific and may be cheaper when driven by a sampled texture. |
+| Vertex Motion | Time, strength → displacement | Normal displacement follows an analytic sine wave. Texture inputs evaluated in the vertex stage use explicit LOD 0. Expand renderer bounds for large offsets. |
+| AudioLink | Band, gain, smoothing, fallback → scalar | Uses the official `_AudioTexture` layout when available. Smoothing is normalized 0–1: 0 is least smoothed/raw and 1 is most smoothed. `_NXSG_AudioLinkPreview` and `_NXSG_AudioLinkValue` provide editor preview data. |
+| Shell | Base surface, layer surface, offset → surface | Emits one independent transparent normal-offset mesh pass. Base surface owns cutout opacity and shadows; shell geometry has no shadow caster. Bounds and transparent sorting need review on each mesh. |
+
+AudioLink support does not install or require the AudioLink package. Missing or
+too-small textures return the node fallback. A correctly sized but stale
+texture can still read zero; live runtime data requires an AudioLink provider.
+
+PBR uses Unity's Built-In BRDF with the main light, spherical-harmonic ambient,
+and one reflection probe. The generated pass does not add ForwardAdd or lightmap
+passes. Normal maps decode tangent-space input using the mesh tangent basis.
+
+Patterns are flat groups over ordinary nodes and wires. **Patterns → Group selection** folds selected nodes into one card with boundary sockets. Expand reveals the original nodes; ungroup keeps them. **Save selection as Pattern** exports a bounded `.nxsg` snippet; **Insert Pattern** makes a new independent group with fresh node IDs. These copies are not linked instances of an external asset.
+
+
+## Preview an intermediate result
+
+Select a node, choose **Preview output**, then **Preview selected node**. Numbers, colors, UV coordinates, tangent normals, and surfaces can be inspected without changing the output connection or saved material. With Live preview enabled, edits update that selected output. **Back to material preview** restores the whole graph. UVs appear as red/green channels; normals map −1…1 to 0…1. Only the sidebar preview is rendered, not a thumbnail on every card.
+
+## Ready-made effect examples
+
+Open `Assets/NXSGExamples/Audio Hologram.nxsg`, `Noise Color Ramp.nxsg`, or `Animated Sticker.nxsg` in the development project. Distributable copies live under `Samples~`. The sticker sample uses a white placeholder; assign a transparent atlas in its texture picker. Audio Hologram has a nonzero fallback, so its shell remains visible without music.

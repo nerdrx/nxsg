@@ -140,6 +140,12 @@ namespace NXSG.Backend
                 return Result(null, diagnostics, properties, sourceMap);
             }
 
+            // Keep the original compact toon emitter stable while routing the
+            // extended surface/effect contract through its own backend. This
+            // also lets older graphs retain byte-for-byte compatible output.
+            if (AdvancedShaderEmitter.IsAdvanced(graph))
+                return AdvancedShaderEmitter.Emit(graph, options ?? new EmitterOptions());
+
             if (graph.Format != "nxsg")
             {
                 AddError(diagnostics, "backend.graph.format", "format", "Only the nxsg graph format is supported.");

@@ -119,6 +119,15 @@ namespace NXSG.Core
                         "Texture node must reference a declared resource.");
                 }
             }
+            else if (node.Operation == "core.sticker")
+            {
+                var resourceId = (string)node.Properties["resourceId"];
+                if (string.IsNullOrWhiteSpace(resourceId) || resources.All(item => item == null || item.Id != resourceId))
+                {
+                    Add(diagnostics, DiagnosticSeverity.Error, "resource.missing", path + ".properties.resourceId",
+                        "Sticker node must reference a declared resource.");
+                }
+            }
         }
 
         private static void ValidateCatalogProperties(GraphNode node, string path, List<Diagnostic> diagnostics)
@@ -136,11 +145,35 @@ namespace NXSG.Core
                 case "core.polarUV": vectors = new[] { "center" }; numeric = new[] { "radialScale", "angleScale" }; break;
                 case "core.uvRotate": vectors = new[] { "center" }; numeric = new[] { "angle" }; break;
                 case "core.uvScroll": vectors = new[] { "speed" }; break;
+                case "core.toonSurface": numeric = new[] { "opacity", "displacement", "cutoff", "threshold", "softness", "shadowStrength" }; break;
+                case "core.unlitSurface": numeric = new[] { "opacity", "displacement", "cutoff" }; break;
+                case "core.pbrSurface": numeric = new[] { "opacity", "displacement", "metallic", "roughness", "cutoff" }; break;
+                case "core.fresnel": numeric = new[] { "power" }; break;
+                case "core.colorRamp": break;
+                case "core.layer": numeric = new[] { "mask" }; break;
+                case "core.sticker": vectors = new[] { "position", "size" }; numeric = new[] { "rotation" }; break;
+                case "core.flipbook": numeric = new[] { "rows", "columns", "speed" }; break;
+                case "core.audioLink": numeric = new[] { "band", "gain", "smoothing", "fallback" }; break;
+                case "core.normalMap": numeric = new[] { "strength" }; break;
+                case "core.dissolve": numeric = new[] { "threshold", "edgeWidth" }; break;
+                case "core.shell": numeric = new[] { "offset" }; break;
+                case "core.vertexMotion": numeric = new[] { "strength", "speed", "frequency" }; break;
+                case "core.uvDistort": numeric = new[] { "strength", "speed", "scale" }; break;
                 default: return;
             }
             if (numeric != null) foreach (var name in numeric) CheckNumber(node.Properties[name], path + ".properties." + name, diagnostics);
             if (vectors != null) foreach (var name in vectors) CheckVector2(node.Properties[name], path + ".properties." + name, diagnostics);
             if (node.Operation == "core.ramp") CheckRampPoints(node.Properties["points"], path + ".properties.points", diagnostics);
+            if (node.Operation == "core.colorRamp") CheckColorRampStops(node.Properties["stops"], path + ".properties.stops", diagnostics);
+            if (node.Operation == "core.flipbook") CheckFlipbookLimits(node, path, diagnostics);
+            if (node.Operation == "core.audioLink")
+            {
+                CheckIntegerRange(node.Properties["band"],path+".properties.band",0,3,diagnostics);
+                var smoothing = node.Properties["smoothing"];
+                if (IsNumber(smoothing) && ((double)smoothing < 0 || (double)smoothing > 1)) Add(diagnostics,DiagnosticSeverity.Error,"value.range",path+".properties.smoothing","Smoothing must be between 0 and 1.");
+            }
+            if (node.Operation == "core.sticker" && node.Properties["size"] is JArray size && size.Count == 2 && size.All(IsNumber) && size.Any(v => (double)v <= 0))
+                Add(diagnostics,DiagnosticSeverity.Error,"value.range",path+".properties.size","Sticker size must be positive.");
         }
 
         private static void CheckRampPoints(JToken token, string path, List<Diagnostic> diagnostics)
@@ -174,6 +207,61 @@ namespace NXSG.Core
                     Add(diagnostics, DiagnosticSeverity.Error, "value.order", pointPath + "[0]", "Ramp point x values must be strictly increasing.");
                 previousX = x;
             }
+        }
+
+        private static void CheckColorRampStops(JToken token, string path, List<Diagnostic> diagnostics)
+        {
+            if (token == null) return;
+            var stops = token as JArray;
+            if (stops == null || stops.Count < 2 || stops.Count > 8)
+            {
+                Add(diagnostics, DiagnosticSeverity.Error, "property.type", path, "Color ramp stops must contain 2 to 8 [position, r, g, b, a] entries.");
+                return;
+            }
+            double previous = -1;
+            for (var i = 0; i < stops.Count; i++)
+            {
+                var stop = stops[i] as JArray;
+                var stopPath = path + "[" + i.ToString(CultureInfo.InvariantCulture) + "]";
+                if (stop == null || stop.Count != 5)
+                {
+                    Add(diagnostics, DiagnosticSeverity.Error, "property.type", stopPath, "Color ramp stop must contain five numbers.");
+                    continue;
+                }
+                for (var component = 0; component < stop.Count; component++) CheckNumber(stop[component], stopPath + "[" + component.ToString(CultureInfo.InvariantCulture) + "]", diagnostics);
+                if (!IsNumber(stop[0]) || !IsNumber(stop[1]) || !IsNumber(stop[2]) || !IsNumber(stop[3]) || !IsNumber(stop[4])) continue;
+                for (var component = 0; component < stop.Count; component++)
+                {
+                    var value = stop[component].Value<double>();
+                    if (value < 0 || value > 1) Add(diagnostics, DiagnosticSeverity.Error, "value.range", stopPath, "Color ramp stop components must be between 0 and 1.");
+                }
+                var position = stop[0].Value<double>();
+                if (i > 0 && position <= previous) Add(diagnostics, DiagnosticSeverity.Error, "value.order", stopPath + "[0]", "Color ramp stop positions must be strictly increasing.");
+                previous = position;
+            }
+        }
+
+        private static void CheckFlipbookLimits(GraphNode node, string path, List<Diagnostic> diagnostics)
+        {
+            CheckIntegerRange(node.Properties["rows"], path + ".properties.rows", 1, 64, diagnostics);
+            CheckIntegerRange(node.Properties["columns"], path + ".properties.columns", 1, 64, diagnostics);
+        }
+
+        private static void CheckIntegerRange(JToken token, string path, int minimum, int maximum, List<Diagnostic> diagnostics)
+        {
+            if (token == null) return;
+            if (!IsNumber(token) || (double)token != Math.Floor((double)token))
+            {
+                Add(diagnostics, DiagnosticSeverity.Error, "property.type", path, "Property must be an integer.");
+                return;
+            }
+            var value = token.Value<double>();
+            if (value < minimum || value > maximum) Add(diagnostics, DiagnosticSeverity.Error, "value.range", path, "Integer property is outside its supported range.");
+        }
+
+        private static bool IsNumber(JToken token)
+        {
+            return token != null && (token.Type == JTokenType.Integer || token.Type == JTokenType.Float);
         }
 
         private static void CheckNumber(JToken token, string path, List<Diagnostic> diagnostics)

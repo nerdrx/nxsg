@@ -11,7 +11,7 @@ using UnityEngine.UIElements;
 
 namespace NXSG.Editor
 {
-    public sealed class GraphWindow : EditorWindow
+    public sealed partial class GraphWindow : EditorWindow
     {
         [SerializeField] GraphSession session;
         [SerializeField] string sourcePath;
@@ -50,11 +50,15 @@ namespace NXSG.Editor
             public VisualElement hit, dot;
         }
         [SerializeField] bool livePreview = true;
+        [SerializeField] string previewNodeId, previewNodePort;
+        [SerializeField] bool audioPreviewEnabled;
+        [SerializeField] float audioPreviewValue = .5f;
         GraphPreview livePreviewResources;
         VisualElement previewHost;
         bool previewPending;
         double previewDue, lastPreviewRepaint;
         string previewHash, previewMessage;
+        string selectedPreviewPort;
         Material preview;
         UnityEditor.Editor previewEditor;
         bool dragging, panning;
@@ -124,6 +128,7 @@ namespace NXSG.Editor
             });
             toolbar.Add(liveToggle);
             toolbar.Add(new ToolbarButton(() => { pan = new Vector2(30, 70); zoom = 1; TransformCanvas(); }) { text = "Reset view" });
+            AddPatternToolbar(toolbar);
             rootVisualElement.Add(toolbar);
             identity = new Label { style = { whiteSpace = WhiteSpace.Normal, paddingLeft = 10, paddingTop = 5, paddingBottom = 5 } };
             rootVisualElement.Add(identity);
@@ -231,7 +236,7 @@ namespace NXSG.Editor
             ClearPreview();
             graph = GraphSamples.CreateDefault();
             graph.GraphId = Guid.NewGuid().ToString("N");
-            sourcePath = null; diskSource = null; contextMaterial = null; selected = null; selection.Clear();
+            sourcePath = null; diskSource = null; contextMaterial = null; selected = null; selection.Clear(); previewNodeId = previewNodePort = null;
             session.json = GraphJson.Serialize(graph, true);
             Undo.ClearUndo(session);
             hasUnsavedChanges = true;
@@ -246,6 +251,7 @@ namespace NXSG.Editor
                 var source = File.ReadAllText(path);
                 var parsed = GraphJson.Parse(source);
                 CheckEditableShape(parsed);
+                previewNodeId = previewNodePort = null;
                 graph = parsed; sourcePath = Path.GetFullPath(path); diskSource = source; contextMaterial = null;
                 session.json = GraphJson.Serialize(parsed, true);
                 Undo.ClearUndo(session); selected = null; selection.Clear(); hasUnsavedChanges = false;
@@ -377,16 +383,18 @@ namespace NXSG.Editor
                 UnityEditor.Editor candidateEditor = null;
                 try
                 {
-                    var hash = GraphJson.ComputeSemanticHash(graph);
+                    var previewGraph = PreparePreviewGraph();
+                    var hash = GraphJson.ComputeSemanticHash(graph) + ":" + previewNodeId + ":" + previewNodePort;
                     if (hash != previewHash)
                     {
                         previewHash = hash;
-                        candidate = GraphPreview.Create(graph, contextMaterial);
+                        candidate = GraphPreview.Create(previewGraph, string.IsNullOrEmpty(previewNodeId) ? contextMaterial : null);
                         candidateEditor = UnityEditor.Editor.CreateEditor(candidate.Material);
                         ClearPreview();
                         livePreviewResources = candidate; preview = candidate.Material; previewEditor = candidateEditor;
+                        ApplyAudioLinkPreview();
                         candidate = null; candidateEditor = null; previewHash = hash;
-                        previewMessage = "Live preview · " + (contextMaterial != null ? contextMaterial.name : "neutral material tint");
+                        previewMessage = string.IsNullOrEmpty(previewNodeId) ? "Live preview · " + (contextMaterial != null ? contextMaterial.name : "neutral material tint") : "Live node preview · " + previewNodePort;
                         RefreshPreviewPanel();
                     }
                 }
@@ -409,6 +417,7 @@ namespace NXSG.Editor
         {
             if (previewHost == null) return;
             previewHost.Clear();
+            if (!string.IsNullOrEmpty(previewNodeId)) previewHost.Add(new Button(() => { previewNodeId = previewNodePort = null; previewHash = null; QueueLivePreview(); RefreshPreviewPanel(); }) { text = "Back to material preview" });
             previewHost.Add(new Label(previewMessage ?? (previewEditor != null
                 ? (contextMaterial != null ? "Last build · " + contextMaterial.name : "Last build · neutral material tint")
                 : livePreview ? "Live preview waiting for a complete graph…" : "Enable Live preview to see unsaved edits."))
@@ -491,6 +500,7 @@ namespace NXSG.Editor
                     box.RegisterCallback<PointerDownEvent>(evt => { if (evt.button == 0) SelectNode(node.Id, evt.shiftKey || selection.Contains(node.Id)); });
                     layer.Add(box); nodes[node.Id] = box;
                 }
+            DrawPatternGroups();
             selection.RemoveAll(id => !nodes.ContainsKey(id));
             UpdateSelectionOutline();
             TransformCanvas(); RebuildInspector(); UpdateIdentity(); QueueLivePreview();
@@ -507,6 +517,8 @@ namespace NXSG.Editor
                 case "core.uv0": case "core.objectUV": case "core.worldUV": case "core.uvTransform":
                 case "core.uvScroll": case "core.uvRotate": case "core.polarUV":
                     return new[] { "core.uv0", "core.objectUV", "core.worldUV", "core.uvTransform", "core.uvScroll", "core.uvRotate", "core.polarUV" };
+                case "core.toonSurface": case "core.unlitSurface": case "core.pbrSurface":
+                    return new[] { "core.toonSurface", "core.unlitSurface", "core.pbrSurface" };
                 default: return Array.Empty<string>();
             }
         }
@@ -642,6 +654,12 @@ namespace NXSG.Editor
                 case "core.subtract": case "core.divide": case "core.minimum": case "core.maximum":
                 case "core.ramp": case "core.value": case "core.time": case "core.add": case "core.mix": case "core.oneMinus": case "core.clamp": case "core.multiply": return new Color(.28f, .33f, .38f);
                 case "core.emission": case "core.toonSurface": return new Color(.13f, .37f, .24f);
+                case "core.unlitSurface": case "core.pbrSurface": case "core.shell": return new Color(.13f,.37f,.24f);
+                case "core.fresnel": case "core.colorRamp": case "core.layer": case "core.dissolve": return new Color(.40f,.34f,.10f);
+                case "core.sticker": return new Color(.46f,.25f,.10f);
+                case "core.flipbook": case "core.uvDistort": return new Color(.16f,.32f,.52f);
+                case "core.vertexMotion": case "core.normalMap": return new Color(.12f,.38f,.40f);
+                case "core.audioLink": return new Color(.44f,.22f,.29f);
                 case "core.output": return new Color(.39f, .19f, .20f);
                 default: return new Color(.28f, .28f, .28f);
             }
@@ -651,7 +669,7 @@ namespace NXSG.Editor
         {
             return type == "surface" ? new Color(.35f, .85f, .46f)
                 : type == "float" ? new Color(.80f, .82f, .85f)
-                : type == "vector2" ? new Color(.45f, .65f, 1f) : new Color(1f, .78f, .25f);
+                : type == "vector2" ? new Color(.45f, .65f, 1f) : type == "vector3" ? new Color(.25f,.85f,.85f) : new Color(1f, .78f, .25f);
         }
 
         void RebuildInspector()
@@ -669,10 +687,10 @@ namespace NXSG.Editor
             {
                 choices.Clear();
                 var searching = !string.IsNullOrWhiteSpace(query);
-                var matches = NodeCatalog.All.Where(op => op != "core.parameter" &&
+                var matches = NodeCatalog.All.Where(op => op != "core.parameter" && op != "core.previewVector" &&
                     (!searching || (Title(op) + " " + op + " " + Aliases(op) + " " + NodeCatalog.Category(op) + " " + NodeCatalog.Description(op))
                         .IndexOf(query.Trim(), StringComparison.OrdinalIgnoreCase) >= 0)).ToList();
-                foreach (var category in new[] { "Inputs", "Coordinates", "Textures", "Math", "Surface" })
+                foreach (var category in new[] { "Inputs", "Coordinates", "Textures", "Math", "Color", "Animation", "Surface" })
                 {
                     var operations = matches.Where(op => NodeCatalog.Category(op) == category).ToList();
                     if (operations.Count == 0) continue;
@@ -711,6 +729,7 @@ namespace NXSG.Editor
                 if (GraphTypes.IsDynamic(node.Operation)) inspector.Add(new Label("Automatic type: " + (inferredTypes.TryGetValue(node.Id, out var inferred) && inferred == "float" ? "Number" : "Color"))
                     { style = { color = new Color(.7f, .8f, .9f), marginBottom = 4 } });
                 inspector.Add(new Label(NodeCatalog.Description(node.Operation)) { style = { whiteSpace = WhiteSpace.Normal, marginBottom = 6 } });
+                AddNodePreviewControls(node);
                 if (node.Operation == "core.constant")
                 {
                     var values = node.Properties["value"] as JArray;
@@ -737,6 +756,7 @@ namespace NXSG.Editor
                 switch (node.Operation)
                 {
                     case "core.ramp": AddNumber(node, "blackPoint", "Black point", 0); AddNumber(node, "whitePoint", "White point", 1); AddNumber(node, "smoothness", "Smoothing (0–1)", 0); AddRampCurve(node); break;
+                    case "core.colorRamp": AddColorRamp(node); break;
                     case "core.value": AddNumber(node, "value", "Value", 0); break;
                     case "core.time": AddNumber(node, "speed", "Speed", 1); AddNumber(node, "offset", "Offset", 0); break;
                     case "core.uvTransform": AddVector(node, "tiling", "Tiling", Vector2.one); AddVector(node, "offset", "Offset", Vector2.zero); break;
@@ -746,11 +766,166 @@ namespace NXSG.Editor
                     case "core.noise": AddNumber(node, "scale", "Scale", 5); AddNumber(node, "speed", "Animation speed", 1); break;
                     case "core.mix": AddFactor(node); break;
                     case "core.emission": AddNumber(node, "strength", "Strength", 1, "strength"); break;
+                    case "core.fresnel": AddNumber(node, "power", "Power", 5, "power"); break;
+                    case "core.layer": AddNumber(node, "mask", "Mask", 1, "mask"); break;
+                    case "core.pbrSurface": AddNumber(node, "opacity", "Opacity", 1, "opacity"); AddNumber(node, "cutoff", "Cutoff", .001f); AddNumber(node, "displacement", "Displacement", 0, "displacement"); AddNumber(node, "metallic", "Metallic", 0, "metallic"); AddNumber(node, "roughness", "Roughness", .5f, "roughness"); break;
+                    case "core.toonSurface": AddNumber(node, "opacity", "Opacity", 1, "opacity"); AddNumber(node, "cutoff", "Cutoff", .001f); AddNumber(node, "displacement", "Displacement", 0, "displacement"); break;
+                    case "core.unlitSurface": AddNumber(node, "opacity", "Opacity", 1, "opacity"); AddNumber(node, "cutoff", "Cutoff", .001f); AddNumber(node, "displacement", "Displacement", 0, "displacement"); break;
+                    case "core.sticker": AddTexturePicker(node, "Sticker texture"); AddVector(node, "position", "Position", Vector2.zero); AddVector(node, "size", "Size", Vector2.one); AddNumber(node, "rotation", "Rotation", 0); AddNumber(node, "mask", "Mask", 1, "mask"); break;
+                    case "core.dissolve": AddNumber(node, "threshold", "Threshold", .5f, "threshold"); AddNumber(node, "edgeWidth", "Edge width", .05f); break;
+                    case "core.flipbook": AddNumber(node, "columns", "Columns", 1); AddNumber(node, "rows", "Rows", 1); AddNumber(node, "speed", "Speed", 1); break;
+                    case "core.uvDistort": AddNumber(node, "strength", "Strength", .05f, "strength"); AddNumber(node, "scale", "Scale", 5); AddNumber(node, "speed", "Speed", 1); break;
+                    case "core.vertexMotion": AddNumber(node, "strength", "Strength", .02f, "strength"); AddNumber(node, "speed", "Speed", 1); AddNumber(node, "frequency", "Frequency", 2); break;
+                    case "core.shell": AddNumber(node, "offset", "Shell offset", .02f, "offset"); break;
+                    case "core.normalMap": AddNumber(node, "strength", "Strength", 1); break;
+                    case "core.audioLink": AddAudioLinkControls(node); break;
                 }
                 inspector.Add(new Button(() => Edit("Disconnect node", () => graph.Connections.RemoveAll(e => e.From.NodeId == selected || e.To.NodeId == selected))) { text = "Disconnect node" });
                 inspector.Add(new Button(DeleteSelection) { text = "Delete node" });
             }
             inspector.Add(library);
+        }
+
+        void AddNodePreviewControls(GraphNode node)
+        {
+            var ports = Ports(node.Operation, true).Where(port =>
+            {
+                var type = PortType(node, port);
+                return type == "float" || type == "color" || type == "surface" || type == "vector2" || type == "vector3";
+            }).ToList();
+            if (ports.Count == 0) return;
+            if (string.IsNullOrEmpty(selectedPreviewPort) || !ports.Contains(selectedPreviewPort)) selectedPreviewPort = ports[0];
+            var field = new PopupField<string>("Preview output", ports, Math.Max(0, ports.IndexOf(selectedPreviewPort)));
+            field.tooltip = "Preview this node output without changing graph connections.";
+            field.RegisterValueChangedCallback(evt => selectedPreviewPort = evt.newValue);
+            inspector.Add(field);
+            inspector.Add(new Button(() => PreviewNode(node, selectedPreviewPort)) { text = "Preview selected node", tooltip = "Build a temporary preview graph from this output. Original graph stays unchanged." });
+        }
+
+        ShaderGraph PreparePreviewGraph()
+        {
+            if (string.IsNullOrEmpty(previewNodeId) || !graph.Nodes.Any(n => n.Id == previewNodeId)) { previewNodeId = previewNodePort = null; return graph; }
+            var clone = GraphJson.Parse(GraphJson.Serialize(graph));
+            var node = clone.Nodes.First(n => n.Id == previewNodeId);
+            var type = GraphTypes.PortType(clone, node, previewNodePort, GraphTypes.Infer(clone));
+            if (type == null) { previewNodeId = previewNodePort = null; return graph; }
+            clone.Nodes.RemoveAll(n => n.Operation == "core.output");
+            var ids = new HashSet<string>(clone.Nodes.Select(n => n.Id));
+            clone.Connections.RemoveAll(e => !ids.Contains(e.From.NodeId) || !ids.Contains(e.To.NodeId));
+            Action<string,string,string,string> wire = (from,fromPort,to,toPort) => clone.Connections.Add(new GraphConnection { Id = Guid.NewGuid().ToString("N"),
+                From = new GraphPortRef { NodeId = from, PortId = fromPort }, To = new GraphPortRef { NodeId = to, PortId = toPort } });
+            var port = previewNodePort;
+            if (type == "vector2" || type == "vector3")
+            {
+                var converter = NodeCatalog.Create("core.previewVector"); clone.Nodes.Add(converter);
+                wire(node.Id,port,converter.Id,type == "vector2" ? "uv" : "normal"); node = converter; port = "color"; type = "color";
+            }
+            if (type != "surface")
+            {
+                var surface = NodeCatalog.Create("core.unlitSurface"); clone.Nodes.Add(surface);
+                wire(node.Id,port,surface.Id,"albedo"); node = surface; port = "surface";
+            }
+            var output = NodeCatalog.Create("core.output"); clone.Nodes.Add(output); wire(node.Id,port,output.Id,"surface");
+            return clone;
+        }
+
+        void PreviewNode(GraphNode node, string port)
+        {
+            if (graph == null || node == null || string.IsNullOrEmpty(port)) return;
+            GraphPreview candidate = null; UnityEditor.Editor candidateEditor = null;
+            var oldNode = previewNodeId; var oldPort = previewNodePort;
+            try
+            {
+                previewNodeId = node.Id; previewNodePort = port;
+                candidate = GraphPreview.Create(PreparePreviewGraph(), null);
+                candidateEditor = UnityEditor.Editor.CreateEditor(candidate.Material);
+                ClearPreview();
+                livePreviewResources = candidate; preview = candidate.Material; previewEditor = candidateEditor;
+                candidate = null; candidateEditor = null; ApplyAudioLinkPreview(); previewPending = false;
+                previewMessage = "Live node preview · " + Title(node.Operation) + " · " + port;
+                RefreshPreviewPanel();
+            }
+            catch (Exception exception)
+            {
+                if (candidateEditor != null) DestroyImmediate(candidateEditor); candidate?.Dispose();
+                previewNodeId = oldNode; previewNodePort = oldPort;
+                previewMessage = "Selected node preview failed: " + exception.Message; RefreshPreviewPanel();
+            }
+        }
+
+        void AddColorRamp(GraphNode node)
+        {
+            var gradient = new Gradient();
+            var points = node.Properties["stops"] as JArray;
+            var validPoints = points == null ? new List<JArray>() : points.OfType<JArray>().Where(point => point.Count >= 5).ToList();
+            var colors = validPoints.Count == 0 ? new[] { new GradientColorKey(Color.black, 0), new GradientColorKey(Color.white, 1) }
+                : validPoints.Select(point => new GradientColorKey(new Color((float)point[1], (float)point[2], (float)point[3], (float)point[4]), Mathf.Clamp01((float)point[0]))).ToArray();
+            var alpha = validPoints.Count == 0 ? new[] { new GradientAlphaKey(1, 0), new GradientAlphaKey(1, 1) }
+                : validPoints.Select(point => new GradientAlphaKey(Mathf.Clamp01((float)point[4]), Mathf.Clamp01((float)point[0]))).ToArray();
+            gradient.SetKeys(colors, alpha);
+            var field = new GradientField("Color stops") { value = gradient, tooltip = "Edit up to 8 combined color/alpha stops. Interpolation is linear." };
+            field.RegisterValueChangedCallback(evt =>
+            {
+                evt.newValue.mode = GradientMode.Blend;
+                var positions = evt.newValue.colorKeys.Select(key => key.time).Concat(evt.newValue.alphaKeys.Select(key => key.time)).Distinct().OrderBy(value => value).ToList();
+                if (positions.Count < 2 || positions.Count > 8) { field.SetValueWithoutNotify(gradient); SetStatus("Use at most 8 combined color/alpha stop positions."); return; }
+                Undo.RegisterCompleteObjectUndo(session, "Change Color Ramp");
+                node.Properties["stops"] = new JArray(positions.Select(position =>
+                {
+                    var color = evt.newValue.Evaluate(position);
+                    return new JArray(position, color.r, color.g, color.b, color.a);
+                }));
+                gradient = evt.newValue; field.SetValueWithoutNotify(gradient);
+                session.json = GraphJson.Serialize(graph, true); hasUnsavedChanges = true; EditorUtility.SetDirty(session); QueueLivePreview();
+            });
+            inspector.Add(field);
+        }
+
+        void AddTexturePicker(GraphNode node, string label)
+        {
+            var field = new ObjectField(label) { objectType = typeof(Texture2D), allowSceneObjects = false,
+                tooltip = "Pick a project texture resource." };
+            var resourceId = (string)node.Properties["resourceId"];
+            var map = graph.Adapter?["textures"] as JObject;
+            var guid = (string)map?[resourceId ?? ""];
+            if (!string.IsNullOrEmpty(guid)) field.value = AssetDatabase.LoadAssetAtPath<Texture2D>(AssetDatabase.GUIDToAssetPath(guid));
+            field.SetEnabled(!string.IsNullOrEmpty(resourceId) && graph.Resources.Any(resource => resource != null && resource.Id == resourceId));
+            field.RegisterValueChangedCallback(evt => Edit("Assign texture", () =>
+            {
+                if (graph.Adapter == null) graph.Adapter = new JObject();
+                if (!(graph.Adapter["textures"] is JObject)) graph.Adapter["textures"] = new JObject();
+                ((JObject)graph.Adapter["textures"])[resourceId ?? ""] = evt.newValue == null ? "" : AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(evt.newValue));
+            }));
+            inspector.Add(field);
+        }
+
+        void AddAudioLinkControls(GraphNode node)
+        {
+            var bandValue = node.Properties["band"] != null ? (int)node.Properties["band"] : 0;
+            var band = new PopupField<string>("Band", new List<string> { "Bass", "Low mids", "High mids", "Treble" }, Mathf.Clamp(bandValue, 0, 3));
+            band.RegisterValueChangedCallback(evt => Edit("Change AudioLink band", () => node.Properties["band"] = band.index));
+            inspector.Add(band);
+            AddNumber(node, "gain", "Gain", 1);
+            AddUnitNumber(node, "smoothing", "Smoothing", .5f);
+            AddNumber(node, "fallback", "Fallback", 0);
+            var toggle = new Toggle("Preview AudioLink") { value = audioPreviewEnabled, tooltip = "Simulate AudioLink only in temporary preview material." };
+            var slider = new Slider("Preview value", 0, 1) { value = audioPreviewValue, showInputField = true, tooltip = "Simulate the same input amplitude for all AudioLink nodes; each node keeps its gain." };
+            toggle.RegisterValueChangedCallback(evt => { audioPreviewEnabled = evt.newValue; ApplyAudioLinkPreview(); });
+            slider.RegisterValueChangedCallback(evt => { audioPreviewValue = Mathf.Clamp01(evt.newValue); ApplyAudioLinkPreview(); });
+            inspector.Add(toggle); inspector.Add(slider);
+        }
+
+        void SetAudioLinkPreview(bool enabled, float value)
+        {
+            audioPreviewEnabled = enabled; audioPreviewValue = Mathf.Clamp01(value); ApplyAudioLinkPreview();
+        }
+
+        void ApplyAudioLinkPreview()
+        {
+            if (preview == null) return;
+            preview.SetFloat("_NXSG_AudioLinkPreview", audioPreviewEnabled ? 1 : 0);
+            preview.SetFloat("_NXSG_AudioLinkValue", Mathf.Clamp01(audioPreviewValue));
+            previewHost?.MarkDirtyRepaint();
         }
 
         void AddRampCurve(GraphNode node)
@@ -812,6 +987,19 @@ namespace NXSG.Editor
             inspector.Add(field);
         }
 
+        void AddUnitNumber(GraphNode node, string property, string label, float fallback)
+        {
+            var field = new Slider(label,0,1) { value = Mathf.Clamp01((float?)node.Properties[property] ?? fallback), showInputField = true };
+            field.RegisterValueChangedCallback(evt =>
+            {
+                if (float.IsNaN(evt.newValue) || float.IsInfinity(evt.newValue)) return;
+                Undo.RegisterCompleteObjectUndo(session,"Change " + label);
+                node.Properties[property] = Mathf.Clamp01(evt.newValue); field.SetValueWithoutNotify((float)node.Properties[property]);
+                session.json = GraphJson.Serialize(graph,true); hasUnsavedChanges = true; EditorUtility.SetDirty(session); QueueLivePreview();
+            });
+            inspector.Add(field);
+        }
+
         void AddNumber(GraphNode node, string property, string label, float fallback, string input = null)
         {
             var token = node.Properties[property];
@@ -845,7 +1033,7 @@ namespace NXSG.Editor
         GraphNode CreateNode(string operation, Vector2 position)
         {
             var node = NodeCatalog.Create(operation);
-            if (operation == "core.texture2D")
+            if (operation == "core.texture2D" || operation == "core.sticker")
             {
                 var resource = new GraphResource { Id = "texture-" + node.Id, Kind = "texture2D", Uri = "builtin://white" };
                 graph.Resources.Add(resource); node.Properties["resourceId"] = resource.Id;
@@ -934,7 +1122,7 @@ namespace NXSG.Editor
             var menuOptions = new ScrollView(ScrollViewMode.Vertical) { style = { maxHeight = 220 } };
             spawnMenu.Add(menuOptions);
             var count = 0;
-            foreach (var operation in NodeCatalog.All.Where(op => op != "core.parameter"))
+            foreach (var operation in NodeCatalog.All.Where(op => op != "core.parameter" && op != "core.previewVector"))
             {
                 if (operation == "core.output" && graph.Nodes.Any(n => n.Operation == operation)) continue;
                 var candidate = new GraphNode { Operation = operation };
@@ -1151,8 +1339,7 @@ namespace NXSG.Editor
         string PortType(GraphNode node, string port) { return GraphTypes.PortType(graph, node, port, inferredTypes); }
         static string[] Ports(string operation, bool output)
         {
-            // Normal-map authoring is still unsupported by the current backend.
-            return NodeCatalog.Ports(operation, output).Where(port => operation != "core.toonSurface" || port != "normal").ToArray();
+            return NodeCatalog.Ports(operation, output);
         }
     }
 }

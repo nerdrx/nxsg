@@ -74,7 +74,7 @@ Reuse the platform shader compiler for low-level optimization. NXSG's own passes
 
 ## D11 — AudioLink optional; VRCFury property compatibility first · Selected
 
-Graphs without AudioLink build without its package or include. AudioLink graphs require a known editor-time implementation and an explicit runtime unavailable-data fallback; those are different missing-dependency cases. Initial VRCFury integration consists of conventional properties and a documented Material Property workflow. No private reflection or unreleased API dependency. Remember renderer-wide property animation can affect multiple materials sharing the same property name. [Integration research](research/PLATFORM_AND_INTEGRATIONS.md)
+Graphs without AudioLink build without its package or include. NXSG's current implementation uses a standalone shader-text contract: `_AudioTexture` is sampled at the official AudioLink layout, with `_NXSG_AudioLinkPreview` and `_NXSG_AudioLinkValue` for deterministic preview and an explicit fallback when data is unavailable. It does not install or include the AudioLink package. Runtime provider and live music behavior remain unvalidated. Initial VRCFury integration consists of conventional properties and a documented Material Property workflow. No private reflection or unreleased API dependency. Remember renderer-wide property animation can affect multiple materials sharing the same property name. [AudioLink implementation](research/AUDIOLINK_IMPLEMENTATION.md) · [Integration research](research/PLATFORM_AND_INTEGRATIONS.md)
 
 ## D12 — Fur is a measured follow-on · Provisional, S07
 

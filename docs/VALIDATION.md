@@ -89,3 +89,21 @@ The portable runner passes scalar/color inference, scalar demand through unbound
 The hidden Unity editor check (`NodeSwitchSmoke.Run`) passes UV operation changes with compatible-wire retention and Undo, categorized search and expansion persistence, numeric math promotion, rejection of a color connection that would break a numeric consumer, gradient endpoint colors, and the presence of Ramp's curve control. Native curve-popup gestures and visual gradient appearance are not covered by these programmatic assertions.
 
 `DynamicRenderSmoke.Run` passes on Unity 2022.3.22f1/OpenGL with a linear floating-point render target: numeric Mix, mixed number/color arithmetic, scalar Invert/Clamp, safe divide with zero/negative divisors, numeric Ramp defaults, equal/reversed black/white ranges, and custom piecewise curve values. A rendering check caught unsupported Cg single-argument vector constructors; scalar promotion now uses a single-call helper with an explicit four-component constructor. Live VRChat, stereo, and native Windows remain separate validation gates.
+
+
+## 2026-09-18 — Surfaces, layers, audio and reusable Patterns
+
+Implemented 13 visible nodes (38 visible total), optional node-output previews, flat reusable Pattern groups, and multiple texture resources. Legacy simple Toon graphs retain the original lowering path. Graphs using the extended contract use bounded per-output shader functions, including separate vertex sampling and a single transparent shell pass.
+
+Validated on **Linux Unity 2022.3.22f1, OpenGL Core, RX 7900 XTX**, inside hidden Gamescope:
+
+- `EffectsRenderSmoke`: Unlit lighting invariance; RGBA Color Ramp interpolation; layer blending; dissolve mask/edge; two flipbook frames; sticker alpha and bounds; Fresnel center/edge; normal-map PBR compilation; visible differences from metallic and roughness; half-opacity shell blending and expanded silhouette; vertex-motion/shadow-pass compilation. All cases passed.
+- AudioLink tests supply a synthetic 128×64 global texture and check exact raw and filtered band values, simulated preview values, and unavailable-data fallback. This caught and fixed the need for the official OpenGL `_AudioTexture_TexelSize` availability branch. The final check binds only the global texture, as the provider does; Unity supplies its size uniform. This is **not** live music/provider or VRChat evidence.
+- `EffectsVariantSmoke`: every catalog value node through a compatible reachable surface/texture path, constants, two texture resources, and the legacy Toon chain. Active Editor passes compiled and `SetPass` succeeded; this does not enumerate every D3D/VR variant.
+- `EffectsEditorSmoke`: Color/Animation library sections; gradient stops restored in the native field; selected scalar/UV/normal previews without source edits; collapsed Pattern cards and hidden member nodes; persisted grouping and toolbar Undo. Programmatic Editor checks, not exhaustive pointer/keyboard interaction proof.
+- `EffectsBuildSmoke`: Audio Hologram, Noise Color Ramp and Animated Sticker built and rebuilt as imported shader/material assets. Material GUID and edited tint survived rebuilds.
+- Portable checks: all node contracts, invalid stops/atlas limits, deterministic emission under reordered nodes/edges, source immutability, optional null handling, sample compilation, Pattern serialization and clipboard identity remapping. Existing portable checks pass.
+
+Local evidence logs (ignored scratch files): `work/unity/effects-render-verified.log`, `effects-variants.log`, `effects-editor-final.log`, `effects-build.log`. Runnable fixtures live in `Tests/Editor` and `Tests/Portable`.
+
+Limits: PBR currently provides main-light BRDF, SH ambient and one reflection probe; no additional-light/lightmap passes. Standalone surfaces use cutout opacity; the one Shell layer alpha-blends and does not cast its own shadow. Offset/motion do not expand renderer bounds automatically. Patterns are flat independent copies, not linked external subgraphs. Previews show one selected output in the sidebar. Windows, live VRChat/VR, actual AudioLink music, advanced stereo variants, and transparent-object sorting remain unverified.

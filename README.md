@@ -16,10 +16,10 @@
   <a href="docs/RISK_REGISTER.md">Known risks</a>
 </p>
 
-> **Early prototype · Linux tested · 2026-09-17**
-> The first graph editor and toon compiler now run in Unity **2022.3.22f1**. Real Linux rendering and build-recovery checks pass. This is a development package; VRChat client/headset acceptance and the larger feature library remain ahead. The banner is a concept illustration.
+> **Early prototype · Linux tested · 2026-09-18**
+> The custom graph editor and Built-In compiler run in Unity **2022.3.22f1**. Real Linux rendering and build-recovery checks pass. This is a development package; VRChat client/headset acceptance remain separate validation gates. The banner is a concept illustration.
 
-## Try the first slice
+## Try NXSG
 
 1. Clone the repository and run `python3 scripts/setup-vrchat-fixture.py` to prepare the isolated SDK fixture.
 2. Open **DevProject** in Unity Hub with **2022.3.22f1**.
@@ -49,7 +49,7 @@ Texture ───── Toon Surface ───── Output
 | :--- | :--- | :--- |
 | Search by name or intent. Start with compact effect nodes; open reusable Patterns when you need detail. | Inspect intermediate values and the material on a mesh. Keep the last good preview while editing. | Animate clean properties, add AudioLink, and understand the cost of passes, noise, and fur. |
 
-**Simple graphs first.** A reliable toon surface comes before the larger library: animated noise, flipbooks, dissolve, fur masks and direction, shells/fins, wind, LOD, and cheaper quality modes.
+**38 nodes to build with.** Toon, Unlit and PBR surfaces; AudioLink, color ramps, rim glow, masked layers, stickers, dissolve, flipbooks, UV distortion, vertex motion and one transparent shell. Fold reusable Patterns and preview intermediate values. Stacked fur, fins, LOD and baking remain future work.
 
 ## Built around the actual target
 
@@ -61,7 +61,7 @@ Texture ───── Toon Surface ───── Output
 | Shader target | **PC VRChat · Built-In forward**; validate the client graphics path separately |
 | Graph format | Portable, versioned **`.nxsg`**; Unity asset references live in an adapter |
 | Editor canvas | Custom UI Toolkit prototype running on the pinned editor; full S03 comparison remains open |
-| Integrations | Planned: optional AudioLink and VRCFury workflow validation |
+| Integrations | Standalone AudioLink shader contract and conventional material properties; live provider/VRCFury validation remains open |
 
 Mobile avatars require VRChat-permitted SDK shaders. A future mobile adapter can map or bake supported material inputs; a cheaper custom PC shader is not automatically allowed. [Compatibility details and sources →](docs/research/PLATFORM_AND_INTEGRATIONS.md)
 
@@ -80,13 +80,13 @@ Three Luna researchers worked in parallel, followed by a consistency review and 
 
 ## Path to a first release
 
-Live material preview and basic animation nodes are available. Intermediate-node previews, AudioLink, fur and Patterns remain planned.
+Live material preview, effect nodes, standalone AudioLink shader text, and flat editable Patterns are available in the current package. Live AudioLink music, fur quality, and VRChat client acceptance remain unverified.
 
 | Stage | Deliverable | Status |
 | :--- | :--- | :--- |
 | **01 · Foundation** | Pinned fixture, portable graph, custom canvas, toon shader | First working slice; remaining gates open |
-| **02 · Avatar workflow** | Live previews, stable builds, animation, AudioLink, VRCFury compatibility | Planned |
-| **03 · Fur + Patterns** | Measured fur techniques, direction/masks/LOD, reusable declarative groups | Planned |
+| **02 · Avatar workflow** | Live previews, stable builds, animation, AudioLink, VRCFury compatibility | Effect nodes and standalone AudioLink contract available; runtime gates open |
+| **03 · Fur + Patterns** | Measured fur techniques, direction/masks/LOD, reusable declarative groups | Flat editable Pattern groups available; measured fur gates open |
 | **04 · More places to create** | Baking, mobile material mapping, Blender bridge, CLI, viewer, other backends | Later |
 
 Linux is our primary authoring and validation environment. Record the Linux Editor graphics API and, when testing VRChat through Proton, the client and translation-layer versions. A Windows machine is not a prerequisite for development or Linux milestones. Native Windows compatibility is expected from the portable design but remains unverified until a future smoke test. Unity imports, shader compilation, SDK validation and headset measurements still establish different things.
@@ -110,4 +110,4 @@ Linux is our primary authoring and validation environment. Record the Linux Edit
 
 ### More nodes
 
-There are now **25 nodes**, including Polar UVs, object/world planar mapping, animated UV rotation, Noise, Emission, and color math. Math and UV headers let you switch operations while retaining compatible wires. Math adapts automatically to numbers/colors; Ramp reshapes noise masks with black/white controls and curve points. The searchable sidebar groups nodes by category. Mix has a bounded 0–1 Factor slider. See the [node guide](docs/NODES.md) and [Animated Palette example](Packages/dev.nerdrx.nxsg/Samples~/Animated%20Palette.nxsg).
+There are now **38 visible nodes**, plus hidden Parameter and Preview Vector helpers. The pack includes PBR and Unlit surfaces, Fresnel, color ramps, layers, stickers, dissolve, flipbooks, UV distortion, vertex motion, AudioLink, normal mapping, and shell rendering. Multiple reachable textures receive stable sampler properties. PBR uses Built-In main-light/ambient/reflection-probe lighting in one generated pass; shell adds one transparent normal-offset mesh pass and warns about bounds and sorting. Patterns are flat editable copies, not linked instances. See the [node guide](docs/NODES.md) and [Animated Palette example](Packages/dev.nerdrx.nxsg/Samples~/Animated%20Palette.nxsg).
