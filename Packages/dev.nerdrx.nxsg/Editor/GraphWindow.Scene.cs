@@ -81,7 +81,7 @@ namespace NXSG.Editor
 
         void UpdateScene()
         {
-            if (!autoScene || !scenePending || graph == null || EditorApplication.timeSinceStartup < sceneDue
+            if (!autoScene || !scenePending || wiring || spawnMenu != null || graph == null || EditorApplication.timeSinceStartup < sceneDue
                 || EditorApplication.isCompiling || EditorApplication.isUpdating || EditorApplication.isPlayingOrWillChangePlaymode) return;
             scenePending = false;
             SceneStatus("Scene: building…", true);

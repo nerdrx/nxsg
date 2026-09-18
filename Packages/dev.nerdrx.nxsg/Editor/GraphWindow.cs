@@ -598,7 +598,7 @@ namespace NXSG.Editor
             row.Add(new Label(port) { pickingMode = PickingMode.Ignore, style = {
                 marginLeft = 16, marginRight = 16,
                 unityTextAlign = output ? TextAnchor.MiddleRight : TextAnchor.MiddleLeft } });
-            var hit = new VisualElement { tooltip = (output ? "Output" : "Input") + ": " + port + " (" + type + ") — drag or click to connect",
+            var hit = new VisualElement { tooltip = (output ? "Output" : "Input") + ": " + port + " (" + type + ") — drag or click to connect. Drag a connected input to detach its wire.",
                 style = { position = UnityEngine.UIElements.Position.Absolute, top = 1, width = 26, height = 26,
                     alignItems = Align.Center, justifyContent = Justify.Center } };
             if (output) hit.style.right = -13; else hit.style.left = -13;
@@ -638,6 +638,23 @@ namespace NXSG.Editor
                 evt.StopPropagation(); evt.PreventDefault();
             });
             hit.RegisterCallback<GeometryChangedEvent>(_ => layer.MarkDirtyRepaint());
+        }
+
+        void DetachInputWire()
+        {
+            if (pendingOutput) return;
+            var edge = graph.Connections.FirstOrDefault(e => e.To.NodeId == pendingNode && e.To.PortId == pendingPort);
+            if (edge == null) return;
+            var pointer = wirePointer;
+            var start = wireStart;
+            var position = wirePosition;
+            Edit("Detach input wire", () => graph.Connections.Remove(edge));
+            // Rebuild clears the old gesture. Continue with the original output's loose wire.
+            pendingNode = edge.From.NodeId; pendingPort = edge.From.PortId; pendingOutput = true;
+            wiring = true; wireMoved = true; wirePointer = pointer; wireStart = start; wirePosition = position;
+            canvas.CapturePointer(pointer);
+            layer.MarkDirtyRepaint();
+            SetStatus("Wire detached. Drop onto an input to reconnect, or empty space to add a node. Undo restores it.");
         }
 
         void CancelWire()
@@ -1271,7 +1288,11 @@ namespace NXSG.Editor
             if (pendingNode != null && spawnMenu == null)
             {
                 wirePosition = layer.WorldToLocal(evt.position);
-                if (wiring && Vector2.Distance(wireStart, evt.position) > 4) wireMoved = true;
+                if (wiring && !wireMoved && Vector2.Distance(wireStart, evt.position) > 4)
+                {
+                    wireMoved = true;
+                    DetachInputWire();
+                }
                 layer.MarkDirtyRepaint();
             }
             if (!panning) return;
