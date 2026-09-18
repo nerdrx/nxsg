@@ -85,10 +85,29 @@ namespace NXSG.Editor
 
         void AddBoundedNumber(GraphNode node, string property, string label, float min, float max, float fallback, string inputPort = null)
         {
-            var field = new Slider(label, min, max) { value = (float?)node.Properties[property] ?? fallback, showInputField = true };
-            field.SetEnabled(inputPort == null || !graph.Connections.Any(e => e.To.NodeId == node.Id && e.To.PortId == inputPort));
-            field.RegisterValueChangedCallback(evt => Edit("Change " + label, () => node.Properties[property] = Mathf.Clamp(evt.newValue, min, max)));
-            inspector.Add(field);
+            var value = (float?)node.Properties[property] ?? fallback;
+            var row = new VisualElement { style = { flexDirection = FlexDirection.Row, marginBottom = 5 } };
+            var slider = new Slider(label, min, max) { value = Mathf.Clamp(value, min, max), style = { flexGrow = 1, flexShrink = 1, minWidth = 0 } };
+            var number = new FloatField { value = value, isDelayed = true, style = { width = 68, flexShrink = 0 },
+                tooltip = label + ": type beyond the slider range. Mathematical limits still apply." };
+            row.SetEnabled(inputPort == null || !graph.Connections.Any(e => e.To.NodeId == node.Id && e.To.PortId == inputPort));
+            slider.RegisterValueChangedCallback(evt => Edit("Change " + label, () => node.Properties[property] = Mathf.Clamp(evt.newValue, min, max)));
+            number.RegisterValueChangedCallback(evt =>
+            {
+                if (float.IsNaN(evt.newValue) || float.IsInfinity(evt.newValue))
+                {
+                    number.SetValueWithoutNotify(value);
+                    SetStatus("Enter a finite number.");
+                    return;
+                }
+                Edit("Change " + label, () => node.Properties[property] = evt.newValue);
+            });
+            slider.labelElement.style.display = DisplayStyle.None;
+            slider.tooltip = label + ": drag within " + min + "–" + max + ", or type a value on the right.";
+            inspector.Add(new Label(label) { tooltip = number.tooltip });
+            row.Add(slider);
+            row.Add(number);
+            inspector.Add(row);
         }
     }
 }

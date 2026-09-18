@@ -10,7 +10,8 @@ namespace NXSG.Core
         private static readonly HashSet<string> DynamicOperations = new HashSet<string>(StringComparer.Ordinal)
         {
             "core.add", "core.subtract", "core.multiply", "core.divide", "core.minimum",
-            "core.maximum", "core.mix", "core.oneMinus", "core.clamp"
+            "core.maximum", "core.mix", "core.oneMinus", "core.clamp", "core.absolute", "core.power", "core.sqrt",
+            "core.sine", "core.cosine", "core.fraction", "core.floor", "core.ceil", "core.round"
         };
 
         public static bool IsDynamic(string operation)
@@ -143,6 +144,7 @@ namespace NXSG.Core
         private static bool IsOperand(string operation, string port)
         {
             if (operation == "core.oneMinus" || operation == "core.clamp") return port == "color";
+            if (operation == "core.absolute" || operation == "core.sqrt" || operation == "core.sine" || operation == "core.cosine" || operation == "core.fraction" || operation == "core.floor" || operation == "core.ceil" || operation == "core.round") return port == "a";
             return port == "a" || port == "b";
         }
 
@@ -155,6 +157,7 @@ namespace NXSG.Core
 
         private static string LegacyType(GraphNode node)
         {
+            if (node != null && (node.Operation == "core.absolute" || node.Operation == "core.power" || node.Operation == "core.sqrt" || node.Operation == "core.sine" || node.Operation == "core.cosine" || node.Operation == "core.fraction" || node.Operation == "core.floor" || node.Operation == "core.ceil" || node.Operation == "core.round")) return "float";
             if (node != null && node.Operation == "core.multiply")
             {
                 var value = node.Properties == null ? null : ReadType(node.Properties["valueType"]);

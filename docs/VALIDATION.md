@@ -134,3 +134,18 @@ An initial zero-density compile exposed a Unity OpenGL geometry-link issue: opti
 **Color from mesh UVs** switches Surface Particles Albedo/Emission UV0 sampling to the interpolated source-mesh spawn UV. `Tests/Editor/ParticleSourceUvSmoke.cs` passed in hidden Unity 2022.3.22f1/Linux OpenGL (`work/unity/particle-source-uv.log`, `NXSG PARTICLE SOURCE UV SMOKE PASSED`): a red/blue texture spans each sprite with the toggle off, while a mesh with constant red-side UVs produces red particles with it on. Albedo and Emission paths are tested independently.
 
 The portable suite also passes mode defaults/range checks and single-precision slider endpoint regressions. Property validation accepts the nearest float representation of a declared boundary, fixing minimum Particle Size (0.0001) being rejected after Unity float rounding. Values below that representation, non-finite numbers and out-of-range values remain rejected. The saved user graph and material were not modified.
+
+## Utility nodes, soft slider ranges and emission rate — 2026-09-18
+
+The full portable suite passes all 20 utility-node contracts, save/reload, emission, numeric validation and scalar/color inference. `UtilityNodesRenderSmoke` passed in Unity 2022.3.22f1/Linux OpenGL (`work/unity/utility-nodes-render.log`): actual center pixels match numeric expectations for all 20 nodes, including negative square-root input protection. `SoftSliderSmoke` passed callback-level typed value 1000, slider clamping, persistence, Undo/Redo, nonfinite rejection and wired-property disabling (`work/unity/soft-slider.log`); this does not claim physical keyboard testing.
+
+`SurfaceParticleRenderSmoke` passed rate 0, low/high rate population differences and the four-slot plateau, alongside the existing motion, skinning and sample checks (`work/unity/emission-rate-render-fixed.log`). `ParticleSourceUvSmoke` re-passed both Albedo and Emission color mapping after the rate changes (`work/unity/particle-source-uv-rate.log`). These checks ran in isolated headless Gamescope projects; they do not establish Windows, VRChat client or stereo behavior.
+
+
+### Final visual toolkit and high-count particle checks
+
+The earlier four-slot/source-triangle plateau is superseded by automatic particle-pass tessellation. `particle-beans-final.log` passes zero/low/high rate comparisons, a requested 10,000 births/sec/source triangle with lifetime 1, finite visible output, motion, source skinning and sample rendering. This establishes amplification and successful rendering, not an exact measured birth count: requested rates are approximate and limited by tessellation level 64.
+
+`visual-nodes-render.log` passes all 21 visual nodes (20 plus Wireframe), finite GPU output, visible shape masks, white texture defaults and distance-fade pixel expectation. The output montage is retained in `docs/evidence/2026-09-18-visual-nodes.png` and was visually inspected for shape topology, including star, hexagons and triangulated wireframe.
+
+`visual-editor-fixed.log` passes 41 node inspectors, output-preview choices, category colors, nonempty hover help, exactly one texture picker per texture node, compatible-node search, grouped destination ports and empty-search feedback. The usability changes separate long slider labels from slider tracks and number fields, preserve out-of-range typed values, and share search across the sidebar and connection menu. Editor checks dispatch UI callbacks; physical keyboard/mouse gestures are not claimed. Unity screen readback returned black under Gamescope, so no editor screenshot is used as visual proof.

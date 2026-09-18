@@ -23,6 +23,7 @@ namespace NXSG.Backend
         readonly Dictionary<string, string> functions = new Dictionary<string, string>();
         readonly StringBuilder code = new StringBuilder();
         readonly List<Diagnostic> diagnostics = new List<Diagnostic>();
+        bool wireframeEnabled;
         int depth;
 
         sealed class SurfacePass
@@ -34,7 +35,7 @@ namespace NXSG.Backend
         public static bool IsAdvanced(ShaderGraph graph)
         {
             if (graph?.Nodes == null) return false;
-            var ops = new HashSet<string> { "core.unlitSurface", "core.pbrSurface", "core.particleSurface", "core.particleColor", "core.surfaceParticles", "core.fresnel", "core.colorRamp", "core.layer", "core.sticker", "core.dissolve", "core.flipbook", "core.uvDistort", "core.vertexMotion", "core.audioLink", "core.shell", "core.normalMap", "core.previewVector", "core.musgrave", "core.voronoi", "core.checker", "core.wave", "core.gradient", "core.uvTile", "core.posterize" };
+            var ops = new HashSet<string> { "core.unlitSurface", "core.pbrSurface", "core.particleSurface", "core.particleColor", "core.surfaceParticles", "core.fresnel", "core.colorRamp", "core.layer", "core.sticker", "core.dissolve", "core.flipbook", "core.uvDistort", "core.vertexMotion", "core.audioLink", "core.shell", "core.normalMap", "core.previewVector", "core.musgrave", "core.voronoi", "core.checker", "core.wave", "core.gradient", "core.uvTile", "core.posterize", "core.absolute", "core.power", "core.sqrt", "core.sine", "core.cosine", "core.fraction", "core.floor", "core.ceil", "core.round", "core.step", "core.smoothstep", "core.remap", "core.pingPong", "core.splitColor", "core.combineColor", "core.luminance", "core.contrast", "core.saturation", "core.splitUV", "core.combineUV", "core.position", "core.normalDirection", "core.viewDirection", "core.vertexColor", "core.cameraDistance", "core.screenUV", "core.circleMask", "core.boxMask", "core.polygonMask", "core.starMask", "core.radialRays", "core.spiral", "core.brick", "core.hexGrid", "core.triplanarTexture", "core.matcapTexture", "core.rimGlow", "core.heightMask", "core.slopeMask", "core.distanceFade", "core.wireframe" };
             // Only reachable effects select the extended lowering; disconnected nodes never change shading.
             var connected = new HashSet<string>();
             var queue = new Queue<string>(graph.Nodes.Where(n => n?.Operation == "core.output").Select(n => n.Id));
@@ -103,10 +104,21 @@ namespace NXSG.Backend
             if (particle && fallback == "toonstandard") fallback = "Particle";
             var live = new HashSet<string>();
             Visit(root, live);
+            var wireNode = live.Select(id => nodes[id]).FirstOrDefault(n => n.Operation == "core.wireframe");
+            wireframeEnabled = wireNode != null;
+            if (wireframeEnabled && particle) throw new InvalidOperationException("Wireframe currently supports Toon, Unlit, PBR and Shell surfaces; use those for mesh edges.");
+            if (wireframeEnabled && surfaceParticles)
+            {
+                var particleInputs = new HashSet<string>();
+                foreach (var port in new[]{"albedo","emission","opacity","mask","time"})
+                { var source = Source(root,port); if(source != null) Visit(source,particleInputs); }
+                if(particleInputs.Any(id=>nodes[id].Operation=="core.wireframe"))
+                    throw new InvalidOperationException("Connect Wireframe to the Base surface, not the generated particle inputs.");
+            }
             foreach (var node in live.Select(id => nodes[id]).OrderBy(n => n.Id, StringComparer.Ordinal))
             {
                 if (node.Version != 1) throw new InvalidOperationException("Unsupported node version: " + node.Id);
-                if (node.Operation != "core.texture2D" && node.Operation != "core.sticker") continue;
+                if (node.Operation != "core.texture2D" && node.Operation != "core.sticker" && node.Operation != "core.triplanarTexture" && node.Operation != "core.matcapTexture") continue;
                 var id = (string)node.Properties["resourceId"];
                 var resource = (graph.Resources ?? new List<GraphResource>()).FirstOrDefault(r => r.Id == id);
                 if (resource == null || resource.Kind != "texture2D") throw new InvalidOperationException("Missing texture resource: " + id);
@@ -141,7 +153,7 @@ namespace NXSG.Backend
             else for (var i = 0; i < passes.Count; i++) passCode.Append(Pass(passes[i].Surface, i, passes[i].Offset));
             if (surfaceParticles) passCode.Append(SurfaceParticleShader.Pass(
                 Scalar(root,"mask",1,true), Input(root,"albedo","float4(1,1,1,1)","color"), Input(root,"emission","float4(0,0,0,1)","color"), Scalar(root,"opacity",1), Input(root,"time","_Time.y","float",true),
-                Prop(root,"density",.1), Prop(root,"size",.03), Prop(root,"lifetime",2), Prop(root,"speed",.2), Prop(root,"gravity",0), Prop(root,"spread",.05), IntProp(root,"blendMode",1,0,1), IntProp(root,"sourceUV",0,0,1) == 1));
+                Prop(root,"density",.1), root.Properties["emissionRate"] == null ? "1.0/max(" + Prop(root,"lifetime",2) + ",0.0001)" : Prop(root,"emissionRate",0), Prop(root,"size",.03), Prop(root,"lifetime",2), Prop(root,"speed",.2), Prop(root,"gravity",0), Prop(root,"spread",.05), IntProp(root,"blendMode",1,0,1), IntProp(root,"sourceUV",0,0,1) == 1));
             var shadowPass = !particle && options.IncludeShadowCaster ? Shadow(passes[0].Surface, passes[0].Offset) : "";
             b.AppendLine("}\nSubShader {\nTags { \"RenderType\"=\"" + (particle ? "Transparent" : "Opaque") + "\" \"Queue\"=\"" + (particle ? "Transparent" : "Geometry") + "\"" + (surfaceParticles ? " \"DisableBatching\"=\"True\"" : "") + (fallback == null ? "" : " \"VRCFallback\"=\"" + fallback + "\"") + " }");
             b.AppendLine("CGINCLUDE\n#include \"UnityCG.cginc\"\n#include \"Lighting.cginc\"\n#include \"AutoLight.cginc\"\n#include \"UnityPBSLighting.cginc\"");
@@ -158,7 +170,7 @@ namespace NXSG.Backend
             if (live.Any(id => nodes[id].Operation == "core.musgrave" || nodes[id].Operation == "core.voronoi" || (nodes[id].Operation == "core.noise" && (int?)nodes[id].Properties["dimensions"] == 4)))
                 diagnostics.Add(new Diagnostic(DiagnosticSeverity.Warning, "cost.procedural", "$", "Fractal, cellular and 4D patterns cost more than 2D noise; start with few detail layers, especially across shells."));
             if (live.Any(id => nodes[id].Operation == "core.vertexMotion")) diagnostics.Add(new Diagnostic(DiagnosticSeverity.Warning, "bounds.displacement", "$", "Vertex displacement requires mesh/SkinnedMeshRenderer bounds large enough for the motion."));
-            if (surfaceParticles) diagnostics.Add(new Diagnostic(DiagnosticSeverity.Warning, "cost.surfaceParticles", root.Id, "An extra PC geometry pass processes every source triangle; density controls visible particles, not geometry work. Density depends on mesh topology; particles follow the current pose. Expand renderer bounds for outward motion. Stereo and VRChat client behavior need validation."));
+            if (surfaceParticles) diagnostics.Add(new Diagnostic(DiagnosticSeverity.Warning, "cost.surfaceParticles", root.Id, "An extra PC geometry pass processes every source triangle; density controls selected triangles, not geometry work. Four particles are emitted per generated subtriangle; high rates use tessellation up to level 64 and approximate the requested source-triangle rate. Particles follow the current pose; expand renderer bounds for outward motion. Stereo and VRChat client behavior need validation."));
             if (particle && root.Properties["softDistance"] != null && (double)root.Properties["softDistance"] > 0)
                 diagnostics.Add(new Diagnostic(DiagnosticSeverity.Warning, "cost.particleDepth", root.Id, "Soft intersections require a camera depth texture. Set soft distance to 0 when unavailable; transparent overdraw and depth sampling add cost."));
             return b.ToString();
@@ -223,6 +235,7 @@ namespace NXSG.Backend
             string body;
             string P(string p, string def, string t = null) { return Input(n, p, def, t ?? type, vertex); }
             string S(string p, double def) { return Scalar(n, p, def, vertex); }
+            string M(string p, double def) { var value = Prop(n,p,def); return P(p,type == "color" ? "NX_Splat(" + value + ")" : value); }
             string uv = DefaultUV(n);
             switch (n.Operation)
             {
@@ -256,6 +269,58 @@ namespace NXSG.Backend
                 case "core.mix": body = "lerp(" + P("a", "0") + "," + P("b", "1") + ",saturate(" + S("factor", .5) + "))"; break;
                 case "core.oneMinus": body = "(1-" + P("color", "0") + ")"; break;
                 case "core.clamp": body = "saturate(" + P("color", "0") + ")"; break;
+                case "core.absolute": body = "abs(" + M("a", .5) + ")"; break;
+                case "core.power": body = "pow(max(abs(" + M("a", .5) + "),.00001)," + M("b", 2) + ")"; break;
+                case "core.sqrt": body = "sqrt(max(0," + M("a", .5) + "))"; break;
+                case "core.sine": body = "sin(" + M("a", .5) + ")"; break;
+                case "core.cosine": body = "cos(" + M("a", .5) + ")"; break;
+                case "core.fraction": body = "frac(" + M("a", .5) + ")"; break;
+                case "core.floor": body = "floor(" + M("a", .5) + ")"; break;
+                case "core.ceil": body = "ceil(" + M("a", .5) + ")"; break;
+                case "core.round": body = "floor(" + M("a", .5) + "+.5)"; break;
+                case "core.step": body = "step(" + S("a", .5) + "," + S("b", 0) + ")"; break;
+                case "core.smoothstep": body = "float t=saturate(NX_Div(" + S("value", 0) + "-" + S("low", 0) + "," + S("high", 1) + "-" + S("low", 0) + ")); return t*t*(3-2*t);"; break;
+                case "core.remap": body = "(" + S("outMin", 0) + "+NX_Div(" + S("value", 0) + "-" + S("inMin", 0) + "," + S("inMax", 1) + "-" + S("inMin", 0) + ")*(" + S("outMax", 1) + "-" + S("outMin", 0) + "))"; break;
+                case "core.pingPong": body = "(abs(frac(" + S("value", 0) + "/(2*max(abs(" + S("length", 1) + "),.00001))+.5)*2-1)*max(abs(" + S("length", 1) + "),.00001))"; break;
+                case "core.splitColor": body = "(" + P("color", "float4(.5,.5,.5,.5)", "color") + ")." + port; break;
+                case "core.combineColor": body = "float4(" + S("r", 0) + "," + S("g", 0) + "," + S("b", 0) + "," + S("a", 1) + ")"; break;
+                case "core.luminance": body = "dot((" + P("color", "float4(.5,.5,.5,1)", "color") + ").rgb,float3(.2126,.7152,.0722))"; break;
+                case "core.contrast": body = "float4 c=" + P("color", "float4(.5,.5,.5,1)", "color") + "; return float4((c.rgb-" + S("pivot", .5) + ")*" + S("amount", 1) + "+" + S("pivot", .5) + ",c.a);"; break;
+                case "core.saturation": body = "float4(lerp(dot((" + P("color", "float4(.5,.5,.5,1)", "color") + ").rgb,float3(.2126,.7152,.0722)),(" + P("color", "float4(.5,.5,.5,1)", "color") + ").rgb," + S("amount", 1) + "),(" + P("color", "float4(.5,.5,.5,1)", "color") + ").a)"; break;
+                case "core.splitUV": body = "(" + P("uv", uv, "vector2") + ")." + (port == "u" ? "x" : "y"); break;
+                case "core.combineUV": body = "float2(" + S("u", 0) + "," + S("v", 0) + ")"; break;
+                case "core.position": body = IntProp(n, "space", 0, 0, 1) == 1 ? "input.ws" : "input.local"; break;
+                case "core.normalDirection": body = IntProp(n, "space", 1, 0, 1) == 1 ? "normalize(input.n)" : "normalize(mul(normalize(input.n),(float3x3)unity_ObjectToWorld))"; break;
+                case "core.viewDirection": body = "normalize(_WorldSpaceCameraPos-input.ws)"; break;
+                case "core.vertexColor": body = port == "alpha" ? "input.color.a" : "input.color"; break;
+                case "core.cameraDistance": body = "distance(_WorldSpaceCameraPos,input.ws)"; break;
+                case "core.screenUV": body = "(ComputeScreenPos(UnityWorldToClipPos(input.ws)).xy/ComputeScreenPos(UnityWorldToClipPos(input.ws)).w)"; break;
+                case "core.wireframe":
+                    if (vertex) throw new InvalidOperationException("Wireframe is a pixel mask; connect it to color, emission or opacity, not displacement or emitter mask.");
+                    body = "NX_Wire(input.wireBary," + Prop(n,"width",1) + "," + Prop(n,"softness",1) + ")"; break;
+                case "core.circleMask": body = "NX_ShapeEdge(length("+P("uv",uv,"vector2")+"-.5)-"+Prop(n,"radius",.4)+","+Prop(n,"softness",.02)+")"; break;
+                case "core.boxMask": body = "float2 q=abs("+P("uv",uv,"vector2")+"-.5)-float2("+Prop(n,"width",.7)+","+Prop(n,"height",.7)+")*.5; return NX_ShapeEdge(max(q.x,q.y),"+Prop(n,"softness",.02)+");"; break;
+                case "core.polygonMask": body = "NX_Polygon("+P("uv",uv,"vector2")+","+IntProp(n,"sides",6,3,32)+","+Prop(n,"radius",.4)+","+Prop(n,"rotation",0)+","+Prop(n,"softness",.02)+")"; break;
+                case "core.starMask": body = "NX_Star("+P("uv",uv,"vector2")+","+IntProp(n,"points",5,3,32)+","+Prop(n,"inner",.2)+","+Prop(n,"outer",.45)+","+Prop(n,"rotation",0)+","+Prop(n,"softness",.02)+")"; break;
+                case "core.radialRays": body = "float2 q="+P("uv",uv,"vector2")+"-.5; float wave=cos((atan2(q.y,q.x)+radians("+Prop(n,"rotation",0)+"))*"+IntProp(n,"count",12,1,128)+"); return smoothstep(-max(.0001,"+Prop(n,"softness",.02)+"),max(.0001,"+Prop(n,"softness",.02)+"),wave);"; break;
+                case "core.spiral": body = "float2 q="+P("uv",uv,"vector2")+"-.5; float phase=frac(atan2(q.y,q.x)/6.2831853+length(q)*"+Prop(n,"turns",3)+"+"+Prop(n,"rotation",0)+"/360); return NX_ShapeEdge(abs(phase-.5)-max(0,"+Prop(n,"width",.2)+")*.5,.005);"; break;
+                case "core.brick": body = "float2 p="+P("uv",uv,"vector2")+"*float2("+Prop(n,"tilingX",5)+","+Prop(n,"tilingY",8)+"); p.x+=floor(p.y)*.5; float2 edge=min(frac(p),1-frac(p)); return step(max(0,"+Prop(n,"mortar",.08)+")*.5,min(edge.x,edge.y));"; break;
+                case "core.hexGrid": body = "NX_Hex("+P("uv",uv,"vector2")+","+Prop(n,"scale",8)+","+Prop(n,"width",.05)+")"; break;
+                case "core.triplanarTexture":
+                    var triPosition=P("position","input.local","vector3");
+                    var triNormal=P("normal","normalize(mul(input.n,(float3x3)unity_ObjectToWorld))","vector3");
+                    var triScale=Prop(n,"scale",1);
+                    body="float3 p="+triPosition+"*"+triScale+"; float3 w=pow(abs("+triNormal+"),max(.001,"+Prop(n,"sharpness",4)+")); w/=max(dot(w,float3(1,1,1)),.00001); return "+Sample(n,"p.yz",vertex)+"*w.x+"+Sample(n,"p.xz",vertex)+"*w.y+"+Sample(n,"p.xy",vertex)+"*w.z;"; break;
+                case "core.matcapTexture":
+                    body=Sample(n,"(normalize(mul((float3x3)UNITY_MATRIX_V,"+P("normal","input.n","vector3")+")).xy*.5+.5)",vertex); break;
+                case "core.rimGlow": body = "float4(" + P("color", "float4(1,1,1,1)", "color") + ".rgb*pow(saturate(1-dot(normalize(input.n),normalize(_WorldSpaceCameraPos-input.ws))),max(.0001," + S("power", 3) + "))," + P("color", "float4(1,1,1,1)", "color") + ".a)"; break;
+                case "core.heightMask":
+                    var heightPosition = P("position", "input.local", "vector3");
+                    var heightAxis = IntProp(n, "axis", 1, 0, 2);
+                    var heightComponent = heightAxis == 0 ? ".x" : heightAxis == 2 ? ".z" : ".y";
+                    body = "saturate(NX_Div(" + heightPosition + heightComponent + "-" + Prop(n, "low", 0) + "," + Prop(n, "high", 1) + "-" + Prop(n, "low", 0) + "))"; break;
+                case "core.slopeMask": body = "saturate(NX_Div(normalize(" + P("normal", "input.n", "vector3") + ").y-" + Prop(n, "low", 0) + "," + Prop(n, "high", 1) + "-" + Prop(n, "low", 0) + "))"; break;
+                case "core.distanceFade": body = "saturate(NX_Div(" + Prop(n, "far", 10) + "-distance(_WorldSpaceCameraPos,input.ws)," + Prop(n, "far", 10) + "-" + Prop(n, "near", 0) + "))"; break;
                 case "core.emission": body = "(" + P("color", "float4(0,0,0,1)", "color") + "*" + S("strength", 1) + ")"; break;
                 case "core.ramp":
                     body = CurveBody(n, P("value", "0", "float"), false); break;
@@ -403,6 +468,8 @@ namespace NXSG.Backend
             return parameter.Binding==GraphBindingKind.Constant ? Literal(parameter.DefaultValue,"float") : ParameterName(id);
         }
 
+        const string WireGeometry = "[maxvertexcount(3)] void geomWire(triangle NXInput tri[3], inout TriangleStream<NXInput> stream) { NXInput o=tri[0]; o.wireBary=float3(1,0,0); stream.Append(o); o=tri[1]; o.wireBary=float3(0,1,0); stream.Append(o); o=tri[2]; o.wireBary=float3(0,0,1); stream.Append(o); stream.RestartStrip(); }";
+
         string Pass(GraphNode surface, int passIndex, string offset)
         {
             var displacement = Scalar(surface,"displacement",0,true);
@@ -414,8 +481,9 @@ namespace NXSG.Backend
             var metallic = Scalar(surface,"metallic",0);
             var roughness = Scalar(surface,"roughness",.5);
             var threshold=ToonSetting(surface,"threshold",passIndex);var softness=ToonSetting(surface,"softness",passIndex);var shadow=ToonSetting(surface,"shadowStrength",passIndex);
-            var b=new StringBuilder("Pass {\nName \""+(shell?(passIndex == 1 ? "Shell" : "Shell" + passIndex.ToString(CultureInfo.InvariantCulture)):"ForwardBase")+"\"\nTags { \"LightMode\"=\""+(shell?"Always":"ForwardBase")+"\" }\nCull Back\n"+(shell?"ZWrite Off\nBlend SrcAlpha OneMinusSrcAlpha":"ZWrite On")+"\nCGPROGRAM\n#pragma target 3.5\n#pragma vertex vert\n#pragma fragment frag\n#pragma multi_compile_fwdbase\n#pragma multi_compile_instancing\n");
+            var b=new StringBuilder("Pass {\nName \""+(shell?(passIndex == 1 ? "Shell" : "Shell" + passIndex.ToString(CultureInfo.InvariantCulture)):"ForwardBase")+"\"\nTags { \"LightMode\"=\""+(shell?"Always":"ForwardBase")+"\" }\nCull Back\n"+(shell?"ZWrite Off\nBlend SrcAlpha OneMinusSrcAlpha":"ZWrite On")+"\nCGPROGRAM\n#pragma target 3.5\n#pragma vertex vert\n#pragma fragment frag\n"+(wireframeEnabled?"#pragma geometry geomWire\n":"")+"#pragma multi_compile_fwdbase\n#pragma multi_compile_instancing\n");
             b.AppendLine("NXInput vert(NXApp v) { UNITY_SETUP_INSTANCE_ID(v); NXInput input=NX_Make(v); v.vertex.xyz+=v.normal*("+displacement+"+"+offset+"); NXInput o=NX_Make(v); o.originalLocal=input.originalLocal; o.originalWs=input.originalWs; UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o); TRANSFER_SHADOW(o); return o; }");
+            if (wireframeEnabled) b.AppendLine(WireGeometry);
             b.AppendLine("float4 frag(NXInput input):SV_Target { UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input); float4 c="+color+"*_Color; float3 emission=("+emission+").rgb; float alpha=saturate(c.a*"+opacity+");");
             if(!shell)b.AppendLine("clip(alpha-"+Prop(surface,"cutoff",.001)+");");
             if(surface.Operation=="core.unlitSurface")b.AppendLine("return float4(c.rgb+emission,alpha);");
@@ -428,7 +496,7 @@ namespace NXSG.Backend
                 }
                 else b.AppendLine("float lit=smoothstep("+threshold+"-max(.001,"+softness+"),"+threshold+"+max(.001,"+softness+"),dot(n,lightDir)*.5+.5); return float4(c.rgb*(max(0,ShadeSH9(float4(n,1)))+_LightColor0.rgb*lerp(1-saturate("+shadow+"),1,lit*atten))+emission,alpha);");
             }
-            return b.AppendLine("}\nENDCG\n}").ToString();
+            return b.AppendLine("}\nENDCG\n}").ToString().Replace("#pragma target 3.5", wireframeEnabled ? "#pragma target 4.0" : "#pragma target 3.5");
         }
         string ParticlePass(GraphNode surface)
         {
@@ -459,13 +527,26 @@ namespace NXSG.Backend
             var displacement=Scalar(surface,"displacement",0,true);
             var opacity=Scalar(surface,"opacity",1);
             var color=Input(surface,"albedo","float4(1,1,1,1)","color");
-            return "Pass {\nName \"ShadowCaster\"\nTags { \"LightMode\"=\"ShadowCaster\" }\nZWrite On\nCGPROGRAM\n#pragma target 3.5\n#pragma vertex vertShadow\n#pragma fragment fragShadow\n#pragma multi_compile_shadowcaster\n#pragma multi_compile_instancing\nstruct NXShadow { V2F_SHADOW_CASTER; float2 uv:TEXCOORD1; float3 ws:TEXCOORD2; float3 normal:TEXCOORD3; float3 local:TEXCOORD4; float2 uv1:TEXCOORD5; float2 uv2:TEXCOORD6; float2 uv3:TEXCOORD7; float3 originalWs:TEXCOORD8; float3 originalLocal:TEXCOORD9; float4 color:TEXCOORD10; UNITY_VERTEX_OUTPUT_STEREO };\nNXShadow vertShadow(NXApp v){UNITY_SETUP_INSTANCE_ID(v); NXInput input=NX_Make(v); v.vertex.xyz+=(v.normal*("+displacement+"+"+offset+")); NXShadow o; UNITY_INITIALIZE_OUTPUT(NXShadow,o); UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o); o.uv=v.uv; o.uv1=v.uv1; o.uv2=v.uv2; o.uv3=v.uv3; o.originalWs=input.originalWs; o.originalLocal=input.originalLocal; o.color=input.color; o.ws=mul(unity_ObjectToWorld,v.vertex).xyz; o.normal=UnityObjectToWorldNormal(v.normal); o.local=v.vertex.xyz; TRANSFER_SHADOW_CASTER_NORMALOFFSET(o); return o;}\nfloat4 fragShadow(NXShadow i):SV_Target{UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i); NXInput input=(NXInput)0; input.uv=i.uv; input.uv1=i.uv1; input.uv2=i.uv2; input.uv3=i.uv3; input.originalWs=i.originalWs; input.originalLocal=i.originalLocal; input.color=i.color; input.ws=i.ws; input.n=i.normal; input.local=i.local; clip(("+color+").a*_Color.a*("+opacity+")-"+Prop(surface,"cutoff",.001)+"); SHADOW_CASTER_FRAGMENT(i);}\nENDCG\n}\n";
+            var shader = "Pass {\nName \"ShadowCaster\"\nTags { \"LightMode\"=\"ShadowCaster\" }\nZWrite On\nCGPROGRAM\n#pragma target 3.5\n#pragma vertex vertShadow\n#pragma fragment fragShadow\n#pragma multi_compile_shadowcaster\n#pragma multi_compile_instancing\nstruct NXShadow { V2F_SHADOW_CASTER; float2 uv:TEXCOORD1; float3 ws:TEXCOORD2; float3 normal:TEXCOORD3; float3 local:TEXCOORD4; float2 uv1:TEXCOORD5; float2 uv2:TEXCOORD6; float2 uv3:TEXCOORD7; float3 originalWs:TEXCOORD8; float3 originalLocal:TEXCOORD9; float4 color:TEXCOORD10; UNITY_VERTEX_OUTPUT_STEREO };\nNXShadow vertShadow(NXApp v){UNITY_SETUP_INSTANCE_ID(v); NXInput input=NX_Make(v); v.vertex.xyz+=(v.normal*("+displacement+"+"+offset+")); NXShadow o; UNITY_INITIALIZE_OUTPUT(NXShadow,o); UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o); o.uv=v.uv; o.uv1=v.uv1; o.uv2=v.uv2; o.uv3=v.uv3; o.originalWs=input.originalWs; o.originalLocal=input.originalLocal; o.color=input.color; o.ws=mul(unity_ObjectToWorld,v.vertex).xyz; o.normal=UnityObjectToWorldNormal(v.normal); o.local=v.vertex.xyz; TRANSFER_SHADOW_CASTER_NORMALOFFSET(o); return o;}\nfloat4 fragShadow(NXShadow i):SV_Target{UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i); NXInput input=(NXInput)0; input.uv=i.uv; input.uv1=i.uv1; input.uv2=i.uv2; input.uv3=i.uv3; input.originalWs=i.originalWs; input.originalLocal=i.originalLocal; input.color=i.color; input.ws=i.ws; input.n=i.normal; input.local=i.local; clip(("+color+").a*_Color.a*("+opacity+")-"+Prop(surface,"cutoff",.001)+"); SHADOW_CASTER_FRAGMENT(i);}\nENDCG\n}\n";
+            if (wireframeEnabled)
+                shader = shader.Replace("#pragma target 3.5", "#pragma target 4.0\n#pragma geometry geomWireShadow")
+                    .Replace("float4 color:TEXCOORD10;", "float4 color:TEXCOORD10; float3 wireBary:TEXCOORD11;")
+                    .Replace("float4 fragShadow", WireGeometry.Replace("NXInput", "NXShadow").Replace("geomWire", "geomWireShadow") + "\nfloat4 fragShadow")
+                    .Replace("input.uv=i.uv;", "input.wireBary=i.wireBary; input.uv=i.uv;");
+            return shader;
         }
         const string Helpers=@"
 struct NXApp { float4 vertex:POSITION; float3 normal:NORMAL; float4 tangent:TANGENT; float2 uv:TEXCOORD0; float2 uv1:TEXCOORD1; float2 uv2:TEXCOORD2; float2 uv3:TEXCOORD3; float4 color:COLOR; UNITY_VERTEX_INPUT_INSTANCE_ID };
-struct NXInput { float4 pos:SV_POSITION; float2 uv:TEXCOORD0; float2 uv1:TEXCOORD7; float2 uv2:TEXCOORD8; float2 uv3:TEXCOORD9; float3 ws:TEXCOORD1; float3 n:TEXCOORD2; float3 local:TEXCOORD3; float3 originalWs:TEXCOORD10; float3 originalLocal:TEXCOORD11; float3 tangent:TEXCOORD4; float3 bitangent:TEXCOORD5; float4 color:TEXCOORD12; float4 screenPos:TEXCOORD13; float2 sourceUV:TEXCOORD14; SHADOW_COORDS(6) UNITY_VERTEX_OUTPUT_STEREO };
+struct NXInput { float4 pos:SV_POSITION; float2 uv:TEXCOORD0; float2 uv1:TEXCOORD7; float2 uv2:TEXCOORD8; float2 uv3:TEXCOORD9; float3 ws:TEXCOORD1; float3 n:TEXCOORD2; float3 local:TEXCOORD3; float3 originalWs:TEXCOORD10; float3 originalLocal:TEXCOORD11; float3 tangent:TEXCOORD4; float3 bitangent:TEXCOORD5; float4 color:TEXCOORD12; float4 screenPos:TEXCOORD13; float2 sourceUV:TEXCOORD14; float3 wireBary:TEXCOORD15; SHADOW_COORDS(6) UNITY_VERTEX_OUTPUT_STEREO };
 NXInput NX_Make(NXApp v){ NXInput o=(NXInput)0; o.pos=UnityObjectToClipPos(v.vertex); o.uv=v.uv; o.uv1=v.uv1; o.uv2=v.uv2; o.uv3=v.uv3; o.local=v.vertex.xyz; o.ws=mul(unity_ObjectToWorld,v.vertex).xyz; o.originalLocal=o.local; o.originalWs=o.ws; o.color=v.color; o.n=UnityObjectToWorldNormal(v.normal); o.tangent=UnityObjectToWorldDir(v.tangent.xyz); o.bitangent=cross(o.n,o.tangent)*v.tangent.w*unity_WorldTransformParams.w; return o; }
 float4 NX_Splat(float x){return float4(x,x,x,x);}
+
+float NX_ShapeEdge(float d,float softness){return 1-smoothstep(-max(abs(softness),.00001),max(abs(softness),.00001),d);}
+float NX_Polygon(float2 uv,float sides,float radius,float rotation,float softness){float2 p=uv-.5;float sector=6.2831853/sides;float a=atan2(p.y,p.x)+radians(rotation);float folded=(frac(a/sector+.5)-.5)*sector;return NX_ShapeEdge(length(p)*cos(folded)-max(0,radius)*cos(sector*.5),softness);}
+float NX_Star(float2 uv,float points,float inner,float outer,float rotation,float softness){float2 p=uv-.5;float a=atan2(p.y,p.x)+radians(rotation);float sector=6.2831853/points;float angle=abs((frac(a/sector+.5)-.5)*sector);float halfSector=sector*.5;float denominator=max(.00001,inner*sin(halfSector-angle)+outer*sin(angle));float radius=max(0,outer)*max(0,inner)*sin(halfSector)/denominator;return NX_ShapeEdge(length(p)-radius,softness);}
+float NX_Hex(float2 uv,float scale,float width){float2 p=uv*scale;float2 period=float2(1.7320508,3);float2 a=p-period*floor(p/period+.5);float2 b=p-period*floor((p-float2(.8660254,1.5))/period+.5)-float2(.8660254,1.5);float2 q=dot(a,a)<dot(b,b)?a:b;q=abs(q);float edge=.8660254-max(q.x,dot(q,float2(.5,.8660254)));return 1-smoothstep(max(0,width),max(0,width)+.01,edge);}
+float NX_Wire(float3 bary,float width,float softness){float3 aa=max(fwidth(bary),float3(.00001,.00001,.00001));float3 coverage=smoothstep(aa*max(0,width),aa*(max(0,width)+max(.001,softness)),bary);return 1-min(coverage.x,min(coverage.y,coverage.z));}
+
 float NX_Div(float a,float b){return a/((b<0?-1:1)*max(abs(b),.00001));}
 float4 NX_Div(float4 a,float4 b){return a/((step(0,b)*2-1)*max(abs(b),.00001));}
 float2 NX_Rotate(float2 uv,float2 center,float degrees){float a=radians(degrees);float s=sin(a),c=cos(a);uv-=center;return float2(c*uv.x-s*uv.y,s*uv.x+c*uv.y)+center;}

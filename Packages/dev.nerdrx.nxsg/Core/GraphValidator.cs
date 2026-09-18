@@ -110,7 +110,7 @@ namespace NXSG.Core
                         "Parameter node must reference a declared parameter.");
                 }
             }
-            else if (node.Operation == "core.texture2D")
+            else if (node.Operation == "core.texture2D" || node.Operation == "core.triplanarTexture" || node.Operation == "core.matcapTexture")
             {
                 var resourceId = (string)node.Properties["resourceId"];
                 if (string.IsNullOrWhiteSpace(resourceId) || resources.All(item => item == null || item.Id != resourceId))
@@ -143,6 +143,32 @@ namespace NXSG.Core
                 case "core.wave": numeric = new[] { "scale", "speed" }; break;
                 case "core.uv0": case "core.texture2D": break;
                 case "core.mix": numeric = new[] { "factor" }; break;
+                case "core.absolute": case "core.sqrt": case "core.sine": case "core.cosine": case "core.fraction": case "core.floor": case "core.ceil": case "core.round": numeric = new[] { "a" }; break;
+                case "core.power": numeric = new[] { "a", "b" }; break;
+                case "core.step": numeric = new[] { "a", "b" }; break;
+                case "core.smoothstep": numeric = new[] { "value", "low", "high" }; break;
+                case "core.remap": numeric = new[] { "value", "inMin", "inMax", "outMin", "outMax" }; break;
+                case "core.pingPong": numeric = new[] { "value", "length" }; break;
+                case "core.splitColor": case "core.luminance": break;
+                case "core.combineColor": numeric = new[] { "r", "g", "b", "a" }; break;
+                case "core.contrast": numeric = new[] { "amount", "pivot" }; break;
+                case "core.saturation": numeric = new[] { "amount" }; break;
+                case "core.splitUV": break;
+                case "core.combineUV": numeric = new[] { "u", "v" }; break;
+                case "core.circleMask": numeric = new[] { "radius", "softness" }; break;
+                case "core.boxMask": numeric = new[] { "width", "height", "softness" }; break;
+                case "core.polygonMask": numeric = new[] { "radius", "rotation", "softness" }; break;
+                case "core.starMask": numeric = new[] { "inner", "outer", "rotation", "softness" }; break;
+                case "core.radialRays": numeric = new[] { "rotation", "softness" }; break;
+                case "core.spiral": numeric = new[] { "turns", "width", "rotation" }; break;
+                case "core.brick": numeric = new[] { "tilingX", "tilingY", "mortar" }; break;
+                case "core.hexGrid": numeric = new[] { "scale", "width" }; break;
+                case "core.triplanarTexture": numeric = new[] { "scale", "sharpness" }; break;
+                case "core.rimGlow": numeric = new[] { "power" }; break;
+                case "core.heightMask": numeric = new[] { "low", "high" }; break;
+                case "core.slopeMask": numeric = new[] { "low", "high" }; break;
+                case "core.distanceFade": numeric = new[] { "near", "far" }; break;
+                case "core.wireframe": numeric = new[] { "width", "softness" }; break;
                 case "core.ramp": numeric = new[] { "blackPoint", "whitePoint", "smoothness" }; break;
                 case "core.emission": numeric = new[] { "strength" }; break;
                 case "core.uvTransform": vectors = new[] { "tiling", "offset" }; break;
@@ -152,7 +178,7 @@ namespace NXSG.Core
                 case "core.toonSurface": numeric = new[] { "opacity", "displacement", "cutoff", "threshold", "softness", "shadowStrength" }; break;
                 case "core.unlitSurface": numeric = new[] { "opacity", "displacement", "cutoff" }; break;
                 case "core.pbrSurface": numeric = new[] { "opacity", "displacement", "metallic", "roughness", "cutoff" }; break;
-                case "core.surfaceParticles": numeric = new[] { "density", "size", "lifetime", "speed", "gravity", "spread", "opacity", "mask" }; break;
+                case "core.surfaceParticles": numeric = new[] { "density", "size", "lifetime", "speed", "gravity", "spread", "opacity", "mask", "emissionRate" }; break;
                 case "core.particleSurface": numeric = new[] { "opacity", "softDistance" }; break;
                 case "core.fresnel": numeric = new[] { "power" }; break;
                 case "core.colorRamp": break;
@@ -181,12 +207,14 @@ namespace NXSG.Core
             {
                 CheckIntegerRange(node.Properties["octaves"], path + ".properties.octaves", 1, 8, diagnostics);
                 CheckIntegerRange(node.Properties["mode"], path + ".properties.mode", 0, 2, diagnostics);
-                CheckRange(node.Properties["lacunarity"], path + ".properties.lacunarity", 1, 4, diagnostics);
-                CheckRange(node.Properties["gain"], path + ".properties.gain", 0, 1, diagnostics);
             }
+            if (node.Operation == "core.position" || node.Operation == "core.normalDirection") CheckIntegerRange(node.Properties["space"], path + ".properties.space", 0, 1, diagnostics);
+            if (node.Operation == "core.polygonMask") CheckIntegerRange(node.Properties["sides"], path + ".properties.sides", 3, 32, diagnostics);
+            if (node.Operation == "core.starMask") CheckIntegerRange(node.Properties["points"], path + ".properties.points", 3, 32, diagnostics);
+            if (node.Operation == "core.radialRays") CheckIntegerRange(node.Properties["count"], path + ".properties.count", 1, 128, diagnostics);
+            if (node.Operation == "core.heightMask") CheckIntegerRange(node.Properties["axis"], path + ".properties.axis", 0, 2, diagnostics);
             if (node.Operation == "core.particleSurface")
             {
-                CheckRange(node.Properties["opacity"], path + ".properties.opacity", 0, 1, diagnostics);
                 CheckIntegerRange(node.Properties["blendMode"], path + ".properties.blendMode", 0, 1, diagnostics);
                 CheckRange(node.Properties["softDistance"], path + ".properties.softDistance", 0, float.MaxValue, diagnostics);
             }
@@ -194,12 +222,8 @@ namespace NXSG.Core
             {
                 CheckIntegerRange(node.Properties["sourceUV"], path + ".properties.sourceUV", 0, 1, diagnostics);
                 CheckIntegerRange(node.Properties["blendMode"], path + ".properties.blendMode", 0, 1, diagnostics);
-                foreach (var setting in new[] { "density", "opacity", "mask" }) CheckRange(node.Properties[setting], path + ".properties." + setting, 0, 1, diagnostics);
-                CheckRange(node.Properties["size"], path + ".properties.size", .0001, 10, diagnostics);
-                CheckRange(node.Properties["lifetime"], path + ".properties.lifetime", .001, 1000, diagnostics);
-                CheckRange(node.Properties["spread"], path + ".properties.spread", 0, 1000, diagnostics);
             }
-            if (node.Operation == "core.voronoi") CheckRange(node.Properties["randomness"], path + ".properties.randomness", 0, 1, diagnostics);
+            if (node.Operation == "core.surfaceParticles") CheckRange(node.Properties["lifetime"], path + ".properties.lifetime", .001, float.MaxValue, diagnostics);
             if (node.Operation == "core.wave")
             {
                 CheckIntegerRange(node.Properties["mode"], path + ".properties.mode", 0, 1, diagnostics);
@@ -210,12 +234,10 @@ namespace NXSG.Core
                 CheckIntegerRange(node.Properties["mode"], path + ".properties.mode", 0, 6, diagnostics);
                 CheckIntegerRange(node.Properties["detail"], path + ".properties.detail", 1, 6, diagnostics);
                 CheckRange(node.Properties["radius"], path + ".properties.radius", .000001, float.MaxValue, diagnostics);
-                CheckRange(node.Properties["falloff"], path + ".properties.falloff", 0, 100, diagnostics);
-                CheckRange(node.Properties["mask"], path + ".properties.mask", 0, 1, diagnostics);
             }
             if (node.Operation == "core.gradient" || node.Operation == "core.uvTile") CheckIntegerRange(node.Properties["mode"], path + ".properties.mode", 0, 2, diagnostics);
             if (node.Operation == "core.gradient") CheckRange(node.Properties["radius"], path + ".properties.radius", .000001, float.MaxValue, diagnostics);
-            if (node.Operation == "core.posterize") CheckRange(node.Properties["levels"], path + ".properties.levels", 2, 256, diagnostics);
+            if (node.Operation == "core.posterize") CheckRange(node.Properties["levels"], path + ".properties.levels", 2, float.MaxValue, diagnostics);
             if (numeric != null) foreach (var name in numeric) CheckNumber(node.Properties[name], path + ".properties." + name, diagnostics);
             if (vectors != null) foreach (var name in vectors) CheckVector2(node.Properties[name], path + ".properties." + name, diagnostics);
             if (node.Operation == "core.ramp") CheckRampPoints(node.Properties["points"], path + ".properties.points", diagnostics);

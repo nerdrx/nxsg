@@ -40,8 +40,11 @@ public static class ParticleChecks
         assert(emitted.Succeeded && emitted.ShaderSource.Contains("_CameraDepthTexture"), "soft particles emit depth sampling");
         surface.Properties["softDistance"] = 0;
 
-        Reject(assert, graph, surface, "opacity", -0.01, "particle opacity lower bound");
-        Reject(assert, graph, surface, "opacity", 1.01, "particle opacity upper bound");
+        surface.Properties["opacity"] = -0.01;
+        var roundTrip = GraphJson.Parse(GraphJson.Serialize(graph));
+        assert(GraphValidator.Validate(roundTrip).IsValid && ShaderEmitter.Emit(roundTrip).Succeeded, "particle opacity outside slider round trips and emits");
+        surface.Properties["opacity"] = 1.01;
+        assert(GraphValidator.Validate(graph).IsValid, "particle opacity above slider validates");
         Reject(assert, graph, surface, "blendMode", 2, "particle blend mode choice");
         Reject(assert, graph, surface, "softDistance", -0.01, "particle soft distance lower bound");
         var shell = NodeCatalog.Create("core.shell"); shell.Id = "shell";

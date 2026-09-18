@@ -156,3 +156,58 @@ Use **Distortion UV → Texture UV** or feed it into a procedural pattern. Chain
 Mask is clamped to 0–1, and Axis strength scales horizontal/vertical displacement independently. Zero strength or zero mask returns the original UV exactly. Time connections override the clock for the animated modes. Swirl and lens respond to animated strength; flow responds to its supplied map. Repeat/mirror/clamp with the separate UV Tile / Mirror node as desired. Explicit wrapping can introduce derivative seams at tile boundaries.
 
 The new **Ripple Tiles.nxsg** example combines Gradient masking, Ripple distortion, mirrored UVs, Waves, Posterize and Color Ramp. Each fractal detail layer adds noise evaluations; repeated shells multiply that cost. These nodes warp texture coordinates, not the silhouette or background behind a transparent material.
+
+## Signal, color and UV toolkit
+
+These 20 nodes are available from the categorized node library and connected-node search.
+
+| Node | Use |
+|---|---|
+| Absolute | Turn negative values positive; works on numbers and color channels. |
+| Power | Shape contrast using an exponent; uses absolute base with a small zero guard. |
+| Square Root | Lift dark signals; negative inputs become zero. |
+| Sine | Oscillate from −1 to 1; radians, 6.283 per cycle. |
+| Cosine | Same oscillation starting at 1. |
+| Fraction | Repeat the fractional part of a value, including negative values. |
+| Round Down | Step down to the integer below. |
+| Round Up | Step up to the integer above. |
+| Round | Nearest integer; exact halves round upward. |
+| Step | Hard threshold: zero below the threshold, one at/above it. |
+| Smoothstep | Smooth threshold between two edges; reversed edges reverse the mask. |
+| Remap | Map one numeric range to another without clamping. |
+| Ping Pong | Bounce a signal between zero and a chosen peak. |
+| Split Color | Extract red, green, blue or alpha as a number. |
+| Combine Color | Build a color from four numeric channels. |
+| Luminance | Convert RGB to a weighted brightness signal. |
+| Contrast | Adjust RGB around a pivot; preserve alpha. |
+| Saturation | Blend between grayscale and original RGB; preserve alpha. |
+| Split UV | Extract horizontal U or vertical V. |
+| Combine UV | Build coordinates from independent horizontal/vertical values. |
+
+The nine basic math nodes automatically switch between numbers and colors. Connected inputs override their inspector values. Related unary math nodes can be changed in the node-header menu; Power also appears in the arithmetic menu. `Time → Sine → Remap` makes an adjustable pulse; `Noise → Smoothstep` sharpens a mask; `Split UV → math → Combine UV` builds custom coordinate effects.
+
+Dragging a wire into empty space opens a searchable compatible-node menu. Nodes with multiple compatible sockets are grouped so you can choose the exact destination. Slider tracks keep convenient ranges; the adjacent delayed number fields accept finite values beyond them. Mathematical requirements and shader saturation still apply.
+
+
+## Visual toolkit and wireframes
+
+| Nodes | Use |
+|---|---|
+| Position, Normal Direction | Object/world coordinates and mesh surface direction. |
+| View Direction, Camera Distance, Screen UVs | Camera-relative effects and screen projection. |
+| Vertex Color | Painted mesh RGB and alpha. |
+| Circle Mask, Box Mask, Polygon Mask, Star Mask | Procedural shapes with adjustable outlines. |
+| Radial Rays, Spiral | Rotating rays and curved spiral masks. |
+| Brick Pattern, Hex Grid | Staggered bricks and honeycomb outlines. |
+| Triplanar Texture | Three-axis object-space texture projection; no authored UVs required. |
+| Matcap Texture | Camera-facing normal projection for stylized shading. |
+| Rim Glow | Colored silhouette highlight; connect to Emission. |
+| Height Mask, Slope Mask | Position or surface-orientation masks. |
+| Distance Fade | Camera distance mapped from white near to black far. |
+| Wireframe | Anti-aliased actual triangle edges, including triangulation diagonals. |
+
+Wireframe outputs a mask; it does not force transparency on the whole material. Connect it to a mix factor, emission or opacity. Width and softness are measured in screen pixels. The built-in surface and shadow passes use geometry-generated barycentric coordinates; vertex displacement and emitter-mask use are rejected because this is a pixel effect. Use it on Toon, Unlit, PBR or Shell surfaces. Particle Surface and generated particle inputs are rejected; a Surface Particles Base may still use Wireframe. Native Windows/stereo behavior remains unverified. **Neon Wireframe** is a ready-to-open example in NXSGExamples and Samples~.
+
+![Visual-node GPU output montage](evidence/2026-09-18-visual-nodes.png)
+
+Montage rows, left to right: Position, Normal Direction, View Direction, Vertex Color, Camera Distance, Screen UVs, Circle Mask; Box Mask, Polygon Mask, Star Mask, Radial Rays, Spiral, Brick Pattern, Hex Grid; Triplanar Texture, Matcap Texture, Rim Glow, Height Mask, Slope Mask, Distance Fade, Wireframe. Black rim/slope tiles are expected for the flat camera-facing test quad; texture nodes use a white fixture texture.

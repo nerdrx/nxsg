@@ -517,8 +517,11 @@ namespace NXSG.Editor
         {
             switch (operation)
             {
-                case "core.add": case "core.multiply": case "core.mix": case "core.subtract": case "core.divide": case "core.minimum": case "core.maximum":
-                    return new[] { "core.add", "core.subtract", "core.multiply", "core.divide", "core.minimum", "core.maximum", "core.mix" };
+                case "core.power": case "core.add": case "core.multiply": case "core.mix": case "core.subtract": case "core.divide": case "core.minimum": case "core.maximum":
+                    return new[] { "core.add", "core.subtract", "core.multiply", "core.divide", "core.minimum", "core.maximum", "core.power", "core.mix" };
+                case "core.absolute": case "core.sqrt": case "core.sine": case "core.cosine":
+                case "core.fraction": case "core.floor": case "core.ceil": case "core.round":
+                    return new[] { "core.absolute", "core.sqrt", "core.sine", "core.cosine", "core.fraction", "core.floor", "core.ceil", "core.round" };
                 case "core.oneMinus": case "core.clamp":
                     return new[] { "core.oneMinus", "core.clamp" };
                 case "core.uv0": case "core.objectUV": case "core.worldUV": case "core.uvTransform":
@@ -685,7 +688,16 @@ namespace NXSG.Editor
                 case "core.vertexMotion": case "core.normalMap": return new Color(.12f,.38f,.40f);
                 case "core.audioLink": return new Color(.44f,.22f,.29f);
                 case "core.output": return new Color(.39f, .19f, .20f);
-                default: return new Color(.28f, .28f, .28f);
+                default:
+                    switch (NodeCatalog.Category(operation))
+                    {
+                        case "Math": return new Color(.28f,.33f,.38f);
+                        case "Color": return new Color(.40f,.34f,.10f);
+                        case "Coordinates": return new Color(.16f,.32f,.52f);
+                        case "Textures": return new Color(.46f,.25f,.10f);
+                        case "Inputs": return new Color(.12f,.38f,.40f);
+                        default: return new Color(.28f,.28f,.28f);
+                    }
             }
         }
 
@@ -712,8 +724,7 @@ namespace NXSG.Editor
                 choices.Clear();
                 var searching = !string.IsNullOrWhiteSpace(query);
                 var matches = NodeCatalog.All.Where(op => op != "core.parameter" && op != "core.previewVector" &&
-                    (!searching || (Title(op) + " " + op + " " + Aliases(op) + " " + NodeCatalog.Category(op) + " " + NodeCatalog.Description(op))
-                        .IndexOf(query.Trim(), StringComparison.OrdinalIgnoreCase) >= 0)).ToList();
+                    MatchesNodeSearch(op, query)).ToList();
                 foreach (var category in new[] { "Inputs", "Coordinates", "Textures", "Math", "Color", "Animation", "Surface" })
                 {
                     var operations = matches.Where(op => NodeCatalog.Category(op) == category).ToList();
@@ -777,8 +788,21 @@ namespace NXSG.Editor
                     }));
                     inspector.Add(field);
                 }
+                AddVisualControls(node);
                 switch (node.Operation)
                 {
+                    case "core.absolute": case "core.sqrt": case "core.sine": case "core.cosine":
+                    case "core.fraction": case "core.floor": case "core.ceil": case "core.round":
+                        AddNumber(node,"a","Value",.5f,"a"); break;
+                    case "core.power": AddNumber(node,"a","Base",.5f,"a"); AddNumber(node,"b","Exponent",2,"b"); break;
+                    case "core.step": AddNumber(node,"a","Threshold",.5f,"a"); AddNumber(node,"b","Value",0,"b"); break;
+                    case "core.smoothstep": AddNumber(node,"value","Value",0,"value"); AddNumber(node,"low","Low edge",0,"low"); AddNumber(node,"high","High edge",1,"high"); break;
+                    case "core.remap": AddNumber(node,"value","Value",0,"value"); AddNumber(node,"inMin","Input minimum",0,"inMin"); AddNumber(node,"inMax","Input maximum",1,"inMax"); AddNumber(node,"outMin","Output minimum",0,"outMin"); AddNumber(node,"outMax","Output maximum",1,"outMax"); break;
+                    case "core.pingPong": AddNumber(node,"value","Value / time",0,"value"); AddNumber(node,"length","Peak",1,"length"); break;
+                    case "core.combineColor": AddNumber(node,"r","Red",0,"r"); AddNumber(node,"g","Green",0,"g"); AddNumber(node,"b","Blue",0,"b"); AddNumber(node,"a","Alpha",1,"a"); break;
+                    case "core.contrast": AddNumber(node,"amount","Contrast",1,"amount"); AddNumber(node,"pivot","Pivot",.5f,"pivot"); break;
+                    case "core.saturation": AddNumber(node,"amount","Saturation",1,"amount"); break;
+                    case "core.combineUV": AddNumber(node,"u","U / horizontal",0,"u"); AddNumber(node,"v","V / vertical",0,"v"); break;
                     case "core.ramp": AddNumber(node, "blackPoint", "Black point", 0); AddNumber(node, "whitePoint", "White point", 1); AddNumber(node, "smoothness", "Smoothing (0–1)", 0); AddRampCurve(node); break;
                     case "core.colorRamp": AddColorRamp(node); break;
                     case "core.value": AddNumber(node, "value", "Value", 0); break;
@@ -802,6 +826,7 @@ namespace NXSG.Editor
                         inspector.Add(sourceUvToggle);
                         AddIndexedChoice(node,"blendMode","Blending",new[]{"Alpha","Additive"},1);
                         AddBoundedNumber(node,"density","Triangle density",0,1,.1f);
+                        AddBoundedNumber(node,"emissionRate","Rate / triangle / sec",0,4,1 / Mathf.Max(.001f, (float?)node.Properties["lifetime"] ?? 2));
                         AddBoundedNumber(node,"size","Particle size",.0001f,1,.03f);
                         AddBoundedNumber(node,"lifetime","Lifetime (seconds)",.05f,30,2);
                         AddNumber(node,"speed","Outward speed",.2f);
@@ -809,7 +834,7 @@ namespace NXSG.Editor
                         AddBoundedNumber(node,"spread","Velocity randomness",0,5,.05f);
                         AddBoundedNumber(node,"opacity","Opacity",0,1,1,"opacity");
                         AddBoundedNumber(node,"mask","Emitter mask",0,1,1,"mask");
-                        inspector.Add(new Label("Connect your surface to Base, then this node to Output. Emits from the same mesh: up to one particle per triangle. Mask uses mesh UVs. Color from mesh UVs samples particle color at its spawn point; otherwise it uses sprite UVs. Particles follow the current pose. Expand renderer bounds if particles disappear near screen edges.") { style = { whiteSpace = WhiteSpace.Normal } });
+                        inspector.Add(new Label("Connect your surface to Base, then this node to Output. Emits from the same mesh: Density selects source triangles (1 = all). Rate requests births per source triangle per second. High rates automatically tessellate the mesh in this pass; the resulting rate is approximate. Tessellation stops at level 64. Mask uses mesh UVs. Color from mesh UVs samples particle color at its spawn point; otherwise it uses sprite UVs. Particles follow the current pose. Expand renderer bounds if particles disappear near screen edges.") { style = { whiteSpace = WhiteSpace.Normal } });
                         break;
                     case "core.particleSurface":
                         AddIndexedChoice(node, "blendMode", "Blending", new[] { "Alpha · smoke / fluff", "Additive · sparks / glow" });
@@ -1083,7 +1108,7 @@ namespace NXSG.Editor
         GraphNode CreateNode(string operation, Vector2 position)
         {
             var node = NodeCatalog.Create(operation);
-            if (operation == "core.texture2D" || operation == "core.sticker")
+            if (operation == "core.texture2D" || operation == "core.sticker" || operation == "core.triplanarTexture" || operation == "core.matcapTexture")
             {
                 var resource = new GraphResource { Id = "texture-" + node.Id, Kind = "texture2D", Uri = "builtin://white" };
                 graph.Resources.Add(resource); node.Properties["resourceId"] = resource.Id;
@@ -1155,6 +1180,12 @@ namespace NXSG.Editor
                 From = new GraphPortRef { NodeId = from, PortId = fromPort }, To = new GraphPortRef { NodeId = to, PortId = toPort } });
         }
 
+        static bool MatchesNodeSearch(string operation, string query)
+        {
+            return string.IsNullOrWhiteSpace(query) || (Title(operation) + " " + operation + " " + Aliases(operation) + " " + NodeCatalog.Category(operation) + " " + NodeCatalog.Description(operation))
+                .IndexOf(query.Trim(), StringComparison.OrdinalIgnoreCase) >= 0;
+        }
+
         void ShowSpawnMenu(Vector2 position)
         {
             var endpoint = pendingNode; var endpointPort = pendingPort; var output = pendingOutput;
@@ -1171,27 +1202,44 @@ namespace NXSG.Editor
             spawnMenu.Add(new Label("Add connected node · " + type) { style = { unityFontStyleAndWeight = FontStyle.Bold, marginBottom = 6 } });
             var menuOptions = new ScrollView(ScrollViewMode.Vertical) { style = { maxHeight = 220 } };
             spawnMenu.Add(menuOptions);
-            var count = 0;
-            foreach (var operation in NodeCatalog.All.Where(op => op != "core.parameter" && op != "core.previewVector"))
+            var search = new ToolbarSearchField { name = "connected-node-search", tooltip = "Search compatible nodes by name or purpose." };
+            spawnMenu.Insert(1, search);
+            void RefreshOptions(string query)
             {
-                if (operation == "core.output" && graph.Nodes.Any(n => n.Operation == operation)) continue;
-                var candidate = new GraphNode { Operation = operation };
-                foreach (var port in Ports(operation, !output))
+                menuOptions.Clear();
+                var count = 0;
+                foreach (var operation in NodeCatalog.All.Where(op => op != "core.parameter" && op != "core.previewVector"))
                 {
-                    if (!(output ? CanOffer(source, endpointPort, candidate, port) : CanOffer(candidate, port, source, endpointPort))) continue;
-                    var op = operation; var compatiblePort = port;
-                    menuOptions.Add(new Button(() => Edit("Add connected " + Title(op), () =>
+                    if (operation == "core.output" && graph.Nodes.Any(n => n.Operation == operation)) continue;
+                    if (!MatchesNodeSearch(operation, query)) continue;
+                    var candidate = NodeCatalog.Create(operation);
+                    var compatible = Ports(operation, !output).Where(port => output ? CanOffer(source, endpointPort, candidate, port) : CanOffer(candidate, port, source, endpointPort)).ToArray();
+                    if (compatible.Length == 0) continue;
+                    VisualElement group = menuOptions;
+                    if (compatible.Length > 1)
                     {
-                        var node = CreateNode(op, graphPosition - (output ? Vector2.zero : new Vector2(175, 0)));
-                        if (output) AddConnection(endpoint, endpointPort, node.Id, compatiblePort);
-                        else AddConnection(node.Id, compatiblePort, endpoint, endpointPort);
-                    })) { text = Title(op) + " · " + port, tooltip = NodeCatalog.Description(op) });
+                        var fold = new Foldout { text = Title(operation), value = !string.IsNullOrWhiteSpace(query), tooltip = NodeCatalog.Description(operation) };
+                        menuOptions.Add(fold); group = fold;
+                    }
+                    foreach (var port in compatible)
+                    {
+                        var op = operation; var compatiblePort = port;
+                        group.Add(new Button(() => Edit("Add connected " + Title(op), () =>
+                        {
+                            var node = CreateNode(op, graphPosition - (output ? Vector2.zero : new Vector2(175, 0)));
+                            if (output) AddConnection(endpoint, endpointPort, node.Id, compatiblePort);
+                            else AddConnection(node.Id, compatiblePort, endpoint, endpointPort);
+                        })) { text = compatible.Length > 1 ? "Connect to " + port : Title(op) + " · " + port, tooltip = NodeCatalog.Description(op), style = { minHeight = 24 } });
+                    }
                     count++;
                 }
+                if (count == 0) menuOptions.Add(new Label("No matching compatible nodes."));
             }
-            if (count == 0) spawnMenu.Add(new Label("No compatible nodes available."));
+            search.RegisterValueChangedCallback(evt => RefreshOptions(evt.newValue));
+            RefreshOptions("");
             spawnMenu.Add(new Button(CancelWire) { text = "Cancel" });
             canvas.Add(spawnMenu);
+            search.Focus();
             SetStatus("Choose a compatible node. Existing connections stay until you choose. Esc cancels.");
         }
 

@@ -21,7 +21,7 @@ public static class SurfaceParticleRenderSmoke
             subject = GameObject.CreatePrimitive(PrimitiveType.Cube); subject.transform.localScale = Vector3.one * 1.4f;
             camera = new GameObject("NXSG Surface Particle Camera").AddComponent<Camera>(); camera.clearFlags = CameraClearFlags.SolidColor; camera.backgroundColor = Color.black; camera.orthographic = true; camera.orthographicSize = 2.5f; camera.transform.position = new Vector3(0, 0, -4); camera.transform.LookAt(Vector3.zero);
             target = new RenderTexture(Size, Size, 24, RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.Linear); target.Create(); camera.targetTexture = target;
-            CheckRender(); CheckSkinnedSource(); CheckSample(); Debug.Log("NXSG SURFACE PARTICLE RENDER SMOKE PASSED"); EditorApplication.Exit(0);
+            CheckRender(); CheckRate(); CheckSkinnedSource(); CheckSample(); Debug.Log("NXSG SURFACE PARTICLE RENDER SMOKE PASSED"); EditorApplication.Exit(0);
         }
         catch (Exception exception) { Debug.LogException(exception); EditorApplication.Exit(1); }
         finally { RenderTexture.active = null; if (target != null) { target.Release(); UnityEngine.Object.DestroyImmediate(target); } if (camera != null) UnityEngine.Object.DestroyImmediate(camera.gameObject); if (subject != null) UnityEngine.Object.DestroyImmediate(subject); }
@@ -37,6 +37,43 @@ public static class SurfaceParticleRenderSmoke
         if (Changed(first, later) < 8) throw new InvalidOperationException("surfaceParticles time did not change pixels");
         graph = Graph(1, 0, .2); using (var preview = GraphPreview.Create(graph, null)) { subject.GetComponent<Renderer>().sharedMaterial = preview.Material; if (CountRed(Capture()) > CountRed(baseOnly) + 2) throw new InvalidOperationException("surfaceParticles mask 0 still rendered"); }
         graph = Graph(1, 1, .2); camera.transform.position = new Vector3(2.5f, 1.2f, -3.2f); camera.transform.LookAt(Vector3.zero); using (var preview = GraphPreview.Create(graph, null)) { subject.GetComponent<Renderer>().sharedMaterial = preview.Material; if (CountRed(Capture()) < 8) throw new InvalidOperationException("surfaceParticles disappeared after camera rotation"); }
+    }
+    static void CheckRate()
+    {
+        camera.transform.position = new Vector3(0, 0, -4); camera.transform.LookAt(Vector3.zero);
+        // Sum several times so random triangle phases do not bias rate comparisons.
+        double none = 0, slow = 0, fast = 0;
+        foreach (var rate in new[] { 0.0, .25, 2.0, 1000.0 })
+        {
+            double total = 0;
+            foreach (var time in new[] { .2, .8, 1.4, 2.0 })
+            {
+                var graph = Graph(1, 1, time);
+                graph.Nodes.Single(n => n.Id == "particles").Properties["emissionRate"] = rate;
+                using (var preview = GraphPreview.Create(graph, null))
+                {
+                    subject.GetComponent<Renderer>().sharedMaterial = preview.Material;
+                    total += Capture().Sum(c => (double)c.r);
+                }
+            }
+            if (rate == 0) none = total;
+            else if (rate == .25) slow = total;
+            else if (rate == 2) fast = total;
+            else if (total < fast * 3) throw new InvalidOperationException("High emission rate did not amplify particles");
+        }
+        var beans = Graph(1, 1, .6);
+        beans.Nodes.Single(n => n.Id == "particles").Properties["emissionRate"] = 10000;
+        beans.Nodes.Single(n => n.Id == "particles").Properties["lifetime"] = 1;
+        beans.Nodes.Single(n => n.Id == "particles").Properties["size"] = .01;
+        using(var preview=GraphPreview.Create(beans,null))
+        {
+            subject.GetComponent<Renderer>().sharedMaterial=preview.Material;
+            var pixels=Capture();
+            if(pixels.Any(c=>float.IsNaN(c.r)||float.IsInfinity(c.r))||CountRed(pixels)<100)
+                throw new InvalidOperationException("10k/triangle/sec did not render finite visible particles");
+        }
+        if (none > .01 || slow <= .01 || fast < slow * 1.5)
+            throw new InvalidOperationException("Emission rate did not control visible population: " + none + " / " + slow + " / " + fast);
     }
     static double RedCenter(Color[] pixels)
     {

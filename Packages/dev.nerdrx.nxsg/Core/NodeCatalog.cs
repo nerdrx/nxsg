@@ -13,6 +13,13 @@ namespace NXSG.Core
             "core.value", "core.time", "core.uvTransform", "core.uvScroll", "core.noise",
             "core.musgrave", "core.voronoi", "core.checker", "core.wave", "core.gradient", "core.uvTile", "core.posterize",
             "core.add", "core.subtract", "core.divide", "core.minimum", "core.maximum", "core.mix", "core.emission", "core.oneMinus", "core.clamp",
+            "core.absolute", "core.power", "core.sqrt", "core.sine", "core.cosine", "core.fraction", "core.floor", "core.ceil", "core.round",
+            "core.step", "core.smoothstep", "core.remap", "core.pingPong",
+            "core.splitColor", "core.combineColor", "core.luminance", "core.contrast", "core.saturation", "core.splitUV", "core.combineUV",
+            "core.position", "core.normalDirection", "core.viewDirection", "core.vertexColor", "core.cameraDistance", "core.screenUV",
+            "core.circleMask", "core.boxMask", "core.polygonMask", "core.starMask", "core.radialRays", "core.spiral", "core.brick", "core.hexGrid",
+            "core.triplanarTexture", "core.matcapTexture", "core.rimGlow", "core.heightMask", "core.slopeMask", "core.distanceFade",
+            "core.wireframe",
             "core.constant", "core.parameter", "core.uv0", "core.texture2D", "core.multiply",
             "core.toonSurface", "core.unlitSurface", "core.pbrSurface", "core.fresnel", "core.colorRamp",
             "core.layer", "core.sticker", "core.dissolve", "core.flipbook", "core.uvDistort", "core.vertexMotion",
@@ -33,6 +40,13 @@ namespace NXSG.Core
             ["core.minimum"] = new[] { "a", "b" }, ["core.maximum"] = new[] { "a", "b" },
             ["core.mix"] = new[] { "a", "b", "factor" }, ["core.emission"] = new[] { "color", "strength" },
             ["core.oneMinus"] = new[] { "color" }, ["core.clamp"] = new[] { "color" },
+            ["core.absolute"] = new[] { "a" }, ["core.power"] = new[] { "a", "b" }, ["core.sqrt"] = new[] { "a" }, ["core.sine"] = new[] { "a" }, ["core.cosine"] = new[] { "a" }, ["core.fraction"] = new[] { "a" }, ["core.floor"] = new[] { "a" }, ["core.ceil"] = new[] { "a" }, ["core.round"] = new[] { "a" },
+            ["core.step"] = new[] { "a", "b" }, ["core.smoothstep"] = new[] { "value", "low", "high" }, ["core.remap"] = new[] { "value", "inMin", "inMax", "outMin", "outMax" }, ["core.pingPong"] = new[] { "value", "length" },
+            ["core.splitColor"] = new[] { "color" }, ["core.combineColor"] = new[] { "r", "g", "b", "a" }, ["core.luminance"] = new[] { "color" }, ["core.contrast"] = new[] { "color", "amount", "pivot" }, ["core.saturation"] = new[] { "color", "amount" }, ["core.splitUV"] = new[] { "uv" }, ["core.combineUV"] = new[] { "u", "v" },
+            ["core.position"] = new string[0], ["core.normalDirection"] = new string[0], ["core.viewDirection"] = new string[0], ["core.vertexColor"] = new string[0], ["core.cameraDistance"] = new string[0], ["core.screenUV"] = new string[0],
+            ["core.circleMask"] = new[] { "uv" }, ["core.boxMask"] = new[] { "uv" }, ["core.polygonMask"] = new[] { "uv" }, ["core.starMask"] = new[] { "uv" }, ["core.radialRays"] = new[] { "uv" }, ["core.spiral"] = new[] { "uv" }, ["core.brick"] = new[] { "uv" }, ["core.hexGrid"] = new[] { "uv" },
+            ["core.triplanarTexture"] = new[] { "position", "normal" }, ["core.matcapTexture"] = new[] { "normal" }, ["core.rimGlow"] = new[] { "color", "power" }, ["core.heightMask"] = new[] { "position" }, ["core.slopeMask"] = new[] { "normal" }, ["core.distanceFade"] = new string[0],
+            ["core.wireframe"] = new string[0],
             ["core.constant"] = new string[0], ["core.parameter"] = new string[0],
             ["core.uv0"] = new string[0], ["core.texture2D"] = new[] { "uv" },
             ["core.multiply"] = new[] { "a", "b" }, ["core.toonSurface"] = new[] { "albedo", "normal", "emission", "opacity", "displacement" },
@@ -66,6 +80,12 @@ namespace NXSG.Core
             ["core.minimum"] = new[] { "value" }, ["core.maximum"] = new[] { "value" },
             ["core.mix"] = new[] { "value" }, ["core.emission"] = new[] { "color" },
             ["core.oneMinus"] = new[] { "color" }, ["core.clamp"] = new[] { "color" },
+            ["core.absolute"] = new[] { "value" }, ["core.power"] = new[] { "value" }, ["core.sqrt"] = new[] { "value" }, ["core.sine"] = new[] { "value" }, ["core.cosine"] = new[] { "value" }, ["core.fraction"] = new[] { "value" }, ["core.floor"] = new[] { "value" }, ["core.ceil"] = new[] { "value" }, ["core.round"] = new[] { "value" }, ["core.step"] = new[] { "value" }, ["core.smoothstep"] = new[] { "value" }, ["core.remap"] = new[] { "value" }, ["core.pingPong"] = new[] { "value" },
+            ["core.splitColor"] = new[] { "r", "g", "b", "a" }, ["core.combineColor"] = new[] { "color" }, ["core.luminance"] = new[] { "value" }, ["core.contrast"] = new[] { "color" }, ["core.saturation"] = new[] { "color" }, ["core.splitUV"] = new[] { "u", "v" }, ["core.combineUV"] = new[] { "uv" },
+            ["core.position"] = new[] { "position" }, ["core.normalDirection"] = new[] { "normal" }, ["core.viewDirection"] = new[] { "direction" }, ["core.vertexColor"] = new[] { "color", "alpha" }, ["core.cameraDistance"] = new[] { "value" }, ["core.screenUV"] = new[] { "uv" },
+            ["core.circleMask"] = new[] { "value" }, ["core.boxMask"] = new[] { "value" }, ["core.polygonMask"] = new[] { "value" }, ["core.starMask"] = new[] { "value" }, ["core.radialRays"] = new[] { "value" }, ["core.spiral"] = new[] { "value" }, ["core.brick"] = new[] { "value" }, ["core.hexGrid"] = new[] { "value" },
+            ["core.triplanarTexture"] = new[] { "color" }, ["core.matcapTexture"] = new[] { "color" }, ["core.rimGlow"] = new[] { "color" }, ["core.heightMask"] = new[] { "value" }, ["core.slopeMask"] = new[] { "value" }, ["core.distanceFade"] = new[] { "value" },
+            ["core.wireframe"] = new[] { "value" },
             ["core.constant"] = new[] { "value" }, ["core.parameter"] = new[] { "value" },
             ["core.uv0"] = new[] { "uv" }, ["core.texture2D"] = new[] { "color" },
             ["core.multiply"] = new[] { "value" }, ["core.toonSurface"] = new[] { "surface" },
@@ -97,10 +117,19 @@ namespace NXSG.Core
                 case "core.add": case "core.subtract": case "core.multiply": case "core.divide":
                 case "core.minimum": case "core.maximum": case "core.mix": case "core.oneMinus":
                 case "core.clamp": return "Math";
+                case "core.absolute": case "core.power": case "core.sqrt": case "core.sine": case "core.cosine": case "core.fraction": case "core.floor": case "core.ceil": case "core.round": case "core.step": case "core.smoothstep": case "core.remap": case "core.pingPong": return "Math";
                 case "core.emission": case "core.toonSurface": case "core.unlitSurface": case "core.pbrSurface":
                 case "core.shell": case "core.normalMap": case "core.output": return "Surface";
                 case "core.posterize": case "core.fresnel": case "core.colorRamp": case "core.layer": case "core.sticker":
                 case "core.dissolve": return "Color";
+                case "core.splitColor": case "core.combineColor": case "core.luminance": case "core.contrast": case "core.saturation": return "Color";
+                case "core.splitUV": case "core.combineUV": return "Coordinates";
+                case "core.position": case "core.normalDirection": case "core.viewDirection": case "core.vertexColor": case "core.cameraDistance": return "Inputs";
+                case "core.screenUV": return "Coordinates";
+                case "core.circleMask": case "core.boxMask": case "core.polygonMask": case "core.starMask": case "core.radialRays": case "core.spiral": case "core.brick": case "core.hexGrid": return "Math";
+                case "core.triplanarTexture": case "core.matcapTexture": return "Textures";
+                case "core.rimGlow": case "core.heightMask": case "core.slopeMask": case "core.distanceFade": return "Color";
+                case "core.wireframe": return "Color";
                 case "core.flipbook": case "core.uvDistort": case "core.vertexMotion": return "Animation";
                 case "core.audioLink": case "core.particleColor": return "Inputs";
                 case "core.surfaceParticles": case "core.particleSurface": return "Surface";
@@ -116,6 +145,28 @@ namespace NXSG.Core
         {
             switch (operation)
             {
+                case "core.position": return "Position";
+                case "core.normalDirection": return "Normal Direction";
+                case "core.viewDirection": return "View Direction";
+                case "core.vertexColor": return "Vertex Color";
+                case "core.cameraDistance": return "Camera Distance";
+                case "core.screenUV": return "Screen UVs";
+                case "core.circleMask": return "Circle Mask";
+                case "core.boxMask": return "Box Mask";
+                case "core.polygonMask": return "Polygon Mask";
+                case "core.starMask": return "Star Mask";
+                case "core.radialRays": return "Radial Rays";
+                case "core.spiral": return "Spiral";
+                case "core.brick": return "Brick Pattern";
+                case "core.hexGrid": return "Hex Grid";
+                case "core.triplanarTexture": return "Triplanar Texture";
+                case "core.matcapTexture": return "Matcap Texture";
+                case "core.rimGlow": return "Rim Glow";
+                case "core.heightMask": return "Height Mask";
+                case "core.slopeMask": return "Slope Mask";
+                case "core.distanceFade": return "Distance Fade";
+                case "core.wireframe": return "Wireframe";
+
                 case "core.ramp": return "Ramp";
                 case "core.polarUV": return "Polar UVs";
                 case "core.uvRotate": return "Rotate UVs";
@@ -130,6 +181,9 @@ namespace NXSG.Core
                 case "core.mix": return "Mix";
                 case "core.emission": return "Emission"; case "core.oneMinus": return "Invert";
                 case "core.clamp": return "Clamp"; case "core.constant": return "Color";
+                case "core.absolute": return "Absolute"; case "core.power": return "Power"; case "core.sqrt": return "Square Root"; case "core.sine": return "Sine"; case "core.cosine": return "Cosine"; case "core.fraction": return "Fraction"; case "core.floor": return "Round Down"; case "core.ceil": return "Round Up"; case "core.round": return "Round";
+                case "core.step": return "Step"; case "core.smoothstep": return "Smoothstep"; case "core.remap": return "Remap"; case "core.pingPong": return "Ping Pong";
+                case "core.splitColor": return "Split Color"; case "core.combineColor": return "Combine Color"; case "core.luminance": return "Luminance"; case "core.contrast": return "Contrast"; case "core.saturation": return "Saturation"; case "core.splitUV": return "Split UV"; case "core.combineUV": return "Combine UV";
                 case "core.parameter": return "Parameter"; case "core.uv0": return "UV Coordinates";
                 case "core.texture2D": return "Texture"; case "core.multiply": return "Multiply";
                 case "core.toonSurface": return "Toon Surface"; case "core.unlitSurface": return "Unlit Surface";
@@ -149,6 +203,28 @@ namespace NXSG.Core
         {
             switch (operation)
             {
+                case "core.position": return "Get a point on the mesh in object or world space. Feed Position on 3D textures and height masks.";
+                case "core.normalDirection": return "Get the mesh surface direction in object or world space. This is a direction, not a normal-map texture.";
+                case "core.viewDirection": return "Direction from the surface toward the camera in world space.";
+                case "core.vertexColor": return "Read painted mesh RGBA and alpha. Meshes without vertex colors normally return white.";
+                case "core.cameraDistance": return "Distance from each surface point to the camera in world units.";
+                case "core.screenUV": return "Coordinates across the screen, from zero to one. This mapping follows the camera.";
+                case "core.circleMask": return "A filled circle centered in UV space. Radius controls size; softness blurs the edge.";
+                case "core.boxMask": return "A filled rectangle centered in UV space. Set width, height and edge softness.";
+                case "core.polygonMask": return "A filled regular polygon. Choose sides, radius and rotation.";
+                case "core.starMask": return "A pointed star mask. Inner and outer radii control the valleys and tips.";
+                case "core.radialRays": return "Alternating rays around the UV center. Animate rotation for a spinning sunburst.";
+                case "core.spiral": return "A curved spiral mask. Adjust turns, line width and rotation.";
+                case "core.brick": return "Staggered brick rows. White is brick; black is mortar. Connect to Mix or a Color Ramp.";
+                case "core.hexGrid": return "A honeycomb outline mask. Grid scale changes cell count; width thickens the lines.";
+                case "core.triplanarTexture": return "Project a texture along three axes and blend by surface direction. Defaults to object space; connected Position and Normal must use matching space.";
+                case "core.matcapTexture": return "Map a texture using the camera-facing surface normal, for stylized highlights. Connect a world-space normal to override the mesh normal.";
+                case "core.rimGlow": return "Color the silhouette facing away from the camera. Connect to Emission for glow; Power controls rim tightness.";
+                case "core.heightMask": return "Fade between low and high coordinates along one axis. Uses object position unless Position is connected.";
+                case "core.slopeMask": return "Mask by the upward component of a world-space normal: zero is vertical, one faces up, minus one faces down.";
+                case "core.distanceFade": return "White near the camera, black far away. Set distances in world units; connect to opacity or a mix factor.";
+                case "core.wireframe": return "Mask actual triangle edges, including triangulation diagonals. Width and softness use screen pixels. Connect to color, emission or opacity; requires a PC geometry shader.";
+
                 case "core.ramp": return "Reshape a number or noise mask with black/white points and a curve. Connect Noise value here to control its contrast.";
                 case "core.polarUV": return "Wrap coordinates around a center: U is distance, V is angle. Useful for rings and radial patterns.";
                 case "core.uvRotate": return "Rotate texture coordinates around a center, in degrees. Connect Time to angle to spin them.";
@@ -172,6 +248,26 @@ namespace NXSG.Core
                 case "core.emission": return "Add color that stays bright without lighting. Connect it to Toon Surface's emission input.";
                 case "core.oneMinus": return "Invert numbers, colors or masks (1 minus input): black becomes white, and white becomes black.";
                 case "core.clamp": return "Keep each color channel between 0 and 1. Values outside that range are clipped.";
+                case "core.absolute": return "Get the positive magnitude of a number or color.";
+                case "core.power": return "Raise a number or color to a power. Negative bases use their absolute value.";
+                case "core.sqrt": return "Get a square root. Negative inputs are clamped to zero.";
+                case "core.sine": return "Oscillate between -1 and 1. Input is radians (6.283 is one cycle); connect Time for motion.";
+                case "core.cosine": return "Oscillate between -1 and 1, starting at 1. Input is radians (6.283 is one cycle).";
+                case "core.fraction": return "Keep only the fractional part of a number or color.";
+                case "core.floor": return "Round a number or color down to the nearest whole value.";
+                case "core.ceil": return "Round a number or color up to the nearest whole value.";
+                case "core.round": return "Round a number or color to the nearest whole value.";
+                case "core.step": return "Output zero below threshold A and one at or above it using signal B.";
+                case "core.smoothstep": return "Make a smooth 0 to 1 transition between low and high.";
+                case "core.remap": return "Map a value from one range into another range.";
+                case "core.pingPong": return "Repeat a value back and forth between zero and length.";
+                case "core.splitColor": return "Read red, green, blue and alpha channels from a color.";
+                case "core.combineColor": return "Build a color from red, green, blue and alpha channels.";
+                case "core.luminance": return "Convert a color to its perceived brightness.";
+                case "core.contrast": return "Adjust color contrast around a pivot.";
+                case "core.saturation": return "Adjust color saturation.";
+                case "core.splitUV": return "Read U and V components from UV coordinates.";
+                case "core.combineUV": return "Build UV coordinates from U and V values.";
                 case "core.constant": return "Choose a solid color to use on its own or combine with other nodes.";
                 case "core.parameter": return "Read a declared property that can control your material.";
                 case "core.uv0": return "Choose mesh UV0–UV3, object/world mapping, polar or explicitly camera-relative mapping.";
@@ -205,6 +301,28 @@ namespace NXSG.Core
         {
             switch (operation)
             {
+                case "core.position": return "Position";
+                case "core.normalDirection": return "Normal Direction";
+                case "core.viewDirection": return "View Direction";
+                case "core.vertexColor": return "Vertex Color";
+                case "core.cameraDistance": return "Camera Distance";
+                case "core.screenUV": return "Screen UVs";
+                case "core.circleMask": return "Circle Mask";
+                case "core.boxMask": return "Box Mask";
+                case "core.polygonMask": return "Polygon Mask";
+                case "core.starMask": return "Star Mask";
+                case "core.radialRays": return "Radial Rays";
+                case "core.spiral": return "Spiral";
+                case "core.brick": return "Brick Pattern";
+                case "core.hexGrid": return "Hex Grid";
+                case "core.triplanarTexture": return "Triplanar Texture";
+                case "core.matcapTexture": return "Matcap Texture";
+                case "core.rimGlow": return "Rim Glow";
+                case "core.heightMask": return "Height Mask";
+                case "core.slopeMask": return "Slope Mask";
+                case "core.distanceFade": return "Distance Fade";
+                case "core.wireframe": return "Wireframe";
+
                 case "core.ramp": return "gradient contrast remap levels curve mask threshold";
                 case "core.polarUV": return "polar radial circle rings angle radius texture coordinates";
                 case "core.uvRotate": return "rotation spin pivot texture coordinates";
@@ -218,6 +336,9 @@ namespace NXSG.Core
                 case "core.minimum": return "min lower"; case "core.maximum": return "max higher";
                 case "core.mix": return "lerp blend"; case "core.emission": return "glow";
                 case "core.oneMinus": return "invert one minus"; case "core.clamp": return "saturate";
+                case "core.absolute": return "abs magnitude positive"; case "core.power": return "pow exponent raise"; case "core.sqrt": return "square root"; case "core.sine": return "sin wave"; case "core.cosine": return "cos wave"; case "core.fraction": return "frac decimal"; case "core.floor": return "round down"; case "core.ceil": return "round up"; case "core.round": return "nearest integer";
+                case "core.step": return "threshold cutoff"; case "core.smoothstep": return "smooth transition"; case "core.remap": return "range map"; case "core.pingPong": return "repeat bounce loop";
+                case "core.splitColor": return "rgba channels"; case "core.combineColor": return "rgba channels"; case "core.luminance": return "brightness grayscale"; case "core.contrast": return "color contrast"; case "core.saturation": return "color saturation"; case "core.splitUV": return "uv components"; case "core.combineUV": return "uv components";
                 case "core.constant": return "rgb rgba colour";
                 case "core.multiply": return "tint darken blend";
                 case "core.toonSurface": return "anime cel cartoon shading";
@@ -252,6 +373,32 @@ namespace NXSG.Core
                 case "core.mix": return port == "factor" ? "float" : (port == "a" || port == "b" || port == "value" ? "color" : null);
                 case "core.emission": return port == "strength" ? "float" : (port == "color" ? "color" : null);
                 case "core.oneMinus": case "core.clamp": return port == "color" ? "color" : null;
+                case "core.absolute": case "core.power": case "core.sqrt": case "core.sine": case "core.cosine": case "core.fraction": case "core.floor": case "core.ceil": case "core.round": return port == "a" || port == "b" || port == "value" ? "color" : null;
+                case "core.step": return port == "a" || port == "b" || port == "value" ? "float" : null;
+                case "core.smoothstep": return port == "value" || port == "low" || port == "high" ? "float" : null;
+                case "core.remap": return port == "value" || port == "inMin" || port == "inMax" || port == "outMin" || port == "outMax" ? "float" : null;
+                case "core.pingPong": return port == "value" || port == "length" ? "float" : null;
+                case "core.splitColor": return port == "color" ? "color" : port == "r" || port == "g" || port == "b" || port == "a" ? "float" : null;
+                case "core.combineColor": return port == "r" || port == "g" || port == "b" || port == "a" ? "float" : port == "color" ? "color" : null;
+                case "core.luminance": return port == "color" ? "color" : port == "value" ? "float" : null;
+                case "core.contrast": return port == "color" ? "color" : port == "amount" || port == "pivot" ? "float" : null;
+                case "core.saturation": return port == "color" ? "color" : port == "amount" ? "float" : null;
+                case "core.splitUV": return port == "uv" ? "vector2" : port == "u" || port == "v" ? "float" : null;
+                case "core.combineUV": return port == "u" || port == "v" ? "float" : port == "uv" ? "vector2" : null;
+                case "core.position": return port == "position" ? "vector3" : null;
+                case "core.normalDirection": return port == "normal" ? "vector3" : null;
+                case "core.viewDirection": return port == "direction" ? "vector3" : null;
+                case "core.vertexColor": return port == "color" ? "color" : port == "alpha" ? "float" : null;
+                case "core.cameraDistance": return port == "value" ? "float" : null;
+                case "core.screenUV": return port == "uv" ? "vector2" : null;
+                case "core.circleMask": case "core.boxMask": case "core.polygonMask": case "core.starMask": case "core.radialRays": case "core.spiral": case "core.brick": case "core.hexGrid": return port == "uv" ? "vector2" : port == "value" ? "float" : null;
+                case "core.triplanarTexture": return port == "position" || port == "normal" ? "vector3" : port == "color" ? "color" : null;
+                case "core.matcapTexture": return port == "normal" ? "vector3" : port == "color" ? "color" : null;
+                case "core.rimGlow": return port == "color" ? "color" : port == "power" || port == "value" ? "float" : null;
+                case "core.heightMask": return port == "position" ? "vector3" : port == "value" ? "float" : null;
+                case "core.slopeMask": return port == "normal" ? "vector3" : port == "value" ? "float" : null;
+                case "core.distanceFade": return port == "value" ? "float" : null;
+                case "core.wireframe": return port == "value" ? "float" : null;
                 case "core.constant": return port == "value" ? TypeName(node.Properties == null ? null : node.Properties["valueType"]) : null;
                 case "core.parameter": return port == "value" ? "color" : null;
                 case "core.uv0": return port == "uv" ? "vector2" : null;
@@ -306,6 +453,33 @@ namespace NXSG.Core
                     if (operation == "core.wave") { node.Properties["mode"] = 0; node.Properties["axis"] = 0; }
                     break;
                 case "core.mix": node.Properties["factor"] = .5; break;
+                case "core.absolute": case "core.sqrt": case "core.sine": case "core.cosine": case "core.fraction": case "core.floor": case "core.ceil": case "core.round": node.Properties["a"] = .5; break;
+                case "core.power": node.Properties["a"] = .5; node.Properties["b"] = 2.0; break;
+                case "core.step": node.Properties["a"] = .5; node.Properties["b"] = 0.0; break;
+                case "core.smoothstep": node.Properties["value"] = 0.0; node.Properties["low"] = 0.0; node.Properties["high"] = 1.0; break;
+                case "core.remap": node.Properties["value"] = 0.0; node.Properties["inMin"] = 0.0; node.Properties["inMax"] = 1.0; node.Properties["outMin"] = 0.0; node.Properties["outMax"] = 1.0; break;
+                case "core.pingPong": node.Properties["value"] = 0.0; node.Properties["length"] = 1.0; break;
+                case "core.combineColor": node.Properties["r"] = 0.0; node.Properties["g"] = 0.0; node.Properties["b"] = 0.0; node.Properties["a"] = 1.0; break;
+                case "core.contrast": node.Properties["amount"] = 1.0; node.Properties["pivot"] = .5; break;
+                case "core.saturation": node.Properties["amount"] = 1.0; break;
+                case "core.combineUV": node.Properties["u"] = 0.0; node.Properties["v"] = 0.0; break;
+                case "core.position": node.Properties["space"] = 0; break;
+                case "core.normalDirection": node.Properties["space"] = 1; break;
+                case "core.circleMask": node.Properties["radius"] = .4; node.Properties["softness"] = .02; break;
+                case "core.boxMask": node.Properties["width"] = .7; node.Properties["height"] = .7; node.Properties["softness"] = .02; break;
+                case "core.polygonMask": node.Properties["sides"] = 6; node.Properties["radius"] = .4; node.Properties["rotation"] = 0.0; node.Properties["softness"] = .02; break;
+                case "core.starMask": node.Properties["points"] = 5; node.Properties["inner"] = .2; node.Properties["outer"] = .45; node.Properties["rotation"] = 0.0; node.Properties["softness"] = .02; break;
+                case "core.radialRays": node.Properties["count"] = 12; node.Properties["rotation"] = 0.0; node.Properties["softness"] = .02; break;
+                case "core.spiral": node.Properties["turns"] = 3.0; node.Properties["width"] = .2; node.Properties["rotation"] = 0.0; break;
+                case "core.brick": node.Properties["tilingX"] = 5.0; node.Properties["tilingY"] = 8.0; node.Properties["mortar"] = .08; break;
+                case "core.hexGrid": node.Properties["scale"] = 8.0; node.Properties["width"] = .05; break;
+                case "core.triplanarTexture": node.Properties["resourceId"] = ""; node.Properties["scale"] = 1.0; node.Properties["sharpness"] = 4.0; break;
+                case "core.matcapTexture": node.Properties["resourceId"] = ""; break;
+                case "core.rimGlow": node.Properties["power"] = 3.0; break;
+                case "core.heightMask": node.Properties["low"] = 0.0; node.Properties["high"] = 1.0; node.Properties["axis"] = 1; break;
+                case "core.slopeMask": node.Properties["low"] = 0.0; node.Properties["high"] = 1.0; break;
+                case "core.distanceFade": node.Properties["near"] = 0.0; node.Properties["far"] = 10.0; break;
+                case "core.wireframe": node.Properties["width"] = 1.0; node.Properties["softness"] = 1.0; break;
                 case "core.emission": node.Properties["strength"] = 1.0; break;
                 case "core.constant": node.Properties["valueType"] = "color"; node.Properties["value"] = new JArray(1, 1, 1, 1); break;
                 case "core.multiply": node.Properties["valueType"] = "color"; break;
@@ -315,7 +489,7 @@ namespace NXSG.Core
                 case "core.flipbook": node.Properties["rows"] = 1; node.Properties["columns"] = 1; node.Properties["speed"] = 1.0; break;
                 case "core.audioLink": node.Properties["band"] = 0; node.Properties["gain"] = 1.0; node.Properties["smoothing"] = 0.5; node.Properties["fallback"] = 0.0; break;
                 case "core.normalMap": node.Properties["strength"] = 1.0; break;
-                case "core.surfaceParticles": node.Properties["sourceUV"] = 0; node.Properties["density"] = .1; node.Properties["size"] = .03; node.Properties["lifetime"] = 2.0; node.Properties["speed"] = .2; node.Properties["gravity"] = 0.0; node.Properties["spread"] = .05; node.Properties["blendMode"] = 1; node.Properties["opacity"] = 1.0; node.Properties["mask"] = 1.0; break;
+                case "core.surfaceParticles": node.Properties["sourceUV"] = 0; node.Properties["density"] = .1; node.Properties["emissionRate"] = .5; node.Properties["size"] = .03; node.Properties["lifetime"] = 2.0; node.Properties["speed"] = .2; node.Properties["gravity"] = 0.0; node.Properties["spread"] = .05; node.Properties["blendMode"] = 1; node.Properties["opacity"] = 1.0; node.Properties["mask"] = 1.0; break;
                 case "core.particleSurface": node.Properties["opacity"] = 1.0; node.Properties["blendMode"] = 0; node.Properties["softDistance"] = 0.0; break;
                 case "core.unlitSurface": node.Properties["opacity"] = 1.0; node.Properties["displacement"] = 0.0; break;
                 case "core.pbrSurface": node.Properties["opacity"] = 1.0; node.Properties["displacement"] = 0.0; node.Properties["metallic"] = 0.0; node.Properties["roughness"] = 0.5; break;

@@ -61,13 +61,20 @@ public static class DistortionChecks
         Reject(assert, "core.uvDistort", "mode", 7, "uvDistort mode range");
         Reject(assert, "core.uvDistort", "detail", 0, "uvDistort detail range");
         Reject(assert, "core.uvDistort", "radius", 0, "uvDistort radius range");
-        Reject(assert, "core.uvDistort", "falloff", -1, "uvDistort falloff range");
         Reject(assert, "core.uvDistort", "coordinateSource", "bad", "uvDistort coordinate source choice");
         Reject(assert, "core.gradient", "mode", 3, "gradient mode range");
         Reject(assert, "core.gradient", "radius", 0, "gradient radius range");
         Reject(assert, "core.uvTile", "mode", 3, "uvTile mode range");
         Reject(assert, "core.posterize", "levels", 1, "posterize levels range");
-        Reject(assert, "core.posterize", "levels", 257, "posterize levels range high");
+        var unbounded = BuildGraph("core.uvDistort", 0);
+        var distort = unbounded.Nodes.Single(n => n.Id == "effect");
+        distort.Properties["falloff"] = -10; distort.Properties["mask"] = 5;
+        var roundTrip = GraphJson.Parse(GraphJson.Serialize(unbounded));
+        assert(GraphValidator.Validate(roundTrip).IsValid && ShaderEmitter.Emit(roundTrip).Succeeded, "uvDistort values outside sliders round trip and emit");
+        var posterize = BuildGraph("core.posterize", 0);
+        posterize.Nodes.Single(n => n.Id == "effect").Properties["levels"] = 257;
+        var roundTripPosterize = GraphJson.Parse(GraphJson.Serialize(posterize));
+        assert(GraphValidator.Validate(roundTripPosterize).IsValid && ShaderEmitter.Emit(roundTripPosterize).Succeeded, "posterize levels above slider round trip and emit");
     }
 
     private static void Reject(Action<bool, string> assert, string operation, string property, object value, string label)

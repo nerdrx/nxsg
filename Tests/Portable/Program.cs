@@ -47,8 +47,12 @@ internal static class Program
         DynamicTypeChecks.Run(Assert);
         ProceduralChecks.Run(Assert);
         DistortionChecks.Run(Assert);
+        UtilityNodeChecks.Run(Assert);
+        VisualNodeChecks.Run(Assert);
         CheckClipboard();
         var fixtures = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../../Tests/Fixtures"));
+        var wireExample = GraphJson.Parse(File.ReadAllText(Path.Combine(fixtures, "../../Packages/dev.nerdrx.nxsg/Samples~/Neon Wireframe.nxsg")));
+        Assert(ShaderEmitter.Emit(wireExample).Succeeded, "Neon Wireframe example compiles");
         var example = GraphJson.Parse(File.ReadAllText(Path.Combine(fixtures, "../../Packages/dev.nerdrx.nxsg/Samples~/Animated Palette.nxsg")));
         Assert(GraphValidator.Validate(example).IsValid && ShaderEmitter.Emit(example).Succeeded, "animated palette example validates and emits");
         var polarExample = GraphJson.Parse(File.ReadAllText(Path.Combine(fixtures, "../../Packages/dev.nerdrx.nxsg/Samples~/Polar Palette.nxsg")));

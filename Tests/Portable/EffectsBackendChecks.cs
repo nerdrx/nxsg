@@ -12,7 +12,7 @@ public static class EffectsBackendChecks
         {
             var graph=new ShaderGraph {GraphId="effects"};
             var node=NodeCatalog.Create(op); node.Id="effect";
-            if(op=="core.texture2D"||op=="core.sticker") {node.Properties["resourceId"]="texture";graph.Resources.Add(new GraphResource {Id="texture",Kind="texture2D",Uri="builtin://white"});}
+            if(op=="core.texture2D"||op=="core.sticker"||op=="core.triplanarTexture"||op=="core.matcapTexture") {node.Properties["resourceId"]="texture";graph.Resources.Add(new GraphResource {Id="texture",Kind="texture2D",Uri="builtin://white"});}
             graph.Nodes.Add(node);
             var surface=NodeCatalog.Create("core.unlitSurface"); surface.Id="surface";graph.Nodes.Add(surface);
             var output=NodeCatalog.Create("core.output");output.Id="output";graph.Nodes.Add(output);

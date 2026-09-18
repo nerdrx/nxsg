@@ -18,9 +18,14 @@ public static class SurfaceParticleChecks
         assert(GraphValidator.Validate(graph).IsValid, "surfaceParticles graph validates");
         var emitted = ShaderEmitter.Emit(graph);
         assert(emitted.Succeeded && emitted.ShaderSource != null, "surfaceParticles graph emits");
-        assert(emitted.ShaderSource.Contains("maxvertexcount(4)") && emitted.ShaderSource.Contains("SV_PrimitiveID") && emitted.ShaderSource.Contains("TriangleStream"), "surfaceParticles emits bounded geometry pass");
+        assert(emitted.ShaderSource.Contains("maxvertexcount(16)") && emitted.ShaderSource.Contains("SV_PrimitiveID") && emitted.ShaderSource.Contains("TriangleStream"), "surfaceParticles emits bounded geometry pass");
         assert(emitted.ShaderSource.Contains("ForwardBase") && emitted.ShaderSource.Contains("originalLocal"), "surfaceParticles preserves base pass and source position");
-        Reject(assert, graph, "density", -.01, "density lower bound"); Reject(assert, graph, "size", .00009, "size lower bound"); Reject(assert, graph, "size", 10.01, "size upper bound"); Reject(assert, graph, "lifetime", .0009, "lifetime lower bound"); Reject(assert, graph, "lifetime", 1000.01, "lifetime upper bound"); Reject(assert, graph, "spread", -.01, "spread lower bound"); Reject(assert, graph, "mask", 1.01, "mask upper bound"); Reject(assert, graph, "opacity", -.01, "opacity lower bound"); Reject(assert, graph, "blendMode", 2, "blend mode choice"); Reject(assert, graph, "speed", new JValue(double.NaN), "speed finite");
+        Reject(assert, graph, "lifetime", .0009, "lifetime lower bound"); Reject(assert, graph, "blendMode", 2, "blend mode choice"); Reject(assert, graph, "speed", new JValue(double.NaN), "speed finite");
+        var outsideSliders = Graph();
+        var outsideNode = outsideSliders.Nodes.Single(n => n.Id == "particles");
+        outsideNode.Properties["density"] = 1000; outsideNode.Properties["size"] = 100; outsideNode.Properties["spread"] = -10; outsideNode.Properties["emissionRate"] = -3;
+        var roundTrip = GraphJson.Parse(GraphJson.Serialize(outsideSliders));
+        assert(GraphValidator.Validate(roundTrip).IsValid && ShaderEmitter.Emit(roundTrip).Succeeded, "surface particle values outside sliders round trip and emit");
         var endpoint = Graph();
         var endpointNode = endpoint.Nodes.Single(n => n.Id == "particles");
         endpointNode.Properties["size"] = .0001f;
@@ -28,7 +33,8 @@ public static class SurfaceParticleChecks
         assert(GraphValidator.Validate(endpoint).IsValid, "Unity float slider endpoints validate before saving");
         assert(ShaderEmitter.Emit(endpoint).Succeeded, "Unity float endpoints build before saving");
         assert(GraphValidator.Validate(GraphJson.Parse(GraphJson.Serialize(endpoint))).IsValid, "slider endpoints validate after saving");
-        Reject(assert, endpoint, "size", (double).0001f - 1e-11, "values below float endpoint remain rejected");
+        endpointNode.Properties["size"] = (double).0001f - 1e-11;
+        assert(GraphValidator.Validate(endpoint).IsValid, "values below slider endpoint validate");
         var gradient = NodeCatalog.Create("core.gradient"); gradient.Properties["radius"] = .000001f; endpoint.Nodes.Add(gradient);
         assert(GraphValidator.Validate(endpoint).IsValid, "shared range check accepts gradient float endpoint");
         var uvGraph = Graph();
