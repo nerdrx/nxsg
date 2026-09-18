@@ -1,6 +1,6 @@
 # Built-in node pack
 
-The canvas now offers 42 visible nodes, plus hidden Parameter and Preview Vector helpers. Socket color indicates data type: yellow color, gray scalar, blue UV coordinates, cyan normals, green surface. Drag from either end; compatible-node menus and clipboard operations use the same core catalog.
+The canvas now offers 45 visible nodes, plus hidden Parameter and Preview Vector helpers. Socket color indicates data type: yellow color, gray scalar, blue UV coordinates, cyan normals, green surface. Drag from either end; compatible-node menus and clipboard operations use the same core catalog.
 
 ## New nodes
 
@@ -97,7 +97,10 @@ can feed a surface or another effect.
 | Sticker | Base color, UV, mask → color | `resourceId` binds a separate texture property; multiple sticker and texture resources are allowed. |
 | Dissolve | Value, threshold → mask and edge; edge-width control | Surface integration must use opacity/cutoff semantics; it is not a geometry deletion pass. |
 | Flipbook | UV, time → UV | Rows, columns, and speed select animated cells. |
-| UV Distort | UV, strength → UV | Procedural distortion is target-specific and may be cheaper when driven by a sampled texture. |
+| Distortion | UV, strength, mask, time, flow → UV and offset | Noise, waves, swirl, ripple, flow map, pixelate and lens; see controls below. |
+| Gradient | UV → value/color | Linear, radial and angular masks with center, direction and radius. |
+| UV Tile / Mirror | UV → UV | Repeat, mirrored repetition or clamp with tiling and offset. |
+| Posterize | Value, levels → value | Quantize a 0–1 mask to 2–256 evenly spaced levels. |
 | Vertex Motion | Time, strength → displacement | Normal displacement follows an analytic sine wave. Texture inputs evaluated in the vertex stage use explicit LOD 0. Expand renderer bounds for large offsets. |
 | AudioLink | Band, gain, smoothing, fallback → scalar | Uses the official `_AudioTexture` layout when available. Smoothing is normalized 0–1: 0 is least smoothed/raw and 1 is most smoothed. `_NXSG_AudioLinkPreview` and `_NXSG_AudioLinkValue` provide editor preview data. |
 | Shell | Base surface, layer surface, offset → surface | Accepts nested Shells in Base or Layer, up to 8 transparent passes. Base chains keep each offset relative to the original mesh; nesting in Layer adds ancestor offsets. Layers render in graph order, base first. Each leaf retains its own surface settings; only the first base surface casts shadows. Extra passes increase draw calls and overdraw; bounds and transparent sorting need review on each mesh. |
@@ -131,3 +134,20 @@ Mesh UV and Polar mappings do not depend on the camera. Panosphere uses viewing 
 These coordinate choices use [Poiyomi's documented UV options](https://www.poiyomi.com/) as workflow context; NXSG's implementations are independent. This is not complete Poiyomi shader parity. Animated noise can make an otherwise fixed mapping appear to move: freeze Speed to check alignment. Object coordinates follow transforms and the supplied skinned vertex positions, not an undeformed bind-pose texture space.
 
 4D Noise interpolates 16 lattice corners. Voronoi searches 9 cells in 2D or 27 in 3D; Musgrave adds up to 8 octaves. Shells multiply the shading work. These are algorithmic costs, not measured GPU timings. Try `Assets/NXSGExamples/4D Clouds.nxsg` for an evolving volume.
+
+
+## Distortion controls
+
+Use **Distortion UV → Texture UV** or feed it into a procedural pattern. Chain several Distortion nodes for combined effects. The **offset** output is the UV displacement alone, useful for debugging or reuse.
+
+- **Noise / turbulence:** directional scrolling, scale and 1–6 detail layers. Detail 1 preserves the old UV Distort noise formula with default direction and axes.
+- **Waves:** sine offsets with wave direction, scale and speed.
+- **Swirl:** rotate around Center inside Radius, with adjustable edge falloff. Strength is in radians; animate it with a connection.
+- **Ripple:** animated radial waves, radius, falloff, frequency and speed.
+- **Flow map:** connect Texture Color to Flow. Red/green encode horizontal/vertical offsets: 0.5 is neutral, 0 is negative and 1 positive. Import flow textures as linear data. Animate their upstream UVs if needed.
+- **Pixelate:** sample grid cell centers; Scale is the grid density and Strength blends from original to snapped UVs.
+- **Lens / bulge:** bounded radial bulging. Negative strength reverses the displacement.
+
+Mask is clamped to 0–1, and Axis strength scales horizontal/vertical displacement independently. Zero strength or zero mask returns the original UV exactly. Time connections override the clock for the animated modes. Swirl and lens respond to animated strength; flow responds to its supplied map. Repeat/mirror/clamp with the separate UV Tile / Mirror node as desired. Explicit wrapping can introduce derivative seams at tile boundaries.
+
+The new **Ripple Tiles.nxsg** example combines Gradient masking, Ripple distortion, mirrored UVs, Waves, Posterize and Color Ramp. Each fractal detail layer adds noise evaluations; repeated shells multiply that cost. These nodes warp texture coordinates, not the silhouette or background behind a transparent material.

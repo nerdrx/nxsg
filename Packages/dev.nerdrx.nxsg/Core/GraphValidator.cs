@@ -162,7 +162,10 @@ namespace NXSG.Core
                 case "core.dissolve": numeric = new[] { "threshold", "edgeWidth" }; break;
                 case "core.shell": numeric = new[] { "offset" }; break;
                 case "core.vertexMotion": numeric = new[] { "strength", "speed", "frequency" }; break;
-                case "core.uvDistort": numeric = new[] { "strength", "speed", "scale" }; break;
+                case "core.uvDistort": numeric = new[] { "strength", "speed", "scale", "mask", "radius", "falloff" }; vectors = new[] { "center", "direction", "axes" }; break;
+                case "core.gradient": numeric = new[] { "angle", "radius" }; vectors = new[] { "center" }; break;
+                case "core.uvTile": vectors = new[] { "tiling", "offset" }; break;
+                case "core.posterize": numeric = new[] { "levels" }; break;
                 default: return;
             }
             if (node.Properties["coordinateSource"] != null)
@@ -185,6 +188,17 @@ namespace NXSG.Core
                 CheckIntegerRange(node.Properties["mode"], path + ".properties.mode", 0, 1, diagnostics);
                 CheckIntegerRange(node.Properties["axis"], path + ".properties.axis", 0, 2, diagnostics);
             }
+            if (node.Operation == "core.uvDistort")
+            {
+                CheckIntegerRange(node.Properties["mode"], path + ".properties.mode", 0, 6, diagnostics);
+                CheckIntegerRange(node.Properties["detail"], path + ".properties.detail", 1, 6, diagnostics);
+                CheckRange(node.Properties["radius"], path + ".properties.radius", .000001, float.MaxValue, diagnostics);
+                CheckRange(node.Properties["falloff"], path + ".properties.falloff", 0, 100, diagnostics);
+                CheckRange(node.Properties["mask"], path + ".properties.mask", 0, 1, diagnostics);
+            }
+            if (node.Operation == "core.gradient" || node.Operation == "core.uvTile") CheckIntegerRange(node.Properties["mode"], path + ".properties.mode", 0, 2, diagnostics);
+            if (node.Operation == "core.gradient") CheckRange(node.Properties["radius"], path + ".properties.radius", .000001, float.MaxValue, diagnostics);
+            if (node.Operation == "core.posterize") CheckRange(node.Properties["levels"], path + ".properties.levels", 2, 256, diagnostics);
             if (numeric != null) foreach (var name in numeric) CheckNumber(node.Properties[name], path + ".properties." + name, diagnostics);
             if (vectors != null) foreach (var name in vectors) CheckVector2(node.Properties[name], path + ".properties." + name, diagnostics);
             if (node.Operation == "core.ramp") CheckRampPoints(node.Properties["points"], path + ".properties.points", diagnostics);

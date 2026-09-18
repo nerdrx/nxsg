@@ -11,7 +11,7 @@ namespace NXSG.Core
         {
             "core.ramp", "core.polarUV", "core.uvRotate", "core.objectUV", "core.worldUV",
             "core.value", "core.time", "core.uvTransform", "core.uvScroll", "core.noise",
-            "core.musgrave", "core.voronoi", "core.checker", "core.wave",
+            "core.musgrave", "core.voronoi", "core.checker", "core.wave", "core.gradient", "core.uvTile", "core.posterize",
             "core.add", "core.subtract", "core.divide", "core.minimum", "core.maximum", "core.mix", "core.emission", "core.oneMinus", "core.clamp",
             "core.constant", "core.parameter", "core.uv0", "core.texture2D", "core.multiply",
             "core.toonSurface", "core.unlitSurface", "core.pbrSurface", "core.fresnel", "core.colorRamp",
@@ -41,7 +41,8 @@ namespace NXSG.Core
             ["core.fresnel"] = new string[0], ["core.colorRamp"] = new[] { "value" },
             ["core.layer"] = new[] { "base", "overlay", "mask" }, ["core.sticker"] = new[] { "base", "uv", "mask" },
             ["core.dissolve"] = new[] { "value", "threshold" }, ["core.flipbook"] = new[] { "uv", "time" },
-            ["core.uvDistort"] = new[] { "uv", "strength" }, ["core.vertexMotion"] = new[] { "time", "strength" },
+            ["core.uvDistort"] = new[] { "uv", "strength", "mask", "time", "flow" },
+            ["core.gradient"] = new[] { "uv" }, ["core.uvTile"] = new[] { "uv" }, ["core.posterize"] = new[] { "value", "levels" }, ["core.vertexMotion"] = new[] { "time", "strength" },
             ["core.audioLink"] = new string[0], ["core.shell"] = new[] { "base", "layer", "offset" },
             ["core.normalMap"] = new[] { "color" },
             ["core.previewVector"] = new[] { "uv", "normal" },
@@ -69,7 +70,8 @@ namespace NXSG.Core
             ["core.fresnel"] = new[] { "value" }, ["core.colorRamp"] = new[] { "color" },
             ["core.layer"] = new[] { "color" }, ["core.sticker"] = new[] { "color" },
             ["core.dissolve"] = new[] { "mask", "edge" }, ["core.flipbook"] = new[] { "uv" },
-            ["core.uvDistort"] = new[] { "uv" }, ["core.vertexMotion"] = new[] { "value" },
+            ["core.uvDistort"] = new[] { "uv", "offset" },
+            ["core.gradient"] = new[] { "value", "color" }, ["core.uvTile"] = new[] { "uv" }, ["core.posterize"] = new[] { "value" }, ["core.vertexMotion"] = new[] { "value" },
             ["core.audioLink"] = new[] { "value" }, ["core.shell"] = new[] { "surface" },
             ["core.normalMap"] = new[] { "normal" },
             ["core.previewVector"] = new[] { "color" },
@@ -84,15 +86,15 @@ namespace NXSG.Core
             {
                 case "core.ramp": return "Math";
                 case "core.uv0": case "core.uvTransform": case "core.uvScroll": case "core.uvRotate":
-                case "core.polarUV": case "core.objectUV": case "core.worldUV": return "Coordinates";
+                case "core.uvTile": case "core.polarUV": case "core.objectUV": case "core.worldUV": return "Coordinates";
                 case "core.value": case "core.time": case "core.constant": case "core.parameter": return "Inputs";
-                case "core.texture2D": case "core.noise": case "core.musgrave": case "core.voronoi": case "core.checker": case "core.wave": return "Textures";
+                case "core.gradient": case "core.texture2D": case "core.noise": case "core.musgrave": case "core.voronoi": case "core.checker": case "core.wave": return "Textures";
                 case "core.add": case "core.subtract": case "core.multiply": case "core.divide":
                 case "core.minimum": case "core.maximum": case "core.mix": case "core.oneMinus":
                 case "core.clamp": return "Math";
                 case "core.emission": case "core.toonSurface": case "core.unlitSurface": case "core.pbrSurface":
                 case "core.shell": case "core.normalMap": case "core.output": return "Surface";
-                case "core.fresnel": case "core.colorRamp": case "core.layer": case "core.sticker":
+                case "core.posterize": case "core.fresnel": case "core.colorRamp": case "core.layer": case "core.sticker":
                 case "core.dissolve": return "Color";
                 case "core.flipbook": case "core.uvDistort": case "core.vertexMotion": return "Animation";
                 case "core.audioLink": return "Inputs";
@@ -116,6 +118,7 @@ namespace NXSG.Core
                 case "core.value": return "Value"; case "core.time": return "Time";
                 case "core.uvTransform": return "UV Transform"; case "core.uvScroll": return "UV Scroll";
                 case "core.musgrave": return "Musgrave"; case "core.voronoi": return "Voronoi"; case "core.checker": return "Checkerboard"; case "core.wave": return "Waves";
+                case "core.gradient": return "Gradient"; case "core.uvTile": return "UV Tile / Mirror"; case "core.posterize": return "Posterize";
                 case "core.noise": return "Noise"; case "core.add": return "Add"; case "core.subtract": return "Subtract";
                 case "core.divide": return "Divide"; case "core.minimum": return "Minimum"; case "core.maximum": return "Maximum";
                 case "core.mix": return "Mix";
@@ -127,7 +130,7 @@ namespace NXSG.Core
                 case "core.pbrSurface": return "PBR Surface"; case "core.fresnel": return "Fresnel";
                 case "core.colorRamp": return "Color Ramp"; case "core.layer": return "Layer";
                 case "core.sticker": return "Sticker"; case "core.dissolve": return "Dissolve";
-                case "core.flipbook": return "Flipbook"; case "core.uvDistort": return "UV Distort";
+                case "core.flipbook": return "Flipbook"; case "core.uvDistort": return "Distortion";
                 case "core.vertexMotion": return "Vertex Motion"; case "core.audioLink": return "Audio Link";
                 case "core.shell": return "Shell"; case "core.normalMap": return "Normal Map";
                 case "core.output": return "Output";
@@ -175,7 +178,10 @@ namespace NXSG.Core
                 case "core.sticker": return "Project a texture onto UVs with optional masking and transform controls.";
                 case "core.dissolve": return "Compare a value to a threshold and output dissolve and edge masks.";
                 case "core.flipbook": return "Animate UVs through a rows by columns texture atlas.";
-                case "core.uvDistort": return "Offset UVs using a strength-controlled distortion.";
+                case "core.gradient": return "A linear, radial or angular mask for Color Ramp, distortion or dissolve.";
+                case "core.uvTile": return "Repeat, mirror or clamp UV tiles with scale and offset.";
+                case "core.posterize": return "Turn a smooth number or mask into a chosen number of distinct steps.";
+                case "core.uvDistort": return "Warp UVs with noise, waves, swirl, ripple, flow, pixelate or lens. Mask and animate the effect. Zero strength leaves UVs unchanged.";
                 case "core.vertexMotion": return "Drive vertex motion from time and strength inputs.";
                 case "core.audioLink": return "Read a smoothed audio band value with a fallback.";
                 case "core.shell": return "Wrap a surface or another Shell with a transparent layer. Up to 8 shell passes; nesting in Layer adds offsets.";
@@ -208,7 +214,8 @@ namespace NXSG.Core
                 case "core.fresnel": return "edge rim grazing angle"; case "core.colorRamp": return "gradient palette lookup";
                 case "core.layer": return "overlay composite blend"; case "core.sticker": return "decal projected texture";
                 case "core.dissolve": return "cutout burn edge mask"; case "core.flipbook": return "texture atlas animation";
-                case "core.uvDistort": return "warp wobble coordinates"; case "core.vertexMotion": return "vertex animation deformation";
+                case "core.gradient": return "linear radial angular mask ramp"; case "core.uvTile": return "repeat mirror clamp wrap tile"; case "core.posterize": return "steps quantize pixel banding";
+                case "core.uvDistort": return "uv distortion warp wobble swirl ripple flow pixelate lens"; case "core.vertexMotion": return "vertex animation deformation";
                 case "core.audioLink": return "audio reactive spectrum"; case "core.shell": return "outline rim extrude";
                 case "core.normalMap": return "bump tangent normal";
                 case "core.texture2D": return "image albedo diffuse";
@@ -247,7 +254,11 @@ namespace NXSG.Core
                 case "core.layer": return port == "base" || port == "overlay" || port == "color" ? "color" : (port == "mask" ? "float" : null);
                 case "core.sticker": return port == "base" ? "color" : (port == "uv" ? "vector2" : (port == "mask" ? "float" : (port == "color" ? "color" : null)));
                 case "core.dissolve": return port == "value" || port == "threshold" || port == "mask" || port == "edge" ? "float" : null;
-                case "core.flipbook": case "core.uvDistort": return port == "uv" ? "vector2" : (port == "time" || port == "strength" ? "float" : null);
+                case "core.flipbook": return port == "uv" ? "vector2" : port == "time" ? "float" : null;
+                case "core.uvDistort": return port == "uv" || port == "offset" ? "vector2" : port == "flow" ? "color" : port == "strength" || port == "mask" || port == "time" ? "float" : null;
+                case "core.gradient": return port == "uv" ? "vector2" : port == "color" ? "color" : port == "value" ? "float" : null;
+                case "core.uvTile": return port == "uv" ? "vector2" : null;
+                case "core.posterize": return port == "value" || port == "levels" ? "float" : null;
                 case "core.vertexMotion": return port == "time" || port == "strength" || port == "value" ? "float" : null;
                 case "core.audioLink": return port == "value" ? "float" : null;
                 case "core.unlitSurface": return port == "surface" ? "surface" : (port == "albedo" || port == "emission" ? "color" : (port == "opacity" || port == "displacement" ? "float" : null));
@@ -293,6 +304,9 @@ namespace NXSG.Core
                 case "core.dissolve": node.Properties["threshold"] = 0.5; node.Properties["edgeWidth"] = 0.05; break;
                 case "core.shell": node.Properties["offset"] = 0.02; break;
                 case "core.vertexMotion": node.Properties["strength"] = 0.02; node.Properties["speed"] = 1.0; node.Properties["frequency"] = 2.0; break;
+                case "core.gradient": node.Properties["mode"] = 0; node.Properties["center"] = Vector(.5,.5); node.Properties["radius"] = .5; node.Properties["angle"] = 0.0; break;
+                case "core.uvTile": node.Properties["mode"] = 0; node.Properties["tiling"] = Vector(1,1); node.Properties["offset"] = Vector(0,0); break;
+                case "core.posterize": node.Properties["levels"] = 4.0; break;
                 case "core.uvDistort": node.Properties["strength"] = 0.1; node.Properties["speed"] = 1.0; node.Properties["scale"] = 1.0; break;
             }
             return node;

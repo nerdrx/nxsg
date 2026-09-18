@@ -34,7 +34,7 @@ namespace NXSG.Backend
         public static bool IsAdvanced(ShaderGraph graph)
         {
             if (graph?.Nodes == null) return false;
-            var ops = new HashSet<string> { "core.unlitSurface", "core.pbrSurface", "core.fresnel", "core.colorRamp", "core.layer", "core.sticker", "core.dissolve", "core.flipbook", "core.uvDistort", "core.vertexMotion", "core.audioLink", "core.shell", "core.normalMap", "core.previewVector", "core.musgrave", "core.voronoi", "core.checker", "core.wave" };
+            var ops = new HashSet<string> { "core.unlitSurface", "core.pbrSurface", "core.fresnel", "core.colorRamp", "core.layer", "core.sticker", "core.dissolve", "core.flipbook", "core.uvDistort", "core.vertexMotion", "core.audioLink", "core.shell", "core.normalMap", "core.previewVector", "core.musgrave", "core.voronoi", "core.checker", "core.wave", "core.gradient", "core.uvTile", "core.posterize" };
             // Only reachable effects select the extended lowering; disconnected nodes never change shading.
             var connected = new HashSet<string>();
             var queue = new Queue<string>(graph.Nodes.Where(n => n?.Operation == "core.output").Select(n => n.Id));
@@ -142,6 +142,7 @@ namespace NXSG.Backend
             b.AppendLine("#ifndef SHADOW_COORDS\n#define SHADOW_COORDS(index)\n#endif");
             b.AppendLine(Helpers);
             b.AppendLine(ProceduralShader.Hlsl);
+            b.AppendLine(DistortionShader.Hlsl);
             b.AppendLine(code.ToString());
             b.AppendLine("ENDCG\n" + passCode + shadowPass + "}\nFallback Off\n}");
             if (passes.Count > 1) diagnostics.Add(new Diagnostic(DiagnosticSeverity.Warning, "cost.shell", root.Id, (passes.Count - 1) + " extra transparent mesh pass" + (passes.Count == 2 ? "" : "es") + " per view; normal offset does not expand renderer bounds. Overlapping transparent objects can sort imperfectly."));
@@ -253,7 +254,17 @@ namespace NXSG.Backend
                 case "core.dissolve":
                     body = port == "mask" ? "step(" + S("threshold", .5) + "," + S("value", 0) + ")" : "(step(" + S("threshold", .5) + "," + S("value", 0) + ")*(1-step(" + S("threshold", .5) + "+max(.00001," + Prop(n, "edgeWidth", .05) + ")," + S("value", 0) + ")))"; break;
                 case "core.flipbook": body = "NX_Flipbook(" + P("uv", uv) + "," + P("time", "_Time.y", "float") + "*" + Prop(n, "speed", 1) + "," + Prop(n, "columns", 1) + "," + Prop(n, "rows", 1) + ")"; break;
-                case "core.uvDistort": body = "NX_Distort(" + P("uv", uv) + "," + S("strength", .05) + "," + Prop(n, "scale", 5) + ",_Time.y*" + Prop(n, "speed", 1) + ")"; break;
+                case "core.uvDistort":
+                    var baseUV = P("uv", uv, "vector2");
+                    body = "NX_Warp(" + baseUV + "," + IntProp(n,"mode",0,0,6) + ",(" + S("strength",.05) + "*saturate(" + S("mask",1) + "))," + Prop(n,"scale",5) + "," + P("time","_Time.y","float") + "*" + Prop(n,"speed",1) + "," + Vec(n,"center",.5,.5) + "," + Vec(n,"direction",1,1) + "," + Vec(n,"axes",1,1) + "," + Prop(n,"radius",.5) + "," + Prop(n,"falloff",1) + "," + IntProp(n,"detail",1,1,6) + "," + "(" + P("flow","float4(.5,.5,0,1)","color") + ").rg" + ")";
+                    if (port == "offset") body = "(" + body + "-" + baseUV + ")";
+                    break;
+                case "core.gradient":
+                    body = "NX_Gradient(" + P("uv",uv,"vector2") + "," + IntProp(n,"mode",0,0,2) + "," + Vec(n,"center",.5,.5) + "," + Prop(n,"angle",0) + "," + Prop(n,"radius",.5) + ")";
+                    if (port == "color") body = "float v=" + body + "; return float4(v,v,v,1);";
+                    break;
+                case "core.uvTile": body = "NX_TileUV(" + P("uv",uv,"vector2") + "," + IntProp(n,"mode",0,0,2) + "," + Vec(n,"tiling",1,1) + "," + Vec(n,"offset",0,0) + ")"; break;
+                case "core.posterize": body = "NX_Posterize(" + S("value",0) + "," + S("levels",4) + ")"; break;
                 case "core.vertexMotion": body = "(sin(" + P("time", "_Time.y", "float") + "*" + Prop(n, "speed", 1) + "+input.local.y*" + Prop(n, "frequency", 2) + ")*" + S("strength", .02) + ")"; break;
                 case "core.audioLink": body = "NXSG_Audio(" + Prop(n, "band", 0) + "," + Prop(n, "gain", 1) + "," + Prop(n, "smoothing", .5) + "," + Prop(n, "fallback", 0) + ")"; break;
                 case "core.normalMap": body = "NX_Normal(" + P("color", "float4(.5,.5,1,1)", "color") + "," + Prop(n, "strength", 1) + ")"; break;

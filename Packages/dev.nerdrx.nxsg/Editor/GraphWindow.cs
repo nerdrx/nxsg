@@ -679,9 +679,9 @@ namespace NXSG.Editor
                 case "core.ramp": case "core.value": case "core.time": case "core.add": case "core.mix": case "core.oneMinus": case "core.clamp": case "core.multiply": return new Color(.28f, .33f, .38f);
                 case "core.emission": case "core.toonSurface": return new Color(.13f, .37f, .24f);
                 case "core.unlitSurface": case "core.pbrSurface": case "core.shell": return new Color(.13f,.37f,.24f);
-                case "core.fresnel": case "core.colorRamp": case "core.layer": case "core.dissolve": return new Color(.40f,.34f,.10f);
+                case "core.gradient": case "core.posterize": case "core.fresnel": case "core.colorRamp": case "core.layer": case "core.dissolve": return new Color(.40f,.34f,.10f);
                 case "core.sticker": return new Color(.46f,.25f,.10f);
-                case "core.flipbook": case "core.uvDistort": return new Color(.16f,.32f,.52f);
+                case "core.uvTile": case "core.flipbook": case "core.uvDistort": return new Color(.16f,.32f,.52f);
                 case "core.vertexMotion": case "core.normalMap": return new Color(.12f,.38f,.40f);
                 case "core.audioLink": return new Color(.44f,.22f,.29f);
                 case "core.output": return new Color(.39f, .19f, .20f);
@@ -799,7 +799,10 @@ namespace NXSG.Editor
                     case "core.sticker": AddTexturePicker(node, "Sticker texture"); AddVector(node, "position", "Position", Vector2.zero); AddVector(node, "size", "Size", Vector2.one); AddNumber(node, "rotation", "Rotation", 0); AddNumber(node, "mask", "Mask", 1, "mask"); break;
                     case "core.dissolve": AddNumber(node, "threshold", "Threshold", .5f, "threshold"); AddNumber(node, "edgeWidth", "Edge width", .05f); break;
                     case "core.flipbook": AddNumber(node, "columns", "Columns", 1); AddNumber(node, "rows", "Rows", 1); AddNumber(node, "speed", "Speed", 1); break;
-                    case "core.uvDistort": AddNumber(node, "strength", "Strength", .05f, "strength"); AddNumber(node, "scale", "Scale", 5); AddNumber(node, "speed", "Speed", 1); break;
+                    case "core.uvDistort": AddDistortionControls(node); break;
+                    case "core.gradient": AddCoordinateChoice(node); AddIndexedChoice(node,"mode","Shape",new[]{"Linear","Radial","Angular"}); AddVector(node,"center","Center",new Vector2(.5f,.5f)); AddNumber(node,"angle","Angle (degrees)",0); AddNumber(node,"radius","Radius",.5f); break;
+                    case "core.uvTile": AddCoordinateChoice(node); AddIndexedChoice(node,"mode","Wrapping",new[]{"Repeat","Mirror","Clamp"}); AddVector(node,"tiling","Tiling",Vector2.one); AddVector(node,"offset","Offset",Vector2.zero); break;
+                    case "core.posterize": AddBoundedNumber(node,"levels","Steps",2,256,4,"levels"); break;
                     case "core.vertexMotion": AddNumber(node, "strength", "Strength", .02f, "strength"); AddNumber(node, "speed", "Speed", 1); AddNumber(node, "frequency", "Frequency", 2); break;
                     case "core.shell": AddNumber(node, "offset", "Shell offset", .02f, "offset"); break;
                     case "core.normalMap": AddNumber(node, "strength", "Strength", 1); break;

@@ -1,0 +1,255 @@
+{
+  "format": "nxsg",
+  "schemaVersion": 1,
+  "graphId": "ripple-tiles",
+  "nodes": [
+    {
+      "id": "uv",
+      "operation": "core.uv0",
+      "version": 1,
+      "properties": {}
+    },
+    {
+      "id": "gradient",
+      "operation": "core.gradient",
+      "version": 1,
+      "properties": {
+        "mode": 0,
+        "center": [
+          0.5,
+          0.5
+        ]
+      }
+    },
+    {
+      "id": "ripple",
+      "operation": "core.uvDistort",
+      "version": 1,
+      "properties": {
+        "mode": 3,
+        "strength": 0.15,
+        "scale": 24,
+        "speed": 3,
+        "radius": 0.8,
+        "falloff": 1
+      }
+    },
+    {
+      "id": "tile",
+      "operation": "core.uvTile",
+      "version": 1,
+      "properties": {
+        "mode": 1,
+        "tiling": [
+          2,
+          2
+        ]
+      }
+    },
+    {
+      "id": "waves",
+      "operation": "core.wave",
+      "version": 1,
+      "properties": {
+        "dimensions": 2,
+        "mode": 1,
+        "scale": 25,
+        "speed": 0
+      }
+    },
+    {
+      "id": "steps",
+      "operation": "core.posterize",
+      "version": 1,
+      "properties": {
+        "levels": 6
+      }
+    },
+    {
+      "id": "colors",
+      "operation": "core.colorRamp",
+      "version": 1,
+      "properties": {
+        "stops": [
+          [
+            0,
+            0.01,
+            0.02,
+            0.08,
+            1
+          ],
+          [
+            0.5,
+            0.05,
+            0.7,
+            0.9,
+            1
+          ],
+          [
+            1,
+            1,
+            0.1,
+            0.5,
+            1
+          ]
+        ]
+      }
+    },
+    {
+      "id": "surface",
+      "operation": "core.unlitSurface",
+      "version": 1,
+      "properties": {}
+    },
+    {
+      "id": "output",
+      "operation": "core.output",
+      "version": 1,
+      "properties": {}
+    }
+  ],
+  "connections": [
+    {
+      "id": "uv-gradient-uv",
+      "from": {
+        "nodeId": "uv",
+        "portId": "uv"
+      },
+      "to": {
+        "nodeId": "gradient",
+        "portId": "uv"
+      }
+    },
+    {
+      "id": "uv-ripple-uv",
+      "from": {
+        "nodeId": "uv",
+        "portId": "uv"
+      },
+      "to": {
+        "nodeId": "ripple",
+        "portId": "uv"
+      }
+    },
+    {
+      "id": "gradient-ripple-mask",
+      "from": {
+        "nodeId": "gradient",
+        "portId": "value"
+      },
+      "to": {
+        "nodeId": "ripple",
+        "portId": "mask"
+      }
+    },
+    {
+      "id": "ripple-tile-uv",
+      "from": {
+        "nodeId": "ripple",
+        "portId": "uv"
+      },
+      "to": {
+        "nodeId": "tile",
+        "portId": "uv"
+      }
+    },
+    {
+      "id": "tile-waves-uv",
+      "from": {
+        "nodeId": "tile",
+        "portId": "uv"
+      },
+      "to": {
+        "nodeId": "waves",
+        "portId": "uv"
+      }
+    },
+    {
+      "id": "waves-steps-value",
+      "from": {
+        "nodeId": "waves",
+        "portId": "value"
+      },
+      "to": {
+        "nodeId": "steps",
+        "portId": "value"
+      }
+    },
+    {
+      "id": "steps-colors-value",
+      "from": {
+        "nodeId": "steps",
+        "portId": "value"
+      },
+      "to": {
+        "nodeId": "colors",
+        "portId": "value"
+      }
+    },
+    {
+      "id": "colors-surface-albedo",
+      "from": {
+        "nodeId": "colors",
+        "portId": "color"
+      },
+      "to": {
+        "nodeId": "surface",
+        "portId": "albedo"
+      }
+    },
+    {
+      "id": "surface-output-surface",
+      "from": {
+        "nodeId": "surface",
+        "portId": "surface"
+      },
+      "to": {
+        "nodeId": "output",
+        "portId": "surface"
+      }
+    }
+  ],
+  "parameters": [],
+  "resources": [],
+  "patterns": [],
+  "layout": {
+    "nodes": {
+      "uv": {
+        "x": 0,
+        "y": 40
+      },
+      "gradient": {
+        "x": 0,
+        "y": 250
+      },
+      "ripple": {
+        "x": 240,
+        "y": 40
+      },
+      "tile": {
+        "x": 480,
+        "y": 40
+      },
+      "waves": {
+        "x": 710,
+        "y": 40
+      },
+      "steps": {
+        "x": 940,
+        "y": 40
+      },
+      "colors": {
+        "x": 1170,
+        "y": 40
+      },
+      "surface": {
+        "x": 1400,
+        "y": 40
+      },
+      "output": {
+        "x": 1630,
+        "y": 40
+      }
+    }
+  }
+}

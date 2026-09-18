@@ -61,9 +61,32 @@ namespace NXSG.Editor
             }
         }
 
-        void AddBoundedNumber(GraphNode node, string property, string label, float min, float max, float fallback)
+        void AddDistortionControls(GraphNode node)
+        {
+            AddCoordinateChoice(node);
+            AddIndexedChoice(node,"mode","Distortion",new[]{"Noise / turbulence","Waves","Swirl","Ripple","Flow map (red/green)","Pixelate","Lens / bulge"});
+            var mode = (int?)node.Properties["mode"] ?? 0;
+            AddNumber(node,"strength",mode == 5 ? "Blend amount (0–1)" : "Strength",.05f,"strength");
+            AddBoundedNumber(node,"mask","Mask",0,1,1,"mask");
+            AddVector(node,"axes","Axis strength",Vector2.one);
+            if (mode == 0 || mode == 1 || mode == 3 || mode == 5) AddNumber(node,"scale",mode == 5 ? "Grid cells" : "Scale",5);
+            if (mode == 0 || mode == 1 || mode == 3) AddNumber(node,"speed","Animation speed",1);
+            if (mode == 0 || mode == 1) AddVector(node,"direction",mode == 0 ? "Scroll direction" : "Wave direction",Vector2.one);
+            if (mode == 0) AddIndexedChoice(node,"detail","Detail layers",Enumerable.Range(1,6).Select(i=>i.ToString()).ToArray(),1,1);
+            if (mode == 2 || mode == 3 || mode == 6)
+            {
+                AddVector(node,"center","Center",new Vector2(.5f,.5f));
+                AddNumber(node,"radius","Radius",.5f);
+                AddBoundedNumber(node,"falloff","Edge falloff",0,8,1);
+            }
+            inspector.Add(new Label(mode == 4 ? "Connect a flow texture's Color to Flow. Red/green set direction; 0.5 is neutral. Import flow textures as linear data." : "Mask 0 or Strength 0 leaves UVs unchanged. Chain UV outputs to combine effects.") { style = { whiteSpace = WhiteSpace.Normal } });
+            inspector.Add(new Label("Offset output gives the UV displacement for preview or reuse.") { style = { whiteSpace = WhiteSpace.Normal } });
+        }
+
+        void AddBoundedNumber(GraphNode node, string property, string label, float min, float max, float fallback, string inputPort = null)
         {
             var field = new Slider(label, min, max) { value = (float?)node.Properties[property] ?? fallback, showInputField = true };
+            field.SetEnabled(inputPort == null || !graph.Connections.Any(e => e.To.NodeId == node.Id && e.To.PortId == inputPort));
             field.RegisterValueChangedCallback(evt => Edit("Change " + label, () => node.Properties[property] = Mathf.Clamp(evt.newValue, min, max)));
             inspector.Add(field);
         }
