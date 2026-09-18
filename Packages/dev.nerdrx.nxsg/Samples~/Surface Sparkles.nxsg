@@ -1,0 +1,135 @@
+{
+  "format": "nxsg",
+  "schemaVersion": 1,
+  "graphId": "surface-sparkles-example",
+  "nodes": [
+    {
+      "id": "baseColor",
+      "operation": "core.constant",
+      "version": 1,
+      "properties": {
+        "valueType": "color",
+        "value": [
+          0.06,
+          0.12,
+          0.2,
+          1
+        ]
+      }
+    },
+    {
+      "id": "base",
+      "operation": "core.toonSurface",
+      "version": 1,
+      "properties": {}
+    },
+    {
+      "id": "sparkColor",
+      "operation": "core.constant",
+      "version": 1,
+      "properties": {
+        "valueType": "color",
+        "value": [
+          1,
+          0.35,
+          0.08,
+          1
+        ]
+      }
+    },
+    {
+      "id": "particles",
+      "operation": "core.surfaceParticles",
+      "version": 1,
+      "properties": {
+        "density": 0.3,
+        "size": 0.06,
+        "lifetime": 2,
+        "speed": 0.25,
+        "spread": 0.06,
+        "gravity": 0,
+        "blendMode": 1,
+        "opacity": 1,
+        "mask": 1
+      }
+    },
+    {
+      "id": "output",
+      "operation": "core.output",
+      "version": 1,
+      "properties": {}
+    }
+  ],
+  "connections": [
+    {
+      "id": "baseColor-base",
+      "from": {
+        "nodeId": "baseColor",
+        "portId": "value"
+      },
+      "to": {
+        "nodeId": "base",
+        "portId": "albedo"
+      }
+    },
+    {
+      "id": "base-particles",
+      "from": {
+        "nodeId": "base",
+        "portId": "surface"
+      },
+      "to": {
+        "nodeId": "particles",
+        "portId": "base"
+      }
+    },
+    {
+      "id": "sparkColor-particles",
+      "from": {
+        "nodeId": "sparkColor",
+        "portId": "value"
+      },
+      "to": {
+        "nodeId": "particles",
+        "portId": "albedo"
+      }
+    },
+    {
+      "id": "particles-output",
+      "from": {
+        "nodeId": "particles",
+        "portId": "surface"
+      },
+      "to": {
+        "nodeId": "output",
+        "portId": "surface"
+      }
+    }
+  ],
+  "parameters": [],
+  "resources": [],
+  "layout": {
+    "nodes": {
+      "baseColor": {
+        "x": 0,
+        "y": 0
+      },
+      "base": {
+        "x": 230,
+        "y": 0
+      },
+      "sparkColor": {
+        "x": 230,
+        "y": 220
+      },
+      "particles": {
+        "x": 470,
+        "y": 0
+      },
+      "output": {
+        "x": 730,
+        "y": 0
+      }
+    }
+  }
+}

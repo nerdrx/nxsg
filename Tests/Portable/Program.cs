@@ -63,6 +63,7 @@ internal static class Program
         }
         EffectsCoreChecks.Run(Assert);
         ParticleChecks.Run(Assert);
+        SurfaceParticleChecks.Run(Assert);
         EffectsBackendChecks.Run(Assert);
         NestedShellChecks.Run(Assert);
         FloatHashChecks.Run(Assert);

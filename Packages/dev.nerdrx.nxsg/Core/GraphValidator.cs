@@ -152,6 +152,7 @@ namespace NXSG.Core
                 case "core.toonSurface": numeric = new[] { "opacity", "displacement", "cutoff", "threshold", "softness", "shadowStrength" }; break;
                 case "core.unlitSurface": numeric = new[] { "opacity", "displacement", "cutoff" }; break;
                 case "core.pbrSurface": numeric = new[] { "opacity", "displacement", "metallic", "roughness", "cutoff" }; break;
+                case "core.surfaceParticles": numeric = new[] { "density", "size", "lifetime", "speed", "gravity", "spread", "opacity", "mask" }; break;
                 case "core.particleSurface": numeric = new[] { "opacity", "softDistance" }; break;
                 case "core.fresnel": numeric = new[] { "power" }; break;
                 case "core.colorRamp": break;
@@ -188,6 +189,14 @@ namespace NXSG.Core
                 CheckRange(node.Properties["opacity"], path + ".properties.opacity", 0, 1, diagnostics);
                 CheckIntegerRange(node.Properties["blendMode"], path + ".properties.blendMode", 0, 1, diagnostics);
                 CheckRange(node.Properties["softDistance"], path + ".properties.softDistance", 0, float.MaxValue, diagnostics);
+            }
+            if (node.Operation == "core.surfaceParticles")
+            {
+                CheckIntegerRange(node.Properties["blendMode"], path + ".properties.blendMode", 0, 1, diagnostics);
+                foreach (var setting in new[] { "density", "opacity", "mask" }) CheckRange(node.Properties[setting], path + ".properties." + setting, 0, 1, diagnostics);
+                CheckRange(node.Properties["size"], path + ".properties.size", .0001, 10, diagnostics);
+                CheckRange(node.Properties["lifetime"], path + ".properties.lifetime", .001, 1000, diagnostics);
+                CheckRange(node.Properties["spread"], path + ".properties.spread", 0, 1000, diagnostics);
             }
             if (node.Operation == "core.voronoi") CheckRange(node.Properties["randomness"], path + ".properties.randomness", 0, 1, diagnostics);
             if (node.Operation == "core.wave")

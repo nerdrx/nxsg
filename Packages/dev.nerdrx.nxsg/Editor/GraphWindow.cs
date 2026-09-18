@@ -678,7 +678,7 @@ namespace NXSG.Editor
                 case "core.subtract": case "core.divide": case "core.minimum": case "core.maximum":
                 case "core.ramp": case "core.value": case "core.time": case "core.add": case "core.mix": case "core.oneMinus": case "core.clamp": case "core.multiply": return new Color(.28f, .33f, .38f);
                 case "core.emission": case "core.toonSurface": return new Color(.13f, .37f, .24f);
-                case "core.particleSurface": case "core.unlitSurface": case "core.pbrSurface": case "core.shell": return new Color(.13f,.37f,.24f);
+                case "core.surfaceParticles": case "core.particleSurface": case "core.unlitSurface": case "core.pbrSurface": case "core.shell": return new Color(.13f,.37f,.24f);
                 case "core.gradient": case "core.posterize": case "core.fresnel": case "core.colorRamp": case "core.layer": case "core.dissolve": return new Color(.40f,.34f,.10f);
                 case "core.sticker": return new Color(.46f,.25f,.10f);
                 case "core.uvTile": case "core.flipbook": case "core.uvDistort": return new Color(.16f,.32f,.52f);
@@ -795,6 +795,18 @@ namespace NXSG.Editor
                     case "core.layer": AddNumber(node, "mask", "Mask", 1, "mask"); break;
                     case "core.pbrSurface": AddNumber(node, "opacity", "Opacity", 1, "opacity"); AddNumber(node, "cutoff", "Cutoff", .001f); AddNumber(node, "displacement", "Displacement", 0, "displacement"); AddNumber(node, "metallic", "Metallic", 0, "metallic"); AddNumber(node, "roughness", "Roughness", .5f, "roughness"); break;
                     case "core.toonSurface": AddNumber(node, "opacity", "Opacity", 1, "opacity"); AddNumber(node, "cutoff", "Cutoff", .001f); AddNumber(node, "displacement", "Displacement", 0, "displacement"); break;
+                    case "core.surfaceParticles":
+                        AddIndexedChoice(node,"blendMode","Blending",new[]{"Alpha","Additive"},1);
+                        AddBoundedNumber(node,"density","Triangle density",0,1,.1f);
+                        AddBoundedNumber(node,"size","Particle size",.0001f,1,.03f);
+                        AddBoundedNumber(node,"lifetime","Lifetime (seconds)",.05f,30,2);
+                        AddNumber(node,"speed","Outward speed",.2f);
+                        AddNumber(node,"gravity","Gravity (local Y)",0);
+                        AddBoundedNumber(node,"spread","Velocity randomness",0,5,.05f);
+                        AddBoundedNumber(node,"opacity","Opacity",0,1,1,"opacity");
+                        AddBoundedNumber(node,"mask","Emitter mask",0,1,1,"mask");
+                        inspector.Add(new Label("Connect your surface to Base, then this node to Output. Emits from the same mesh: up to one particle per triangle. Mask uses mesh UVs; particle textures use sprite UVs. Particles follow the current pose. Expand renderer bounds if particles disappear near screen edges.") { style = { whiteSpace = WhiteSpace.Normal } });
+                        break;
                     case "core.particleSurface":
                         AddIndexedChoice(node, "blendMode", "Blending", new[] { "Alpha · smoke / fluff", "Additive · sparks / glow" });
                         AddBoundedNumber(node, "opacity", "Opacity", 0, 1, 1, "opacity");

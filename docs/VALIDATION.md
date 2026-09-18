@@ -116,3 +116,14 @@ Limits: PBR currently provides main-light BRDF, SH ambient and one reflection pr
 `Tests/Editor/ParticleRenderSmoke.cs` passed in Unity 2022.3.22f1, Linux OpenGL under headless Gamescope (`work/unity/particle-render-verified.log`, `NXSG PARTICLE RENDER SMOKE PASSED`). It checks transparent queue and no shadow caster, alpha versus additive pixels, vertex alpha, soft intersections at a known depth gap in perspective and orthographic cameras, the disabled-depth path, Particle Color RGB through an ordinary Unlit surface, white vertex color on a mesh without a color channel, the Sparkles sample, and an actual billboard ParticleSystemRenderer with Color over Lifetime alpha changes.
 
 This implements particle materials for Unity's existing particle system, not GPU simulation. The existing Flipbook, Distortion and AudioLink nodes remain composable; this check does not establish live AudioLink provider behavior. Mesh-particle procedural GPU instancing, native Windows/DX11, stereo VR, SDK upload and VRChat client fallback behavior remain unverified. Soft intersections require a camera depth texture; distance 0 omits depth sampling. No user scene or authored graph was changed by the hidden fixture.
+
+
+## Same-mesh Surface Particles — 2026-09-18
+
+Added the experimental **Surface Particles** decorator: existing surface → Surface Particles → Output. A geometry pass emits camera-facing quads from the original rendered triangles; it requires neither a separate mesh nor a ParticleSystem. The abandoned extra-mesh prototype is not shipped.
+
+`Tests/Portable/SurfaceParticleChecks.cs` passes with the full portable suite: node contract/defaults, property ranges, finite values, bounded geometry output, base-pass preservation and nesting rejection. `Tests/Editor/SurfaceParticleRenderSmoke.cs` passed under headless Gamescope with Unity 2022.3.22f1/OpenGL (`work/unity/surface-particles-verified.log`, `NXSG SURFACE PARTICLE RENDER SMOKE PASSED`). The graphics check covers density 0 versus 1, wired mask 0, deterministic wired time, visible motion over time, camera rotation, emission following a moved bone in a SkinnedMeshRenderer, and the Surface Sparkles sample with its base material intact.
+
+![Same-mesh surface emission captured in Unity](evidence/2026-09-18-surface-particles.png)
+
+An initial zero-density compile exposed a Unity OpenGL geometry-link issue: optimizing away every Append loses the output primitive declaration. Invisible particles now produce degenerate quads; density and mask reduce visibility, not the number of geometry invocations. Every source triangle is processed. The pass is an analytical loop following the current mesh pose, not stateful simulation. Source bounds remain unchanged; expand them for outward motion. Shader-driven base displacement, per-particle alpha sorting, GPU instancing, DX11, stereo VR and live VRChat behavior remain unverified or unsupported as detailed in [particle usage](PARTICLES.md).

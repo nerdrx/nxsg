@@ -34,7 +34,7 @@ namespace NXSG.Backend
         public static bool IsAdvanced(ShaderGraph graph)
         {
             if (graph?.Nodes == null) return false;
-            var ops = new HashSet<string> { "core.unlitSurface", "core.pbrSurface", "core.particleSurface", "core.particleColor", "core.fresnel", "core.colorRamp", "core.layer", "core.sticker", "core.dissolve", "core.flipbook", "core.uvDistort", "core.vertexMotion", "core.audioLink", "core.shell", "core.normalMap", "core.previewVector", "core.musgrave", "core.voronoi", "core.checker", "core.wave", "core.gradient", "core.uvTile", "core.posterize" };
+            var ops = new HashSet<string> { "core.unlitSurface", "core.pbrSurface", "core.particleSurface", "core.particleColor", "core.surfaceParticles", "core.fresnel", "core.colorRamp", "core.layer", "core.sticker", "core.dissolve", "core.flipbook", "core.uvDistort", "core.vertexMotion", "core.audioLink", "core.shell", "core.normalMap", "core.previewVector", "core.musgrave", "core.voronoi", "core.checker", "core.wave", "core.gradient", "core.uvTile", "core.posterize" };
             // Only reachable effects select the extended lowering; disconnected nodes never change shading.
             var connected = new HashSet<string>();
             var queue = new Queue<string>(graph.Nodes.Where(n => n?.Operation == "core.output").Select(n => n.Id));
@@ -93,6 +93,9 @@ namespace NXSG.Backend
             var root = Source(output, "surface");
             if (root == null) throw new InvalidOperationException("Connect a Surface to Output.");
             var particle = root.Operation == "core.particleSurface";
+            var surfaceParticles = root.Operation == "core.surfaceParticles";
+            var baseRoot = surfaceParticles ? Source(root, "base") : root;
+            if (surfaceParticles && baseRoot == null) throw new InvalidOperationException("Connect a surface to Surface Particles Base.");
             var name = options.ShaderName;
             if (string.IsNullOrEmpty(name) || name.Length > 180 || name.Any(c => char.IsControl(c) || c == '"' || c == '\\')) throw new InvalidOperationException("Invalid shader name.");
             var fallback = options.IncludeVrcFallback ? options.VrcFallbackTag : null;
@@ -113,7 +116,7 @@ namespace NXSG.Backend
                 properties.Add(new MaterialProperty { Name = symbol, DisplayName = "Texture " + textureNames.Count, Type = GraphValueType.Texture2D, Binding = GraphBindingKind.Material, ResourceId = id, ResourceUri = resource.Uri });
             }
             var passes = new List<SurfacePass>();
-            if (!particle) FlattenSurfaces(root, "0", 0, passes);
+            if (!particle) FlattenSurfaces(baseRoot, "0", 0, passes);
             var b = new StringBuilder();
             b.AppendLine("Shader \"" + name + "\" {\nProperties {");
             foreach (var prop in properties.Where(p => p.Type == GraphValueType.Texture2D)) b.AppendLine(prop.Name + " (\"" + prop.DisplayName + "\", 2D) = \"white\" {}");
@@ -136,8 +139,11 @@ namespace NXSG.Backend
             var passCode = new StringBuilder();
             if (particle) passCode.Append(ParticlePass(root));
             else for (var i = 0; i < passes.Count; i++) passCode.Append(Pass(passes[i].Surface, i, passes[i].Offset));
+            if (surfaceParticles) passCode.Append(SurfaceParticleShader.Pass(
+                Scalar(root,"mask",1,true), Input(root,"albedo","float4(1,1,1,1)","color"), Input(root,"emission","float4(0,0,0,1)","color"), Scalar(root,"opacity",1), Input(root,"time","_Time.y","float",true),
+                Prop(root,"density",.1), Prop(root,"size",.03), Prop(root,"lifetime",2), Prop(root,"speed",.2), Prop(root,"gravity",0), Prop(root,"spread",.05), IntProp(root,"blendMode",1,0,1)));
             var shadowPass = !particle && options.IncludeShadowCaster ? Shadow(passes[0].Surface, passes[0].Offset) : "";
-            b.AppendLine("}\nSubShader {\nTags { \"RenderType\"=\"" + (particle ? "Transparent" : "Opaque") + "\" \"Queue\"=\"" + (particle ? "Transparent" : "Geometry") + "\"" + (fallback == null ? "" : " \"VRCFallback\"=\"" + fallback + "\"") + " }");
+            b.AppendLine("}\nSubShader {\nTags { \"RenderType\"=\"" + (particle ? "Transparent" : "Opaque") + "\" \"Queue\"=\"" + (particle ? "Transparent" : "Geometry") + "\"" + (surfaceParticles ? " \"DisableBatching\"=\"True\"" : "") + (fallback == null ? "" : " \"VRCFallback\"=\"" + fallback + "\"") + " }");
             b.AppendLine("CGINCLUDE\n#include \"UnityCG.cginc\"\n#include \"Lighting.cginc\"\n#include \"AutoLight.cginc\"\n#include \"UnityPBSLighting.cginc\"");
             b.AppendLine("float4 _Color;");
             foreach (var prop in properties) b.AppendLine(prop.Type == GraphValueType.Texture2D ? "sampler2D " + prop.Name + "; float4 " + prop.Name + "_ST;" : (prop.Type == GraphValueType.Float ? "float " : "float4 ") + prop.Name + ";");
@@ -152,6 +158,7 @@ namespace NXSG.Backend
             if (live.Any(id => nodes[id].Operation == "core.musgrave" || nodes[id].Operation == "core.voronoi" || (nodes[id].Operation == "core.noise" && (int?)nodes[id].Properties["dimensions"] == 4)))
                 diagnostics.Add(new Diagnostic(DiagnosticSeverity.Warning, "cost.procedural", "$", "Fractal, cellular and 4D patterns cost more than 2D noise; start with few detail layers, especially across shells."));
             if (live.Any(id => nodes[id].Operation == "core.vertexMotion")) diagnostics.Add(new Diagnostic(DiagnosticSeverity.Warning, "bounds.displacement", "$", "Vertex displacement requires mesh/SkinnedMeshRenderer bounds large enough for the motion."));
+            if (surfaceParticles) diagnostics.Add(new Diagnostic(DiagnosticSeverity.Warning, "cost.surfaceParticles", root.Id, "An extra PC geometry pass processes every source triangle; density controls visible particles, not geometry work. Density depends on mesh topology; particles follow the current pose. Expand renderer bounds for outward motion. Stereo and VRChat client behavior need validation."));
             if (particle && root.Properties["softDistance"] != null && (double)root.Properties["softDistance"] > 0)
                 diagnostics.Add(new Diagnostic(DiagnosticSeverity.Warning, "cost.particleDepth", root.Id, "Soft intersections require a camera depth texture. Set soft distance to 0 when unavailable; transparent overdraw and depth sampling add cost."));
             return b.ToString();
@@ -171,6 +178,7 @@ namespace NXSG.Backend
         {
             if (traversalDepth > 64) throw new InvalidOperationException("Nested shell traversal exceeds depth limit.");
             if (node == null) throw new InvalidOperationException("Connect Toon, Unlit or PBR to each surface socket.");
+            if (node.Operation == "core.surfaceParticles") throw new InvalidOperationException("Surface Particles must be the final surface before Output; nesting is not supported.");
             if (node.Operation != "core.shell") { CheckSurface(node); if (result.Count >= 9) throw new InvalidOperationException("Nested shells support at most 8 transparent shell layers (9 leaf surfaces)."); result.Add(new SurfacePass { Surface = node, Offset = inheritedOffset }); return; }
             FlattenSurfaces(Source(node, "base"), inheritedOffset, traversalDepth + 1, result);
             var offset = "(" + inheritedOffset + "+" + Scalar(node, "offset", .02, true) + ")";
