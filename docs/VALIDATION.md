@@ -107,3 +107,12 @@ Validated on **Linux Unity 2022.3.22f1, OpenGL Core, RX 7900 XTX**, inside hidde
 Local evidence logs (ignored scratch files): `work/unity/effects-render-verified.log`, `effects-variants.log`, `effects-editor-final.log`, `effects-build.log`. Runnable fixtures live in `Tests/Editor` and `Tests/Portable`.
 
 Limits: PBR currently provides main-light BRDF, SH ambient and one reflection probe; no additional-light/lightmap passes. Standalone surfaces use cutout opacity; the one Shell layer alpha-blends and does not cast its own shadow. Offset/motion do not expand renderer bounds automatically. Patterns are flat independent copies, not linked external subgraphs. Previews show one selected output in the sidebar. Windows, live VRChat/VR, actual AudioLink music, advanced stereo variants, and transparent-object sorting remain unverified.
+
+
+## Particle materials — 2026-09-18
+
+`Tests/Portable/ParticleChecks.cs` passes with the full portable harness. It checks node contracts, property ranges, alpha/additive states, particle fallback tagging, optional depth sampling, and explicit rejection of Particle Surface inside Shells.
+
+`Tests/Editor/ParticleRenderSmoke.cs` passed in Unity 2022.3.22f1, Linux OpenGL under headless Gamescope (`work/unity/particle-render-verified.log`, `NXSG PARTICLE RENDER SMOKE PASSED`). It checks transparent queue and no shadow caster, alpha versus additive pixels, vertex alpha, soft intersections at a known depth gap in perspective and orthographic cameras, the disabled-depth path, Particle Color RGB through an ordinary Unlit surface, white vertex color on a mesh without a color channel, the Sparkles sample, and an actual billboard ParticleSystemRenderer with Color over Lifetime alpha changes.
+
+This implements particle materials for Unity's existing particle system, not GPU simulation. The existing Flipbook, Distortion and AudioLink nodes remain composable; this check does not establish live AudioLink provider behavior. Mesh-particle procedural GPU instancing, native Windows/DX11, stereo VR, SDK upload and VRChat client fallback behavior remain unverified. Soft intersections require a camera depth texture; distance 0 omits depth sampling. No user scene or authored graph was changed by the hidden fixture.

@@ -1,6 +1,6 @@
 # Built-in node pack
 
-The canvas now offers 45 visible nodes, plus hidden Parameter and Preview Vector helpers. Socket color indicates data type: yellow color, gray scalar, blue UV coordinates, cyan normals, green surface. Drag from either end; compatible-node menus and clipboard operations use the same core catalog.
+The canvas now offers 47 visible nodes, plus hidden Parameter and Preview Vector helpers. Socket color indicates data type: yellow color, gray scalar, blue UV coordinates, cyan normals, green surface. Drag from either end; compatible-node menus and clipboard operations use the same core catalog.
 
 ## New nodes
 
@@ -45,6 +45,8 @@ The original UV Coordinates, Texture, Color, Multiply, Toon Surface, and Output 
 - PC Built-In backend only; VRChat client, headset, and mobile acceptance remain separate checks.
 
 Try **Assets/NXSGExamples/Polar Palette.nxsg** in the development project for rotating radial noise. The distributable copy is in `Samples~/Polar Palette.nxsg`.
+
+Try **Assets/NXSGExamples/Particle Sparkles.nxsg** for a radial soft-dot mask, bright additive particle color, and Particle Surface output. The distributable copy is in `Samples~/Particle Sparkles.nxsg`.
 
 ## Coordinate recipes
 
@@ -103,6 +105,8 @@ can feed a surface or another effect.
 | Posterize | Value, levels → value | Quantize a 0–1 mask to 2–256 evenly spaced levels. |
 | Vertex Motion | Time, strength → displacement | Normal displacement follows an analytic sine wave. Texture inputs evaluated in the vertex stage use explicit LOD 0. Expand renderer bounds for large offsets. |
 | AudioLink | Band, gain, smoothing, fallback → scalar | Uses the official `_AudioTexture` layout when available. Smoothing is normalized 0–1: 0 is least smoothed/raw and 1 is most smoothed. `_NXSG_AudioLinkPreview` and `_NXSG_AudioLinkValue` provide editor preview data. |
+| Particle Surface | Albedo, emission, opacity → surface | Particle-facing surface. Blend mode 1 is additive; opacity defaults to 1 and soft distance to 0 (off). Optional soft intersection uses camera depth. Renderer COLOR multiplies particle color and alpha automatically. |
+| Particle Color | Renderer COLOR → color and alpha | Reads Unity's per-particle RGBA stream, including Color over Lifetime. Do not multiply it into albedo or opacity again. |
 | Shell | Base surface, layer surface, offset → surface | Accepts nested Shells in Base or Layer, up to 8 transparent passes. Base chains keep each offset relative to the original mesh; nesting in Layer adds ancestor offsets. Layers render in graph order, base first. Each leaf retains its own surface settings; only the first base surface casts shadows. Extra passes increase draw calls and overdraw; bounds and transparent sorting need review on each mesh. |
 
 AudioLink support does not install or require the AudioLink package. Missing or

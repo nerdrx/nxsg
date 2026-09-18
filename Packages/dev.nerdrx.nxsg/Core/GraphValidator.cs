@@ -152,6 +152,7 @@ namespace NXSG.Core
                 case "core.toonSurface": numeric = new[] { "opacity", "displacement", "cutoff", "threshold", "softness", "shadowStrength" }; break;
                 case "core.unlitSurface": numeric = new[] { "opacity", "displacement", "cutoff" }; break;
                 case "core.pbrSurface": numeric = new[] { "opacity", "displacement", "metallic", "roughness", "cutoff" }; break;
+                case "core.particleSurface": numeric = new[] { "opacity", "softDistance" }; break;
                 case "core.fresnel": numeric = new[] { "power" }; break;
                 case "core.colorRamp": break;
                 case "core.layer": numeric = new[] { "mask" }; break;
@@ -181,6 +182,12 @@ namespace NXSG.Core
                 CheckIntegerRange(node.Properties["mode"], path + ".properties.mode", 0, 2, diagnostics);
                 CheckRange(node.Properties["lacunarity"], path + ".properties.lacunarity", 1, 4, diagnostics);
                 CheckRange(node.Properties["gain"], path + ".properties.gain", 0, 1, diagnostics);
+            }
+            if (node.Operation == "core.particleSurface")
+            {
+                CheckRange(node.Properties["opacity"], path + ".properties.opacity", 0, 1, diagnostics);
+                CheckIntegerRange(node.Properties["blendMode"], path + ".properties.blendMode", 0, 1, diagnostics);
+                CheckRange(node.Properties["softDistance"], path + ".properties.softDistance", 0, float.MaxValue, diagnostics);
             }
             if (node.Operation == "core.voronoi") CheckRange(node.Properties["randomness"], path + ".properties.randomness", 0, 1, diagnostics);
             if (node.Operation == "core.wave")

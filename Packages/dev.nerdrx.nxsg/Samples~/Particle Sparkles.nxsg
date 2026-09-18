@@ -1,0 +1,61 @@
+{
+  "format": "nxsg",
+  "schemaVersion": 1,
+  "graphId": "particle-sparkles-example",
+  "nodes": [
+    { "id": "uv", "operation": "core.uv0", "version": 1, "properties": {} },
+    {
+      "id": "radial",
+      "operation": "core.gradient",
+      "version": 1,
+      "properties": { "mode": 1, "center": [0.5, 0.5], "radius": 0.5 }
+    },
+    { "id": "invert", "operation": "core.oneMinus", "version": 1, "properties": {} },
+    {
+      "id": "opacity",
+      "operation": "core.ramp",
+      "version": 1,
+      "properties": {
+        "blackPoint": 0.0,
+        "whitePoint": 1.0,
+        "smoothness": 0.4,
+        "points": [[0, 0], [0.35, 0.1], [0.7, 0.85], [1, 1]]
+      }
+    },
+    {
+      "id": "sparkle",
+      "operation": "core.constant",
+      "version": 1,
+      "properties": { "valueType": "color", "value": [1, 0.32, 0.04, 1] }
+    },
+    {
+      "id": "particle",
+      "operation": "core.particleSurface",
+      "version": 1,
+      "properties": { "opacity": 1, "blendMode": 1, "softDistance": 0 }
+    },
+    { "id": "output", "operation": "core.output", "version": 1, "properties": {} }
+  ],
+  "connections": [
+    { "id": "uv-gradient", "from": { "nodeId": "uv", "portId": "uv" }, "to": { "nodeId": "radial", "portId": "uv" } },
+    { "id": "gradient-invert", "from": { "nodeId": "radial", "portId": "value" }, "to": { "nodeId": "invert", "portId": "color" } },
+    { "id": "invert-ramp", "from": { "nodeId": "invert", "portId": "color" }, "to": { "nodeId": "opacity", "portId": "value" } },
+    { "id": "ramp-opacity", "from": { "nodeId": "opacity", "portId": "value" }, "to": { "nodeId": "particle", "portId": "opacity" } },
+    { "id": "color-albedo", "from": { "nodeId": "sparkle", "portId": "value" }, "to": { "nodeId": "particle", "portId": "albedo" } },
+    { "id": "particle-output", "from": { "nodeId": "particle", "portId": "surface" }, "to": { "nodeId": "output", "portId": "surface" } }
+  ],
+  "parameters": [],
+  "resources": [],
+  "patterns": [],
+  "layout": {
+    "nodes": {
+      "uv": { "x": -520, "y": 40 },
+      "radial": { "x": -300, "y": 40 },
+      "invert": { "x": -80, "y": 40 },
+      "opacity": { "x": 140, "y": 40 },
+      "sparkle": { "x": 140, "y": 220 },
+      "particle": { "x": 390, "y": 80 },
+      "output": { "x": 650, "y": 80 }
+    }
+  }
+}

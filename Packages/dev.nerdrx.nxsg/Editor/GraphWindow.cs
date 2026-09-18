@@ -524,8 +524,8 @@ namespace NXSG.Editor
                 case "core.uv0": case "core.objectUV": case "core.worldUV": case "core.uvTransform":
                 case "core.uvScroll": case "core.uvRotate": case "core.polarUV":
                     return new[] { "core.uv0", "core.objectUV", "core.worldUV", "core.uvTransform", "core.uvScroll", "core.uvRotate", "core.polarUV" };
-                case "core.toonSurface": case "core.unlitSurface": case "core.pbrSurface":
-                    return new[] { "core.toonSurface", "core.unlitSurface", "core.pbrSurface" };
+                case "core.toonSurface": case "core.unlitSurface": case "core.pbrSurface": case "core.particleSurface":
+                    return new[] { "core.toonSurface", "core.unlitSurface", "core.pbrSurface", "core.particleSurface" };
                 default: return Array.Empty<string>();
             }
         }
@@ -674,11 +674,11 @@ namespace NXSG.Editor
                 case "core.polarUV": case "core.uvRotate": case "core.objectUV": case "core.worldUV":
                 case "core.uvTransform": case "core.uvScroll": case "core.uv0": return new Color(.16f, .32f, .52f);
                 case "core.noise": case "core.musgrave": case "core.voronoi": case "core.checker": case "core.wave": case "core.texture2D": return new Color(.46f, .25f, .10f);
-                case "core.constant": return new Color(.40f, .34f, .10f);
+                case "core.particleColor": case "core.constant": return new Color(.40f, .34f, .10f);
                 case "core.subtract": case "core.divide": case "core.minimum": case "core.maximum":
                 case "core.ramp": case "core.value": case "core.time": case "core.add": case "core.mix": case "core.oneMinus": case "core.clamp": case "core.multiply": return new Color(.28f, .33f, .38f);
                 case "core.emission": case "core.toonSurface": return new Color(.13f, .37f, .24f);
-                case "core.unlitSurface": case "core.pbrSurface": case "core.shell": return new Color(.13f,.37f,.24f);
+                case "core.particleSurface": case "core.unlitSurface": case "core.pbrSurface": case "core.shell": return new Color(.13f,.37f,.24f);
                 case "core.gradient": case "core.posterize": case "core.fresnel": case "core.colorRamp": case "core.layer": case "core.dissolve": return new Color(.40f,.34f,.10f);
                 case "core.sticker": return new Color(.46f,.25f,.10f);
                 case "core.uvTile": case "core.flipbook": case "core.uvDistort": return new Color(.16f,.32f,.52f);
@@ -795,6 +795,12 @@ namespace NXSG.Editor
                     case "core.layer": AddNumber(node, "mask", "Mask", 1, "mask"); break;
                     case "core.pbrSurface": AddNumber(node, "opacity", "Opacity", 1, "opacity"); AddNumber(node, "cutoff", "Cutoff", .001f); AddNumber(node, "displacement", "Displacement", 0, "displacement"); AddNumber(node, "metallic", "Metallic", 0, "metallic"); AddNumber(node, "roughness", "Roughness", .5f, "roughness"); break;
                     case "core.toonSurface": AddNumber(node, "opacity", "Opacity", 1, "opacity"); AddNumber(node, "cutoff", "Cutoff", .001f); AddNumber(node, "displacement", "Displacement", 0, "displacement"); break;
+                    case "core.particleSurface":
+                        AddIndexedChoice(node, "blendMode", "Blending", new[] { "Alpha · smoke / fluff", "Additive · sparks / glow" });
+                        AddBoundedNumber(node, "opacity", "Opacity", 0, 1, 1, "opacity");
+                        AddBoundedNumber(node, "softDistance", "Soft intersection distance", 0, 5, 0);
+                        inspector.Add(new Label("Particle color and lifetime alpha apply automatically. Use Renderer streams Position, Normal, Color, UV. Soft distance 0 disables depth fading; positive values need camera depth.") { style = { whiteSpace = WhiteSpace.Normal } });
+                        break;
                     case "core.unlitSurface": AddNumber(node, "opacity", "Opacity", 1, "opacity"); AddNumber(node, "cutoff", "Cutoff", .001f); AddNumber(node, "displacement", "Displacement", 0, "displacement"); break;
                     case "core.sticker": AddTexturePicker(node, "Sticker texture"); AddVector(node, "position", "Position", Vector2.zero); AddVector(node, "size", "Size", Vector2.one); AddNumber(node, "rotation", "Rotation", 0); AddNumber(node, "mask", "Mask", 1, "mask"); break;
                     case "core.dissolve": AddNumber(node, "threshold", "Threshold", .5f, "threshold"); AddNumber(node, "edgeWidth", "Edge width", .05f); break;

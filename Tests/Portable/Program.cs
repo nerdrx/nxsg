@@ -62,6 +62,7 @@ internal static class Program
             Assert(result.Succeeded,effectExample + " example emits: " + string.Join(";",result.Diagnostics.Select(d=>d.Message)));
         }
         EffectsCoreChecks.Run(Assert);
+        ParticleChecks.Run(Assert);
         EffectsBackendChecks.Run(Assert);
         NestedShellChecks.Run(Assert);
         FloatHashChecks.Run(Assert);

@@ -16,7 +16,7 @@ namespace NXSG.Core
             "core.constant", "core.parameter", "core.uv0", "core.texture2D", "core.multiply",
             "core.toonSurface", "core.unlitSurface", "core.pbrSurface", "core.fresnel", "core.colorRamp",
             "core.layer", "core.sticker", "core.dissolve", "core.flipbook", "core.uvDistort", "core.vertexMotion",
-            "core.audioLink", "core.shell", "core.normalMap", "core.previewVector", "core.output"
+            "core.audioLink", "core.shell", "core.normalMap", "core.previewVector", "core.particleSurface", "core.particleColor", "core.output"
         };
 
         private static readonly Dictionary<string, string[]> Inputs = new Dictionary<string, string[]>(StringComparer.Ordinal)
@@ -38,6 +38,8 @@ namespace NXSG.Core
             ["core.multiply"] = new[] { "a", "b" }, ["core.toonSurface"] = new[] { "albedo", "normal", "emission", "opacity", "displacement" },
             ["core.unlitSurface"] = new[] { "albedo", "emission", "opacity", "displacement" },
             ["core.pbrSurface"] = new[] { "albedo", "emission", "opacity", "displacement", "normal", "metallic", "roughness" },
+            ["core.particleSurface"] = new[] { "albedo", "emission", "opacity" },
+            ["core.particleColor"] = new string[0],
             ["core.fresnel"] = new string[0], ["core.colorRamp"] = new[] { "value" },
             ["core.layer"] = new[] { "base", "overlay", "mask" }, ["core.sticker"] = new[] { "base", "uv", "mask" },
             ["core.dissolve"] = new[] { "value", "threshold" }, ["core.flipbook"] = new[] { "uv", "time" },
@@ -67,6 +69,7 @@ namespace NXSG.Core
             ["core.uv0"] = new[] { "uv" }, ["core.texture2D"] = new[] { "color" },
             ["core.multiply"] = new[] { "value" }, ["core.toonSurface"] = new[] { "surface" },
             ["core.unlitSurface"] = new[] { "surface" }, ["core.pbrSurface"] = new[] { "surface" },
+            ["core.particleSurface"] = new[] { "surface" }, ["core.particleColor"] = new[] { "color", "alpha" },
             ["core.fresnel"] = new[] { "value" }, ["core.colorRamp"] = new[] { "color" },
             ["core.layer"] = new[] { "color" }, ["core.sticker"] = new[] { "color" },
             ["core.dissolve"] = new[] { "mask", "edge" }, ["core.flipbook"] = new[] { "uv" },
@@ -97,7 +100,8 @@ namespace NXSG.Core
                 case "core.posterize": case "core.fresnel": case "core.colorRamp": case "core.layer": case "core.sticker":
                 case "core.dissolve": return "Color";
                 case "core.flipbook": case "core.uvDistort": case "core.vertexMotion": return "Animation";
-                case "core.audioLink": return "Inputs";
+                case "core.audioLink": case "core.particleColor": return "Inputs";
+                case "core.particleSurface": return "Surface";
                 default: return "Other";
             }
         }
@@ -127,6 +131,7 @@ namespace NXSG.Core
                 case "core.parameter": return "Parameter"; case "core.uv0": return "UV Coordinates";
                 case "core.texture2D": return "Texture"; case "core.multiply": return "Multiply";
                 case "core.toonSurface": return "Toon Surface"; case "core.unlitSurface": return "Unlit Surface";
+                case "core.particleSurface": return "Particle Surface"; case "core.particleColor": return "Particle Color";
                 case "core.pbrSurface": return "PBR Surface"; case "core.fresnel": return "Fresnel";
                 case "core.colorRamp": return "Color Ramp"; case "core.layer": return "Layer";
                 case "core.sticker": return "Sticker"; case "core.dissolve": return "Dissolve";
@@ -172,6 +177,8 @@ namespace NXSG.Core
                 case "core.toonSurface": return "Give your base color cartoon-style lighting, with optional emission, opacity, and displacement.";
                 case "core.unlitSurface": return "Build a surface with color and emission without lighting.";
                 case "core.pbrSurface": return "Build a physically based surface with color, normal, metallic, and roughness controls.";
+                case "core.particleSurface": return "Transparent unlit particles with alpha or additive blending. Automatically applies particle color and lifetime alpha. Optional soft intersections need camera depth.";
+                case "core.particleColor": return "Read particle or mesh vertex color and alpha. Particle Surface already applies these automatically; use this node for other effects.";
                 case "core.fresnel": return "Compute an edge mask from a value and power.";
                 case "core.colorRamp": return "Map a scalar value through a bounded color ramp.";
                 case "core.layer": return "Blend an overlay color over a base color with a mask.";
@@ -186,7 +193,7 @@ namespace NXSG.Core
                 case "core.audioLink": return "Read a smoothed audio band value with a fallback.";
                 case "core.shell": return "Wrap a surface or another Shell with a transparent layer. Up to 8 shell passes; nesting in Layer adds offsets.";
                 case "core.normalMap": return "Decode a normal map color into a normal vector.";
-                case "core.output": return "The final surface of your shader. Connect a Toon Surface here.";
+                case "core.output": return "The final surface of your shader. Connect a Surface or Shell here.";
                 default: return string.Empty;
             }
         }
@@ -211,6 +218,8 @@ namespace NXSG.Core
                 case "core.multiply": return "tint darken blend";
                 case "core.toonSurface": return "anime cel cartoon shading";
                 case "core.unlitSurface": return "flat no lighting"; case "core.pbrSurface": return "physically based lit material";
+                case "core.particleSurface": return "sparkles embers smoke fluff transparent additive billboard shuriken";
+                case "core.particleColor": return "vertex colour lifetime fade alpha shuriken";
                 case "core.fresnel": return "edge rim grazing angle"; case "core.colorRamp": return "gradient palette lookup";
                 case "core.layer": return "overlay composite blend"; case "core.sticker": return "decal projected texture";
                 case "core.dissolve": return "cutout burn edge mask"; case "core.flipbook": return "texture atlas animation";
@@ -261,6 +270,8 @@ namespace NXSG.Core
                 case "core.posterize": return port == "value" || port == "levels" ? "float" : null;
                 case "core.vertexMotion": return port == "time" || port == "strength" || port == "value" ? "float" : null;
                 case "core.audioLink": return port == "value" ? "float" : null;
+                case "core.particleColor": return port == "color" ? "color" : port == "alpha" ? "float" : null;
+                case "core.particleSurface": return port == "surface" ? "surface" : port == "opacity" ? "float" : port == "albedo" || port == "emission" ? "color" : null;
                 case "core.unlitSurface": return port == "surface" ? "surface" : (port == "albedo" || port == "emission" ? "color" : (port == "opacity" || port == "displacement" ? "float" : null));
                 case "core.shell": return port == "base" || port == "layer" || port == "surface" ? "surface" : (port == "offset" ? "float" : null);
                 case "core.normalMap": return port == "color" ? "color" : (port == "normal" ? "vector3" : null);
@@ -298,6 +309,7 @@ namespace NXSG.Core
                 case "core.flipbook": node.Properties["rows"] = 1; node.Properties["columns"] = 1; node.Properties["speed"] = 1.0; break;
                 case "core.audioLink": node.Properties["band"] = 0; node.Properties["gain"] = 1.0; node.Properties["smoothing"] = 0.5; node.Properties["fallback"] = 0.0; break;
                 case "core.normalMap": node.Properties["strength"] = 1.0; break;
+                case "core.particleSurface": node.Properties["opacity"] = 1.0; node.Properties["blendMode"] = 0; node.Properties["softDistance"] = 0.0; break;
                 case "core.unlitSurface": node.Properties["opacity"] = 1.0; node.Properties["displacement"] = 0.0; break;
                 case "core.pbrSurface": node.Properties["opacity"] = 1.0; node.Properties["displacement"] = 0.0; node.Properties["metallic"] = 0.0; node.Properties["roughness"] = 0.5; break;
                 case "core.layer": node.Properties["mask"] = 1.0; break;
