@@ -264,7 +264,12 @@ namespace NXSG.Core
                     builder.Append(Convert.ToString(value, CultureInfo.InvariantCulture));
                     break;
                 case JTokenType.Float:
-                    builder.Append(Convert.ToDouble(value, CultureInfo.InvariantCulture).ToString("R", CultureInfo.InvariantCulture));
+                    // Match the numeric text written to disk before widening Unity float values.
+                    // Widening a float first exposes binary digits absent from saved JSON.
+                    var number = value is float single
+                        ? double.Parse(single.ToString("R", CultureInfo.InvariantCulture), CultureInfo.InvariantCulture)
+                        : Convert.ToDouble(value, CultureInfo.InvariantCulture);
+                    builder.Append(number.ToString("R", CultureInfo.InvariantCulture));
                     break;
                 case JTokenType.String:
                     builder.Append(JsonConvert.ToString((string)value));

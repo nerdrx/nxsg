@@ -326,7 +326,7 @@ namespace NXSG.Editor
                 }
                 finally { if (File.Exists(temporary)) File.Delete(temporary); }
                 diskSource = text; session.json = text; hasUnsavedChanges = false;
-                AssetDatabase.Refresh(); UpdateIdentity(); QueueSceneUpdate(); SetStatus("Saved " + Path.GetFileName(sourcePath));
+                AssetDatabase.Refresh(); UpdateIdentity(); sceneQueuedHash = null; QueueSceneUpdate(); SetStatus("Saved " + Path.GetFileName(sourcePath));
                 return true;
             }
             catch (Exception exception) { SetStatus(exception.Message); return false; }

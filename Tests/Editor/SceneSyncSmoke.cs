@@ -46,7 +46,12 @@ public static class SceneSyncSmoke
             var liveGraph = (ShaderGraph)Get(window, "graph");
             var constant = liveGraph.Nodes.First(n => n.Operation == "core.constant" &&
                 (string)n.Properties["valueType"] == "color");
-            constant.Properties["value"] = new JArray(.17, .63, .91, 1);
+            constant.Properties["value"] = new JArray(.17f, .63f, .91f, 1f);
+            // UI curve keys are floats, unlike JSON values loaded from disk (doubles).
+            liveGraph.Nodes.Add(new GraphNode { Id = "float-ramp", Operation = "core.ramp", Properties = new JObject
+            {
+                ["points"] = new JArray(new JArray(0f, 0f), new JArray(.311698139f, .777249753f), new JArray(1f, .512882233f))
+            }});
             Invoke(window, "QueueSceneUpdate");
             Set(window, "sceneDue", 0d);
             Invoke(window, "UpdateScene");
@@ -74,6 +79,11 @@ public static class SceneSyncSmoke
                 "invalid scene update replaced last successful shader");
             Require(Status(window).IndexOf("needs attention", StringComparison.OrdinalIgnoreCase) >= 0,
                 "invalid scene update did not report needs attention");
+
+            Require(window.SaveGraph(), "retry save failed");
+            Require((bool)Get(window, "scenePending"), "Save did not retry failed scene update");
+            Set(window, "sceneDue", 0d);
+            Invoke(window, "UpdateScene");
 
             Set(window, "autoScene", false);
             constant.Properties["value"] = new JArray(.91, .22, .14, 1);
