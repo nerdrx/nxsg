@@ -24,10 +24,10 @@
 1. Clone the repository and run `python3 scripts/setup-vrchat-fixture.py` to prepare the isolated SDK fixture.
 2. Open **DevProject** in Unity Hub with **2022.3.22f1**.
 3. Choose **Tools → NXSG → Open Graph Editor**, then **New**.
-4. Save the graph inside `Assets`, then choose **Build for VRChat**.
+4. Save the graph inside `Assets`. **Auto scene** saves and builds edits after a short pause; **Build for VRChat** applies them immediately.
 5. Find its material under `Assets/NXSGGenerated` and assign it to a mesh.
 
-The custom canvas has search/add, click-to-connect ports, drag, pan/zoom, undo/redo and save. Live preview shows unsaved edits in a temporary material; Build updates saved assets without uploading an avatar. [Linux setup and checks](docs/DEVELOPMENT.md)
+The custom canvas has search/add, click-to-connect ports, drag, pan/zoom, undo/redo and save. Live preview shows edits in a temporary material. **Auto scene** is enabled by default: after 0.65 seconds without another shader edit, it saves and builds the graph, updating materials that use its generated shader. The persistent scene status shows pending updates, successful builds, or errors; a failed build keeps the last working shader. Disable Auto scene to save/build manually. Moving nodes does not trigger a shader build. Builds never upload an avatar. [Linux setup and checks](docs/DEVELOPMENT.md)
 
 ![NXSG running in Unity on Linux](docs/assets/editor-preview.png)
 

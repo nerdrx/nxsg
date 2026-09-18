@@ -53,7 +53,8 @@ namespace NXSG.Editor
             ShaderUtil.allowAsyncCompilation = false;
             try
             {
-                File.WriteAllText(staging, result.ShaderSource);
+                var shaderSource = "// NXSG graph hash: " + GraphJson.ComputeSemanticHash(graph) + "\n" + result.ShaderSource;
+                File.WriteAllText(staging, shaderSource);
                 AssetDatabase.ImportAsset(staging, ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate);
                 CheckShader(staging);
                 Checkpoint?.Invoke("staged");
@@ -61,7 +62,7 @@ namespace NXSG.Editor
                     throw new IOException("Graph changed while building. Save and build again.");
                 // Persist original bytes before either output changes. Retain the journal until both imports pass.
                 File.WriteAllText(journalPath, JsonUtility.ToJson(previous));
-                File.WriteAllText(shaderPath, result.ShaderSource);
+                File.WriteAllText(shaderPath, shaderSource);
                 AssetDatabase.ImportAsset(shaderPath, ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate);
                 Checkpoint?.Invoke("shader-promoted");
                 var shader = CheckShader(shaderPath);

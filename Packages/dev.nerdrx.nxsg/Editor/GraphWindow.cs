@@ -85,6 +85,7 @@ namespace NXSG.Editor
             }
             Undo.undoRedoPerformed += Restore;
             EditorApplication.update += UpdateLivePreview;
+            EditorApplication.update += UpdateScene;
             Restore();
         }
 
@@ -93,6 +94,7 @@ namespace NXSG.Editor
             CancelWire();
             Undo.undoRedoPerformed -= Restore;
             EditorApplication.update -= UpdateLivePreview;
+            EditorApplication.update -= UpdateScene;
             ClearPreview();
         }
 
@@ -127,11 +129,14 @@ namespace NXSG.Editor
                 else { previewPending = false; previewMessage = "Preview paused"; RefreshPreviewPanel(); }
             });
             toolbar.Add(liveToggle);
+            AddSceneToggle(toolbar);
             toolbar.Add(new ToolbarButton(() => { pan = new Vector2(30, 70); zoom = 1; TransformCanvas(); }) { text = "Reset view" });
             AddPatternToolbar(toolbar);
             rootVisualElement.Add(toolbar);
             identity = new Label { style = { whiteSpace = WhiteSpace.Normal, paddingLeft = 10, paddingTop = 5, paddingBottom = 5 } };
             rootVisualElement.Add(identity);
+            sceneStatus = new Label { style = { whiteSpace = WhiteSpace.Normal, paddingLeft = 10, paddingBottom = 5 } };
+            rootVisualElement.Add(sceneStatus);
             var body = new VisualElement { style = { flexDirection = FlexDirection.Row, flexGrow = 1 } };
             canvas = new VisualElement { focusable = true, style = { flexGrow = 1, overflow = Overflow.Hidden } };
             layer = new VisualElement { style = { position = UnityEngine.UIElements.Position.Absolute, width = 4000, height = 4000 } };
@@ -321,7 +326,7 @@ namespace NXSG.Editor
                 }
                 finally { if (File.Exists(temporary)) File.Delete(temporary); }
                 diskSource = text; session.json = text; hasUnsavedChanges = false;
-                AssetDatabase.Refresh(); UpdateIdentity(); SetStatus("Saved " + Path.GetFileName(sourcePath));
+                AssetDatabase.Refresh(); UpdateIdentity(); QueueSceneUpdate(); SetStatus("Saved " + Path.GetFileName(sourcePath));
                 return true;
             }
             catch (Exception exception) { SetStatus(exception.Message); return false; }
@@ -343,6 +348,7 @@ namespace NXSG.Editor
             try
             {
                 var material = GraphBuild.Build(graph, sourcePath);
+                SceneBuildSucceeded();
                 ClearPreview();
                 UpdateIdentity();
                 var useContext = contextMaterial != null && contextMaterial.shader == material.shader;
@@ -353,7 +359,7 @@ namespace NXSG.Editor
                 RebuildInspector();
                 SetStatus("Built local shader + material. Preview updated. Client validation is a separate step.");
             }
-            catch (Exception exception) { SetStatus(exception.Message); }
+            catch (Exception exception) { SceneBuildFailed(exception); SetStatus(exception.Message); }
         }
 
         void ClearPreview()
@@ -367,6 +373,7 @@ namespace NXSG.Editor
 
         void QueueLivePreview()
         {
+            QueueSceneUpdate();
             if (!livePreview || graph == null) return;
             previewPending = true;
             previewDue = EditorApplication.timeSinceStartup + .45;
