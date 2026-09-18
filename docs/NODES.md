@@ -1,6 +1,14 @@
 # Built-in node pack
 
-The canvas now offers 48 visible nodes, plus hidden Parameter and Preview Vector helpers. Socket color indicates data type: yellow color, gray scalar, blue UV coordinates, cyan normals, green surface. Drag from either end; compatible-node menus and clipboard operations use the same core catalog.
+The canvas now offers 129 visible nodes, plus hidden Parameter and Preview Vector helpers. Socket color indicates data type: yellow color, gray scalar, blue UV coordinates, cyan normals, green surface. Drag from either end; compatible-node menus and clipboard operations use the same core catalog.
+
+## New feature nodes
+
+The current pack adds these 40 nodes:
+
+Fur, Parallax UVs, Parallax Occlusion, Fur Strand Mask, Flow Map UVs, Dither Mask, Truchet Tiles, Woven Fabric, Scale Pattern, Polka Dots, Scratches, Cracks, Wood Rings, Marble, Clouds, Sparkle Mask, Hologram Scanlines, Glitch UVs, Pixelate UVs, Kaleidoscope UVs, Swap UV Axes, Spherize UVs, Pinch UVs, Barrel Distortion, Chromatic Texture, Blend Normals, Normal Strength, Normal from Height, Reflection Direction, Object Scale, Object Origin, Object Random, Distance to Point, Sphere Volume Mask, Box Volume Mask, Capsule Mask, Volume Stripes, Snow Coverage, Wet Color, and Anisotropic Highlight.
+
+Fur uses layered shell passes with root/tip color, groom, wind, density, thickness, and LOD controls. Parallax UVs offset sampling coordinates; Parallax Occlusion ray-marches a height texture and needs mesh tangents. These effects alter texture depth or shell appearance while preserving the mesh silhouette unless a future geometry feature says otherwise.
 
 ## New nodes
 

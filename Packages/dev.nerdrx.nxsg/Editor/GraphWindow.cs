@@ -131,6 +131,9 @@ namespace NXSG.Editor
             toolbar.Add(liveToggle);
             AddSceneToggle(toolbar);
             toolbar.Add(new ToolbarButton(() => { pan = new Vector2(30, 70); zoom = 1; TransformCanvas(); }) { text = "Reset view" });
+            toolbar.Add(new ToolbarButton(() => FrameNodes(false)) { text = "Fit graph", tooltip = "Frame the whole graph (Home)." });
+            toolbar.Add(new ToolbarButton(() => FrameNodes(true)) { text = "Frame selected", tooltip = "Focus the selected nodes (F)." });
+            toolbar.Add(new ToolbarButton(FocusNodeSearch) { text = "Add node", tooltip = "Search nodes (Space on canvas)." });
             AddPatternToolbar(toolbar);
             rootVisualElement.Add(toolbar);
             identity = new Label { style = { whiteSpace = WhiteSpace.Normal, paddingLeft = 10, paddingTop = 5, paddingBottom = 5 } };
@@ -140,6 +143,7 @@ namespace NXSG.Editor
             var body = new VisualElement { style = { flexDirection = FlexDirection.Row, flexGrow = 1 } };
             canvas = new VisualElement { focusable = true, style = { flexGrow = 1, overflow = Overflow.Hidden } };
             layer = new VisualElement { style = { position = UnityEngine.UIElements.Position.Absolute, width = 4000, height = 4000 } };
+            layer.style.transformOrigin = new TransformOrigin(0, 0, 0);
             layer.generateVisualContent += DrawEdges;
             canvas.Add(layer);
             marquee = new VisualElement { pickingMode = PickingMode.Ignore, style = {
@@ -155,13 +159,17 @@ namespace NXSG.Editor
             {
                 var position = canvas.WorldToLocal(evt.mousePosition);
                 var previous = zoom;
-                zoom = Mathf.Clamp(zoom * Mathf.Exp(-evt.delta.y * .045f), .3f, 1.6f);
+                zoom = Mathf.Clamp(zoom * Mathf.Exp(-evt.delta.y * .045f), .1f, 1.6f);
                 pan = position - (position - pan) * (zoom / previous);
                 TransformCanvas();
                 evt.StopPropagation();
             });
             canvas.RegisterCallback<KeyDownEvent>(evt =>
             {
+                if (IsEditingText(evt.target as VisualElement)) return;
+                if (evt.keyCode == KeyCode.F) { FrameNodes(true); evt.StopPropagation(); }
+                if (evt.keyCode == KeyCode.Home) { FrameNodes(false); evt.StopPropagation(); }
+                if (evt.keyCode == KeyCode.Space) { FocusNodeSearch(); evt.StopPropagation(); }
                 if (evt.keyCode == KeyCode.Escape) { CancelBox(true); CancelWire(); SetStatus("Cancelled."); evt.StopPropagation(); }
                 if (evt.keyCode == KeyCode.Delete || evt.keyCode == KeyCode.Backspace) DeleteSelection();
                 if (evt.actionKey && evt.keyCode == KeyCode.S) { SaveGraph(); evt.StopPropagation(); }
@@ -594,11 +602,51 @@ namespace NXSG.Editor
             }
         }
 
+        static string PortLabel(string port)
+        {
+            switch(port)
+            {
+                case "uv": return "UV"; case "rootColor": return "Root color"; case "tipColor": return "Tip color";
+                case "inMin": return "Input min"; case "inMax": return "Input max";
+                case "outMin": return "Output min"; case "outMax": return "Output max";
+                case "groom": return "Groom direction"; default: return port;
+            }
+        }
+
+        void FocusNodeSearch()
+        {
+            var search=inspector?.Q<ToolbarSearchField>("node-search");
+            if(search==null)return;
+            (inspector as ScrollView)?.ScrollTo(search);
+            search.Focus();
+        }
+
+        void FrameNodes(bool selectedOnly)
+        {
+            if(graph==null||canvas==null)return;
+            var ids=selectedOnly && selection.Count>0?selection:graph.Nodes.Select(n=>n.Id).ToList();
+            var visible=ids.Where(id=>nodes.ContainsKey(id)&&graph.Layout.Nodes.ContainsKey(id)).ToList();
+            if(visible.Count==0){SetStatus("Add a node to frame the graph.");return;}
+            var min=new Vector2(float.MaxValue,float.MaxValue);var max=new Vector2(float.MinValue,float.MinValue);
+            foreach(var id in visible)
+            {
+                var layout=graph.Layout.Nodes[id];var position=new Vector2((float)layout.X,(float)layout.Y);
+                var height=nodes[id].resolvedStyle.height;if(float.IsNaN(height)||height<40)height=120;
+                min=Vector2.Min(min,position);max=Vector2.Max(max,position+new Vector2(175,height));
+            }
+            var viewport=new Vector2(canvas.resolvedStyle.width,canvas.resolvedStyle.height);
+            if(viewport.x<1||viewport.y<1)return;
+            var size=max-min+Vector2.one*80;
+            zoom=Mathf.Clamp(Mathf.Min(viewport.x/size.x,viewport.y/size.y),.1f,1.6f);
+            pan=viewport*.5f-(min+max)*.5f*zoom;
+            TransformCanvas();
+        }
+
         void AddSocket(VisualElement box, GraphNode node, string port, bool output)
         {
             var type = PortType(node, port);
             var row = new VisualElement { style = { height = 28, justifyContent = Justify.Center } };
-            row.Add(new Label(port) { pickingMode = PickingMode.Ignore, style = {
+            row.Add(new Label(PortLabel(port)) { pickingMode = PickingMode.Ignore, style = {
                 marginLeft = 16, marginRight = 16,
                 unityTextAlign = output ? TextAnchor.MiddleRight : TextAnchor.MiddleLeft } });
             var hit = new VisualElement { tooltip = (output ? "Output" : "Input") + ": " + port + " (" + type + ") — drag or click to connect. Drag a connected input to detach its wire.",
@@ -789,6 +837,7 @@ namespace NXSG.Editor
                     inspector.Add(field);
                 }
                 AddVisualControls(node);
+                AddFeatureControls(node);
                 switch (node.Operation)
                 {
                     case "core.absolute": case "core.sqrt": case "core.sine": case "core.cosine":
@@ -1108,7 +1157,7 @@ namespace NXSG.Editor
         GraphNode CreateNode(string operation, Vector2 position)
         {
             var node = NodeCatalog.Create(operation);
-            if (operation == "core.texture2D" || operation == "core.sticker" || operation == "core.triplanarTexture" || operation == "core.matcapTexture")
+            if (operation == "core.texture2D" || operation == "core.sticker" || operation == "core.triplanarTexture" || operation == "core.matcapTexture" || operation == "core.parallaxOcclusion" || operation == "core.chromaticTexture")
             {
                 var resource = new GraphResource { Id = "texture-" + node.Id, Kind = "texture2D", Uri = "builtin://white" };
                 graph.Resources.Add(resource); node.Properties["resourceId"] = resource.Id;

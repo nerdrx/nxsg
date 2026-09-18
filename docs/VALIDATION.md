@@ -149,3 +149,19 @@ The earlier four-slot/source-triangle plateau is superseded by automatic particl
 `visual-nodes-render.log` passes all 21 visual nodes (20 plus Wireframe), finite GPU output, visible shape masks, white texture defaults and distance-fade pixel expectation. The output montage is retained in `docs/evidence/2026-09-18-visual-nodes.png` and was visually inspected for shape topology, including star, hexagons and triangulated wireframe.
 
 `visual-editor-fixed.log` passes 41 node inspectors, output-preview choices, category colors, nonempty hover help, exactly one texture picker per texture node, compatible-node search, grouped destination ports and empty-search feedback. The usability changes separate long slider labels from slider tracks and number fields, preserve out-of-range typed values, and share search across the sidebar and connection menu. Editor checks dispatch UI callbacks; physical keyboard/mouse gestures are not claimed. Unity screen readback returned black under Gamescope, so no editor screenshot is used as visual proof.
+
+## 2026-09-18: forty feature nodes and navigation
+
+The catalog now exposes 129 nodes. Portable tests cover the new 40-node registry, defaults, types, validation, serialization, emission, and the Groomed Fur / Parallax Tiles examples.
+
+Graphics-enabled Unity 2022.3.22f1 on Linux, inside hidden Gamescope, passed:
+
+- `FeatureNodesRenderSmoke`: all 39 new value/coordinate nodes compile and render finite outputs; pattern and volume masks produce visible variation.
+- `FurRenderSmoke`: coverage mask, longer silhouette, animated grooming/wind, distance LOD, 4/16-layer pass compilation, and Fur feeding Surface Particles.
+- `ParallaxRenderSmoke`: oblique-view UV movement, gray versus white height maps, 4/16/64-step POM compilation, and height-derived normals versus flat height.
+
+![Rendered feature-node swatches](evidence/2026-09-18-feature-nodes.png)
+
+These are actual GPU checks, not VRChat client, stereo, Windows, or performance acceptance. Fur currently uses shell passes without fins or fur self-shadowing. POM changes sampled UVs without changing silhouettes.
+
+`FeatureNodesEditorSmoke` also passed all 40 inspectors, descriptions, texture controls, defaults, connected-field disabling, search metadata, whole-graph framing, selected-node framing and search focus. This caught and fixed the canvas transform origin: scaling now anchors at the top left, matching pan and framing calculations. These invoke UI actions and inspect layout; they do not establish physical keyboard reliability.

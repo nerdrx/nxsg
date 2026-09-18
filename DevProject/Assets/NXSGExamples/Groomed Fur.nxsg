@@ -1,0 +1,20 @@
+{
+  "format":"nxsg","schemaVersion":1,"graphId":"groomed-fur-example",
+  "nodes":[
+    {"id":"baseColor","operation":"core.constant","version":1,"properties":{"valueType":"color","value":[0.28,0.12,0.035,1]}},
+    {"id":"base","operation":"core.toonSurface","version":1,"properties":{}},
+    {"id":"rootColor","operation":"core.constant","version":1,"properties":{"valueType":"color","value":[0.32,0.14,0.04,1]}},
+    {"id":"tipColor","operation":"core.constant","version":1,"properties":{"valueType":"color","value":[1,0.72,0.32,1]}},
+    {"id":"groom","operation":"core.constant","version":1,"properties":{"valueType":"vector3","value":[0,-0.2,0.1]}},
+    {"id":"fur","operation":"core.fur","version":1,"properties":{"layers":16,"length":0.06,"density":60,"thickness":0.45,"taper":1,"gravity":0.1,"windStrength":0.2,"windSpeed":1,"windScale":2,"rimStrength":0.25,"lodNear":5,"lodFar":15,"minLayers":4}},
+    {"id":"output","operation":"core.output","version":1,"properties":{}}
+  ],
+  "connections":[
+    {"id":"baseColor-base","from":{"nodeId":"baseColor","portId":"value"},"to":{"nodeId":"base","portId":"albedo"}},
+    {"id":"base-fur","from":{"nodeId":"base","portId":"surface"},"to":{"nodeId":"fur","portId":"base"}},
+    {"id":"root-fur","from":{"nodeId":"rootColor","portId":"value"},"to":{"nodeId":"fur","portId":"rootColor"}},
+    {"id":"tip-fur","from":{"nodeId":"tipColor","portId":"value"},"to":{"nodeId":"fur","portId":"tipColor"}},
+    {"id":"groom-fur","from":{"nodeId":"groom","portId":"value"},"to":{"nodeId":"fur","portId":"groom"}},
+    {"id":"fur-output","from":{"nodeId":"fur","portId":"surface"},"to":{"nodeId":"output","portId":"surface"}}
+  ],"parameters":[],"resources":[]
+}

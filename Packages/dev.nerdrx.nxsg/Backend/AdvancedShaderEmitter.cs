@@ -35,14 +35,14 @@ namespace NXSG.Backend
         public static bool IsAdvanced(ShaderGraph graph)
         {
             if (graph?.Nodes == null) return false;
-            var ops = new HashSet<string> { "core.unlitSurface", "core.pbrSurface", "core.particleSurface", "core.particleColor", "core.surfaceParticles", "core.fresnel", "core.colorRamp", "core.layer", "core.sticker", "core.dissolve", "core.flipbook", "core.uvDistort", "core.vertexMotion", "core.audioLink", "core.shell", "core.normalMap", "core.previewVector", "core.musgrave", "core.voronoi", "core.checker", "core.wave", "core.gradient", "core.uvTile", "core.posterize", "core.absolute", "core.power", "core.sqrt", "core.sine", "core.cosine", "core.fraction", "core.floor", "core.ceil", "core.round", "core.step", "core.smoothstep", "core.remap", "core.pingPong", "core.splitColor", "core.combineColor", "core.luminance", "core.contrast", "core.saturation", "core.splitUV", "core.combineUV", "core.position", "core.normalDirection", "core.viewDirection", "core.vertexColor", "core.cameraDistance", "core.screenUV", "core.circleMask", "core.boxMask", "core.polygonMask", "core.starMask", "core.radialRays", "core.spiral", "core.brick", "core.hexGrid", "core.triplanarTexture", "core.matcapTexture", "core.rimGlow", "core.heightMask", "core.slopeMask", "core.distanceFade", "core.wireframe" };
+            var ops = new HashSet<string> { "core.unlitSurface", "core.pbrSurface", "core.particleSurface", "core.particleColor", "core.surfaceParticles", "core.fur", "core.fresnel", "core.colorRamp", "core.layer", "core.sticker", "core.dissolve", "core.flipbook", "core.uvDistort", "core.vertexMotion", "core.audioLink", "core.shell", "core.normalMap", "core.previewVector", "core.musgrave", "core.voronoi", "core.checker", "core.wave", "core.gradient", "core.uvTile", "core.posterize", "core.absolute", "core.power", "core.sqrt", "core.sine", "core.cosine", "core.fraction", "core.floor", "core.ceil", "core.round", "core.step", "core.smoothstep", "core.remap", "core.pingPong", "core.splitColor", "core.combineColor", "core.luminance", "core.contrast", "core.saturation", "core.splitUV", "core.combineUV", "core.position", "core.normalDirection", "core.viewDirection", "core.vertexColor", "core.cameraDistance", "core.screenUV", "core.circleMask", "core.boxMask", "core.polygonMask", "core.starMask", "core.radialRays", "core.spiral", "core.brick", "core.hexGrid", "core.triplanarTexture", "core.matcapTexture", "core.rimGlow", "core.heightMask", "core.slopeMask", "core.distanceFade", "core.wireframe" };
             // Only reachable effects select the extended lowering; disconnected nodes never change shading.
             var connected = new HashSet<string>();
             var queue = new Queue<string>(graph.Nodes.Where(n => n?.Operation == "core.output").Select(n => n.Id));
             var incoming = (graph.Connections ?? new List<GraphConnection>()).Where(e => e?.From?.NodeId != null && e.To?.NodeId != null).ToLookup(e => e.To.NodeId);
             while (queue.Count > 0) { var id = queue.Dequeue(); if (!connected.Add(id)) continue; foreach (var edge in incoming[id]) queue.Enqueue(edge.From.NodeId); }
             var live = graph.Nodes.Where(n => n != null && connected.Contains(n.Id)).ToArray();
-            return live.Any(n => ops.Contains(n.Operation)) || live.Any(n => (n.Operation == "core.noise" || n.Operation == "core.uv0" || n.Operation == "core.polarUV" || n.Operation == "core.texture2D") && IsAdvancedCoordinates(n, incoming[n.Id])) || live.Count(n => n.Operation == "core.texture2D") > 1 ||
+            return live.Any(n => ops.Contains(n.Operation) || FeatureNodes.IsKnown(n.Operation)) || live.Any(n => (n.Operation == "core.noise" || n.Operation == "core.uv0" || n.Operation == "core.polarUV" || n.Operation == "core.texture2D") && IsAdvancedCoordinates(n, incoming[n.Id])) || live.Count(n => n.Operation == "core.texture2D") > 1 ||
                 live.Any(n => n.Operation == "core.toonSurface" && (n.Properties?["opacity"] != null || n.Properties?["displacement"] != null || incoming[n.Id].Any(e => e.To.PortId == "opacity" || e.To.PortId == "displacement" || e.To.PortId == "normal")));
         }
 
@@ -95,8 +95,11 @@ namespace NXSG.Backend
             if (root == null) throw new InvalidOperationException("Connect a Surface to Output.");
             var particle = root.Operation == "core.particleSurface";
             var surfaceParticles = root.Operation == "core.surfaceParticles";
-            var baseRoot = surfaceParticles ? Source(root, "base") : root;
+            GraphNode furNode = root.Operation == "core.fur" ? root : null;
+            var baseRoot = root.Operation == "core.fur" ? Source(root, "base") : surfaceParticles ? Source(root, "base") : root;
+            if (surfaceParticles && baseRoot != null && baseRoot.Operation == "core.fur") { furNode = baseRoot; baseRoot = Source(baseRoot, "base"); }
             if (surfaceParticles && baseRoot == null) throw new InvalidOperationException("Connect a surface to Surface Particles Base.");
+            if (furNode != null && baseRoot == null) throw new InvalidOperationException("Connect a surface to Fur Base.");
             var name = options.ShaderName;
             if (string.IsNullOrEmpty(name) || name.Length > 180 || name.Any(c => char.IsControl(c) || c == '"' || c == '\\')) throw new InvalidOperationException("Invalid shader name.");
             var fallback = options.IncludeVrcFallback ? options.VrcFallbackTag : null;
@@ -118,7 +121,7 @@ namespace NXSG.Backend
             foreach (var node in live.Select(id => nodes[id]).OrderBy(n => n.Id, StringComparer.Ordinal))
             {
                 if (node.Version != 1) throw new InvalidOperationException("Unsupported node version: " + node.Id);
-                if (node.Operation != "core.texture2D" && node.Operation != "core.sticker" && node.Operation != "core.triplanarTexture" && node.Operation != "core.matcapTexture") continue;
+                if (node.Operation != "core.texture2D" && node.Operation != "core.sticker" && node.Operation != "core.triplanarTexture" && node.Operation != "core.matcapTexture" && node.Operation != "core.parallaxOcclusion" && node.Operation != "core.chromaticTexture") continue;
                 var id = (string)node.Properties["resourceId"];
                 var resource = (graph.Resources ?? new List<GraphResource>()).FirstOrDefault(r => r.Id == id);
                 if (resource == null || resource.Kind != "texture2D") throw new InvalidOperationException("Missing texture resource: " + id);
@@ -151,6 +154,11 @@ namespace NXSG.Backend
             var passCode = new StringBuilder();
             if (particle) passCode.Append(ParticlePass(root));
             else for (var i = 0; i < passes.Count; i++) passCode.Append(Pass(passes[i].Surface, i, passes[i].Offset));
+            if (furNode != null)
+            {
+                passCode.Append(FurShader.Pass(
+                    Input(furNode, "rootColor", "float4(.2,.1,.05,1)", "color"), Input(furNode, "tipColor", "float4(.8,.6,.3,1)", "color"), Scalar(furNode, "length", .04, true), Scalar(furNode, "density", 100), Scalar(furNode, "thickness", .35), Scalar(furNode, "mask", 1), Input(furNode, "groom", "float3(0,0,0)", "vector3", true), Input(furNode, "time", "_Time.y", "float", true), IntProp(furNode, "layers", 16, 4, 32), double.Parse(Prop(furNode, "taper", 1), CultureInfo.InvariantCulture), double.Parse(Prop(furNode, "gravity", .1), CultureInfo.InvariantCulture), double.Parse(Prop(furNode, "windStrength", .1), CultureInfo.InvariantCulture), double.Parse(Prop(furNode, "windSpeed", 1), CultureInfo.InvariantCulture), double.Parse(Prop(furNode, "windScale", 2), CultureInfo.InvariantCulture), double.Parse(Prop(furNode, "rimStrength", .25), CultureInfo.InvariantCulture), double.Parse(Prop(furNode, "lodNear", 5), CultureInfo.InvariantCulture), double.Parse(Prop(furNode, "lodFar", 15), CultureInfo.InvariantCulture), IntProp(furNode, "minLayers", 4, 1, 32)));
+            }
             if (surfaceParticles) passCode.Append(SurfaceParticleShader.Pass(
                 Scalar(root,"mask",1,true), Input(root,"albedo","float4(1,1,1,1)","color"), Input(root,"emission","float4(0,0,0,1)","color"), Scalar(root,"opacity",1), Input(root,"time","_Time.y","float",true),
                 Prop(root,"density",.1), root.Properties["emissionRate"] == null ? "1.0/max(" + Prop(root,"lifetime",2) + ",0.0001)" : Prop(root,"emissionRate",0), Prop(root,"size",.03), Prop(root,"lifetime",2), Prop(root,"speed",.2), Prop(root,"gravity",0), Prop(root,"spread",.05), IntProp(root,"blendMode",1,0,1), IntProp(root,"sourceUV",0,0,1) == 1));
@@ -162,6 +170,7 @@ namespace NXSG.Backend
             if (live.Any(id => nodes[id].Operation == "core.audioLink")) b.AppendLine(AudioLinkShader.Hlsl);
             b.AppendLine("#ifndef SHADOW_COORDS\n#define SHADOW_COORDS(index)\n#endif");
             b.AppendLine(Helpers);
+            b.AppendLine(FeatureShader.Helpers);
             b.AppendLine(ProceduralShader.Hlsl);
             b.AppendLine(DistortionShader.Hlsl);
             b.AppendLine(code.ToString());
@@ -171,6 +180,7 @@ namespace NXSG.Backend
                 diagnostics.Add(new Diagnostic(DiagnosticSeverity.Warning, "cost.procedural", "$", "Fractal, cellular and 4D patterns cost more than 2D noise; start with few detail layers, especially across shells."));
             if (live.Any(id => nodes[id].Operation == "core.vertexMotion")) diagnostics.Add(new Diagnostic(DiagnosticSeverity.Warning, "bounds.displacement", "$", "Vertex displacement requires mesh/SkinnedMeshRenderer bounds large enough for the motion."));
             if (surfaceParticles) diagnostics.Add(new Diagnostic(DiagnosticSeverity.Warning, "cost.surfaceParticles", root.Id, "An extra PC geometry pass processes every source triangle; density controls selected triangles, not geometry work. Four particles are emitted per generated subtriangle; high rates use tessellation up to level 64 and approximate the requested source-triangle rate. Particles follow the current pose; expand renderer bounds for outward motion. Stereo and VRChat client behavior need validation."));
+            if (furNode != null) diagnostics.Add(new Diagnostic(DiagnosticSeverity.Warning, "cost.fur", furNode.Id, "Fur emits " + IntProp(furNode, "layers", 16, 4, 32) + " transparent shell passes per view. Distance LOD reduces active shell coverage but does not remove draw calls; expand renderer bounds for strand length."));
             if (particle && root.Properties["softDistance"] != null && (double)root.Properties["softDistance"] > 0)
                 diagnostics.Add(new Diagnostic(DiagnosticSeverity.Warning, "cost.particleDepth", root.Id, "Soft intersections require a camera depth texture. Set soft distance to 0 when unavailable; transparent overdraw and depth sampling add cost."));
             return b.ToString();
@@ -347,7 +357,11 @@ namespace NXSG.Backend
                 case "core.vertexMotion": body = "(sin(" + P("time", "_Time.y", "float") + "*" + Prop(n, "speed", 1) + "+input.local.y*" + Prop(n, "frequency", 2) + ")*" + S("strength", .02) + ")"; break;
                 case "core.audioLink": body = "NXSG_Audio(" + Prop(n, "band", 0) + "," + Prop(n, "gain", 1) + "," + Prop(n, "smoothing", .5) + "," + Prop(n, "fallback", 0) + ")"; break;
                 case "core.normalMap": body = "NX_Normal(" + P("color", "float4(.5,.5,1,1)", "color") + "," + Prop(n, "strength", 1) + ")"; break;
-                default: throw new InvalidOperationException("Unsupported value operation: " + n.Operation);
+                default:
+                    if (!FeatureNodes.IsKnown(n.Operation)) throw new InvalidOperationException("Unsupported value operation: " + n.Operation);
+                    var resourceId=(string)n.Properties["resourceId"];
+                    body=FeatureShader.Body(n,uv,vertex,P,S,(property,fallback)=>Prop(n,property,fallback),(coords,isVertex)=>Sample(n,coords,isVertex),resourceId!=null && textureNames.TryGetValue(resourceId,out var sampler)?sampler:null);
+                    break;
             }
             functions.Add(key, symbol);
             code.AppendLine(HlslType(type) + " " + symbol + "(NXInput input) { " + (body.Contains("return ") ? body : "return " + body + ";") + " }");

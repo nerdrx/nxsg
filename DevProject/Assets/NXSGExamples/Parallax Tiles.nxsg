@@ -1,0 +1,16 @@
+{
+  "format":"nxsg","schemaVersion":1,"graphId":"parallax-tiles-example",
+  "nodes":[
+    {"id":"uv","operation":"core.uv0","version":1,"properties":{}},
+    {"id":"parallax","operation":"core.parallaxOcclusion","version":1,"properties":{"resourceId":"heightMap","strength":0.05,"steps":16}},
+    {"id":"checker","operation":"core.checker","version":1,"properties":{"dimensions":2,"scale":8,"speed":0}},
+    {"id":"surface","operation":"core.toonSurface","version":1,"properties":{}},
+    {"id":"output","operation":"core.output","version":1,"properties":{}}
+  ],
+  "connections":[
+    {"id":"uv-parallax","from":{"nodeId":"uv","portId":"uv"},"to":{"nodeId":"parallax","portId":"uv"}},
+    {"id":"parallax-checker","from":{"nodeId":"parallax","portId":"uv"},"to":{"nodeId":"checker","portId":"uv"}},
+    {"id":"checker-surface","from":{"nodeId":"checker","portId":"color"},"to":{"nodeId":"surface","portId":"albedo"}},
+    {"id":"surface-output","from":{"nodeId":"surface","portId":"surface"},"to":{"nodeId":"output","portId":"surface"}}
+  ],"parameters":[],"resources":[{"id":"heightMap","kind":"texture2D","uri":"builtin://white"}]
+}

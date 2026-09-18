@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Newtonsoft.Json.Linq;
 
 namespace NXSG.Core
@@ -103,10 +104,11 @@ namespace NXSG.Core
             ["core.output"] = new string[0]
         };
 
-        public static IEnumerable<string> All { get { return Operations; } }
-        public static bool IsKnown(string operation) { return operation != null && Inputs.ContainsKey(operation); }
+        public static IEnumerable<string> All { get { return Operations.Concat(FeatureNodes.All); } }
+        public static bool IsKnown(string operation) { return operation != null && (Inputs.ContainsKey(operation) || FeatureNodes.IsKnown(operation)); }
         public static string Category(string operation)
         {
+            if (FeatureNodes.TryGet(operation, out var feature)) return feature.Category;
             switch (operation)
             {
                 case "core.ramp": return "Math";
@@ -138,11 +140,13 @@ namespace NXSG.Core
         }
         public static string[] Ports(string operation, bool output)
         {
+            if (FeatureNodes.IsKnown(operation)) return FeatureNodes.Ports(operation, output);
             string[] ports;
             return (output ? Outputs : Inputs).TryGetValue(operation ?? string.Empty, out ports) ? (string[])ports.Clone() : new string[0];
         }
         public static string Title(string operation)
         {
+            if (FeatureNodes.TryGet(operation, out var feature)) return feature.Title;
             switch (operation)
             {
                 case "core.position": return "Position";
@@ -201,6 +205,7 @@ namespace NXSG.Core
         }
         public static string Description(string operation)
         {
+            if (FeatureNodes.TryGet(operation, out var feature)) return feature.Description;
             switch (operation)
             {
                 case "core.position": return "Get a point on the mesh in object or world space. Feed Position on 3D textures and height masks.";
@@ -299,6 +304,7 @@ namespace NXSG.Core
         }
         public static string Aliases(string operation)
         {
+            if (FeatureNodes.IsKnown(operation)) return operation.Replace("core.", "").Replace("UV", " uv").Replace("Mask", " mask");
             switch (operation)
             {
                 case "core.position": return "Position";
@@ -360,6 +366,7 @@ namespace NXSG.Core
         public static string PortType(GraphNode node, string port)
         {
             if (node == null || port == null) return null;
+            if (FeatureNodes.IsKnown(node.Operation)) return FeatureNodes.PortType(node.Operation, port, FeatureNodes.PortType(node.Operation, port, false) == null);
             switch (node.Operation)
             {
                 case "core.previewVector": return port == "uv" ? "vector2" : port == "normal" ? "vector3" : port == "color" ? "color" : null;
@@ -435,6 +442,7 @@ namespace NXSG.Core
         public static GraphNode Create(string operation)
         {
             if (!IsKnown(operation)) return null;
+            if (FeatureNodes.IsKnown(operation)) return FeatureNodes.Create(operation);
             var node = new GraphNode { Id = Guid.NewGuid().ToString("N"), Operation = operation };
             switch (operation)
             {

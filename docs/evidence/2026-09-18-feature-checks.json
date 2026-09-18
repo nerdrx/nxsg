@@ -1,0 +1,21 @@
+{
+  "date": "2026-09-18",
+  "unity": "2022.3.22f1",
+  "platform": "Linux OpenGLCore, hidden Gamescope",
+  "visibleNodeCount": 129,
+  "newNodes": 40,
+  "checks": {
+    "portable": "passed including two new samples",
+    "featureRendering": "39 ordinary nodes passed",
+    "furRendering": "coverage, length, wind, LOD, 4/16 layers, particle composition passed",
+    "parallaxRendering": "UV displacement, gray/white height, steps 4/16/64, height normals passed",
+    "editor": "40 inspectors, defaults, descriptions, texture pickers, connected fields, search, whole/selected framing and search focus passed"
+  },
+  "limits": [
+    "VRChat client and stereo untested",
+    "Windows untested",
+    "No fur fins or self-shadow",
+    "Fur LOD does not eliminate draw calls",
+    "Parallax does not alter silhouette"
+  ]
+}
