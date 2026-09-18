@@ -34,15 +34,29 @@ namespace NXSG.Backend
         public static bool IsAdvanced(ShaderGraph graph)
         {
             if (graph?.Nodes == null) return false;
-            var ops = new HashSet<string> { "core.unlitSurface", "core.pbrSurface", "core.fresnel", "core.colorRamp", "core.layer", "core.sticker", "core.dissolve", "core.flipbook", "core.uvDistort", "core.vertexMotion", "core.audioLink", "core.shell", "core.normalMap", "core.previewVector" };
+            var ops = new HashSet<string> { "core.unlitSurface", "core.pbrSurface", "core.fresnel", "core.colorRamp", "core.layer", "core.sticker", "core.dissolve", "core.flipbook", "core.uvDistort", "core.vertexMotion", "core.audioLink", "core.shell", "core.normalMap", "core.previewVector", "core.musgrave", "core.voronoi", "core.checker", "core.wave" };
             // Only reachable effects select the extended lowering; disconnected nodes never change shading.
             var connected = new HashSet<string>();
             var queue = new Queue<string>(graph.Nodes.Where(n => n?.Operation == "core.output").Select(n => n.Id));
             var incoming = (graph.Connections ?? new List<GraphConnection>()).Where(e => e?.From?.NodeId != null && e.To?.NodeId != null).ToLookup(e => e.To.NodeId);
             while (queue.Count > 0) { var id = queue.Dequeue(); if (!connected.Add(id)) continue; foreach (var edge in incoming[id]) queue.Enqueue(edge.From.NodeId); }
             var live = graph.Nodes.Where(n => n != null && connected.Contains(n.Id)).ToArray();
-            return live.Any(n => ops.Contains(n.Operation)) || live.Count(n => n.Operation == "core.texture2D") > 1 ||
+            return live.Any(n => ops.Contains(n.Operation)) || live.Any(n => (n.Operation == "core.noise" || n.Operation == "core.uv0" || n.Operation == "core.polarUV" || n.Operation == "core.texture2D") && IsAdvancedCoordinates(n, incoming[n.Id])) || live.Count(n => n.Operation == "core.texture2D") > 1 ||
                 live.Any(n => n.Operation == "core.toonSurface" && (n.Properties?["opacity"] != null || n.Properties?["displacement"] != null || incoming[n.Id].Any(e => e.To.PortId == "opacity" || e.To.PortId == "displacement" || e.To.PortId == "normal")));
+        }
+
+        static bool IsAdvancedNoise(GraphNode n, IEnumerable<GraphConnection> incoming)
+        {
+            var dimensions = n.Properties?["dimensions"];
+            if (dimensions != null && (dimensions.Type == JTokenType.Integer || dimensions.Type == JTokenType.Float) && (double)dimensions != 2) return true;
+            if (n.Properties?["coordinateSource"] != null && (string)n.Properties["coordinateSource"] != "uv0") return true;
+            if (n.Properties?["coordinateSpace"] != null && (string)n.Properties["coordinateSpace"] != "object") return true;
+            return incoming.Any(e => e.To.PortId == "x" || e.To.PortId == "position");
+        }
+        static bool IsAdvancedCoordinates(GraphNode n, IEnumerable<GraphConnection> incoming)
+        {
+            if (n.Operation == "core.noise") return IsAdvancedNoise(n, incoming);
+            return n.Properties?["coordinateSource"] != null && (string)n.Properties["coordinateSource"] != "uv0";
         }
 
         AdvancedShaderEmitter(ShaderGraph graph, EmitterOptions options)
@@ -127,9 +141,12 @@ namespace NXSG.Backend
             if (live.Any(id => nodes[id].Operation == "core.audioLink")) b.AppendLine(AudioLinkShader.Hlsl);
             b.AppendLine("#ifndef SHADOW_COORDS\n#define SHADOW_COORDS(index)\n#endif");
             b.AppendLine(Helpers);
+            b.AppendLine(ProceduralShader.Hlsl);
             b.AppendLine(code.ToString());
             b.AppendLine("ENDCG\n" + passCode + shadowPass + "}\nFallback Off\n}");
             if (passes.Count > 1) diagnostics.Add(new Diagnostic(DiagnosticSeverity.Warning, "cost.shell", root.Id, (passes.Count - 1) + " extra transparent mesh pass" + (passes.Count == 2 ? "" : "es") + " per view; normal offset does not expand renderer bounds. Overlapping transparent objects can sort imperfectly."));
+            if (live.Any(id => nodes[id].Operation == "core.musgrave" || nodes[id].Operation == "core.voronoi" || (nodes[id].Operation == "core.noise" && (int?)nodes[id].Properties["dimensions"] == 4)))
+                diagnostics.Add(new Diagnostic(DiagnosticSeverity.Warning, "cost.procedural", "$", "Fractal, cellular and 4D patterns cost more than 2D noise; start with few detail layers, especially across shells."));
             if (live.Any(id => nodes[id].Operation == "core.vertexMotion")) diagnostics.Add(new Diagnostic(DiagnosticSeverity.Warning, "bounds.displacement", "$", "Vertex displacement requires mesh/SkinnedMeshRenderer bounds large enough for the motion."));
             return b.ToString();
         }
@@ -140,7 +157,8 @@ namespace NXSG.Backend
             while (queue.Count > 0)
             {
                 var current = queue.Dequeue(); if (!live.Add(current.Id)) continue;
-                foreach (var port in NodeCatalog.Ports(current.Operation, false)) { var source = Source(current, port); if (source != null) queue.Enqueue(source); }
+            var ports = NodeCatalog.Ports(current.Operation, false).Concat(new[] { "x", "position", "uv", "time" });
+            foreach (var port in ports.Distinct()) { var source = Source(current, port); if (source != null) queue.Enqueue(source); }
             }
         }
         void FlattenSurfaces(GraphNode node, string inheritedOffset, int traversalDepth, List<SurfacePass> result)
@@ -191,7 +209,7 @@ namespace NXSG.Backend
             string body;
             string P(string p, string def, string t = null) { return Input(n, p, def, t ?? type, vertex); }
             string S(string p, double def) { return Scalar(n, p, def, vertex); }
-            string uv = "input.uv";
+            string uv = DefaultUV(n);
             switch (n.Operation)
             {
                 case "core.previewVector": body = Source(n,"normal") != null ? "float4(" + P("normal","float3(0,0,1)","vector3") + "*.5+.5,1)" : "float4(" + P("uv",uv,"vector2") + ",0,1)"; break;
@@ -210,8 +228,10 @@ namespace NXSG.Backend
                 case "core.polarUV": body = "NX_Polar(" + P("uv", uv) + "," + Vec(n, "center", .5, .5) + "," + Prop(n, "radialScale", 1) + "," + Prop(n, "angleScale", 1) + ")"; break;
                 case "core.texture2D": body = Sample(n, P("uv", uv, "vector2"), vertex); break;
                 case "core.noise":
-                    body = "NX_Noise(" + P("uv", uv, "vector2") + "*" + Prop(n, "scale", 5) + "+float2(1,.731)*" + P("time", "_Time.y", "float") + "*" + Prop(n, "speed", 1) + ")";
+                    body = NoiseBody(n, P("uv", uv, "vector2"), vertex);
                     if (port == "color") body = "float4(" + body + "," + body + "," + body + ",1)"; break;
+                case "core.musgrave": case "core.voronoi": case "core.checker": case "core.wave":
+                    body = ProceduralBody(n, uv, vertex, port); break;
                 case "core.add": body = "(" + P("a", "0") + "+" + P("b", "0") + ")"; break;
                 case "core.subtract": body = "(" + P("a", "0") + "-" + P("b", "0") + ")"; break;
                 case "core.multiply": body = "(" + P("a", "1") + "*" + P("b", "1") + ")"; break;
@@ -250,6 +270,70 @@ namespace NXSG.Backend
             var tex = textureNames[(string)n.Properties["resourceId"]];
             var transformed = "(" + uv + "*" + tex + "_ST.xy+" + tex + "_ST.zw)";
             return vertex ? "tex2Dlod(" + tex + ",float4(" + transformed + ",0,0))" : "tex2D(" + tex + "," + transformed + ")";
+        }
+        string StringProp(GraphNode n, string key, string fallback, params string[] allowed)
+        {
+            var value = n.Properties[key] == null ? fallback : (string)n.Properties[key];
+            if (!allowed.Contains(value, StringComparer.Ordinal)) throw new InvalidOperationException("Unsupported " + key + ": " + value);
+            return value;
+        }
+        int IntProp(GraphNode n, string key, int fallback, int min, int max)
+        {
+            var token = n.Properties[key];
+            if (token == null) return fallback;
+            if ((token.Type != JTokenType.Integer && token.Type != JTokenType.Float) || (double)token != Math.Truncate((double)token) || (double)token < min || (double)token > max) throw new InvalidOperationException("Expected integer " + key + " in range " + min + ".." + max + ".");
+            return (int)token;
+        }
+        string DefaultUV(GraphNode n)
+        {
+            var source = StringProp(n, "coordinateSource", "uv0", "uv0", "uv1", "uv2", "uv3", "object", "world", "polar", "panosphere", "matcap");
+            switch (source)
+            {
+                case "uv1": return "input.uv1";
+                case "uv2": return "input.uv2";
+                case "uv3": return "input.uv3";
+                case "object": return "input.originalLocal.xz";
+                case "world": return "input.originalWs.xz";
+                case "polar": return "NX_Polar(input.uv,float2(.5,.5),1,1)";
+                case "panosphere": return "NX_PanoUV(normalize(input.originalWs-_WorldSpaceCameraPos))";
+                case "matcap": return "NX_MatcapUV(normalize(input.originalWs-_WorldSpaceCameraPos),normalize(input.n))";
+                default: return "input.uv";
+            }
+        }
+        string NoiseBody(GraphNode n, string selectedUV, bool vertex)
+        {
+            var dimensions = IntProp(n, "dimensions", 2, 1, 4);
+            var time = Input(n, "time", "_Time.y", "float", vertex);
+            var speed = Prop(n, "speed", 1);
+            var scale = Prop(n, "scale", 5);
+            selectedUV = Input(n, "uv", selectedUV, "vector2", vertex);
+            if (dimensions == 1) return "NX_Noise1(" + Input(n, "x", "(" + selectedUV + ").x", "float", vertex) + "*" + scale + "+" + time + "*" + speed + ")";
+            if (dimensions == 2) return "NX_Noise(" + selectedUV + "*" + scale + "+float2(1,.731)*" + time + "*" + speed + ")";
+            var space = StringProp(n, "coordinateSpace", "object", "object", "world");
+            var pos = Input(n, "position", space == "world" ? "input.originalWs" : "input.originalLocal", "vector3", vertex);
+            if (dimensions == 3) return "NX_Noise3(" + pos + "*" + scale + "+float3(1,.731,.357)*" + time + "*" + speed + ")";
+            return "NX_Noise4(float4(" + pos + ".xyz*" + scale + "," + time + "*" + speed + "))";
+        }
+        string ProceduralBody(GraphNode n, string selectedUV, bool vertex, string port)
+        {
+            var dimensions = IntProp(n, "dimensions", 2, 2, 3);
+            var time = Input(n, "time", "_Time.y", "float", vertex);
+            var space = StringProp(n, "coordinateSpace", "object", "object", "world");
+            var p = Input(n, "position", space == "world" ? "input.originalWs" : "input.originalLocal", "vector3", vertex);
+            var source = Input(n, "uv", selectedUV, "vector2", vertex);
+            var scale = Prop(n, "scale", 5);
+            var speed = Prop(n, "speed", 0);
+            var pos = dimensions == 2 ? "float3(" + source + "*" + scale + ",0)" : "(" + p + "*" + scale + ")";
+            var shifted = "(" + pos + (dimensions == 2 ? "+float3(1,.731,0)*" : "+float3(1,.731,.357)*") + time + "*" + speed + ")";
+            string value;
+            switch (n.Operation)
+            {
+                case "core.musgrave": value = "NX_Musgrave(" + shifted + "," + IntProp(n,"octaves",4,1,8) + "," + Prop(n,"lacunarity",2) + "," + Prop(n,"gain",.5) + "," + IntProp(n,"mode",0,0,2) + ")"; break;
+                case "core.voronoi": value = "NX_Voronoi(" + shifted + "," + Prop(n,"randomness",1) + "," + dimensions + ")"; break;
+                case "core.checker": value = "NX_Checker(" + shifted + "," + dimensions + ")"; break;
+                default: value = "NX_Wave(" + pos + "," + IntProp(n,"mode",0,0,1) + "," + IntProp(n,"axis",0,0,2) + "," + time + "*" + speed + ")"; break;
+            }
+            return port == "color" ? "float4(" + value + "," + value + "," + value + ",1)" : value;
         }
         string CurveBody(GraphNode n, string value, bool color)
         {
@@ -306,7 +390,7 @@ namespace NXSG.Backend
             var roughness = Scalar(surface,"roughness",.5);
             var threshold=ToonSetting(surface,"threshold",passIndex);var softness=ToonSetting(surface,"softness",passIndex);var shadow=ToonSetting(surface,"shadowStrength",passIndex);
             var b=new StringBuilder("Pass {\nName \""+(shell?(passIndex == 1 ? "Shell" : "Shell" + passIndex.ToString(CultureInfo.InvariantCulture)):"ForwardBase")+"\"\nTags { \"LightMode\"=\""+(shell?"Always":"ForwardBase")+"\" }\nCull Back\n"+(shell?"ZWrite Off\nBlend SrcAlpha OneMinusSrcAlpha":"ZWrite On")+"\nCGPROGRAM\n#pragma target 3.5\n#pragma vertex vert\n#pragma fragment frag\n#pragma multi_compile_fwdbase\n#pragma multi_compile_instancing\n");
-            b.AppendLine("NXInput vert(NXApp v) { UNITY_SETUP_INSTANCE_ID(v); NXInput input=NX_Make(v); v.vertex.xyz+=v.normal*("+displacement+"+"+offset+"); NXInput o=NX_Make(v); UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o); TRANSFER_SHADOW(o); return o; }");
+            b.AppendLine("NXInput vert(NXApp v) { UNITY_SETUP_INSTANCE_ID(v); NXInput input=NX_Make(v); v.vertex.xyz+=v.normal*("+displacement+"+"+offset+"); NXInput o=NX_Make(v); o.originalLocal=input.originalLocal; o.originalWs=input.originalWs; UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o); TRANSFER_SHADOW(o); return o; }");
             b.AppendLine("float4 frag(NXInput input):SV_Target { UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input); float4 c="+color+"*_Color; float3 emission=("+emission+").rgb; float alpha=saturate(c.a*"+opacity+");");
             if(!shell)b.AppendLine("clip(alpha-"+Prop(surface,"cutoff",.001)+");");
             if(surface.Operation=="core.unlitSurface")b.AppendLine("return float4(c.rgb+emission,alpha);");
@@ -326,12 +410,12 @@ namespace NXSG.Backend
             var displacement=Scalar(surface,"displacement",0,true);
             var opacity=Scalar(surface,"opacity",1);
             var color=Input(surface,"albedo","float4(1,1,1,1)","color");
-            return "Pass {\nName \"ShadowCaster\"\nTags { \"LightMode\"=\"ShadowCaster\" }\nZWrite On\nCGPROGRAM\n#pragma target 3.5\n#pragma vertex vertShadow\n#pragma fragment fragShadow\n#pragma multi_compile_shadowcaster\n#pragma multi_compile_instancing\nstruct NXShadow { V2F_SHADOW_CASTER; float2 uv:TEXCOORD1; float3 ws:TEXCOORD2; float3 normal:TEXCOORD3; float3 local:TEXCOORD4; UNITY_VERTEX_OUTPUT_STEREO };\nNXShadow vertShadow(NXApp v){UNITY_SETUP_INSTANCE_ID(v); NXInput input=NX_Make(v); v.vertex.xyz+=v.normal*("+displacement+"+"+offset+"); NXShadow o; UNITY_INITIALIZE_OUTPUT(NXShadow,o); UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o); o.uv=v.uv; o.ws=mul(unity_ObjectToWorld,v.vertex).xyz; o.normal=UnityObjectToWorldNormal(v.normal); o.local=v.vertex.xyz; TRANSFER_SHADOW_CASTER_NORMALOFFSET(o); return o;}\nfloat4 fragShadow(NXShadow i):SV_Target{UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i); NXInput input=(NXInput)0; input.uv=i.uv; input.ws=i.ws; input.n=i.normal; input.local=i.local; clip(("+color+").a*_Color.a*("+opacity+")-"+Prop(surface,"cutoff",.001)+"); SHADOW_CASTER_FRAGMENT(i);}\nENDCG\n}\n";
+            return "Pass {\nName \"ShadowCaster\"\nTags { \"LightMode\"=\"ShadowCaster\" }\nZWrite On\nCGPROGRAM\n#pragma target 3.5\n#pragma vertex vertShadow\n#pragma fragment fragShadow\n#pragma multi_compile_shadowcaster\n#pragma multi_compile_instancing\nstruct NXShadow { V2F_SHADOW_CASTER; float2 uv:TEXCOORD1; float3 ws:TEXCOORD2; float3 normal:TEXCOORD3; float3 local:TEXCOORD4; float2 uv1:TEXCOORD5; float2 uv2:TEXCOORD6; float2 uv3:TEXCOORD7; float3 originalWs:TEXCOORD8; float3 originalLocal:TEXCOORD9; UNITY_VERTEX_OUTPUT_STEREO };\nNXShadow vertShadow(NXApp v){UNITY_SETUP_INSTANCE_ID(v); NXInput input=NX_Make(v); v.vertex.xyz+=v.normal*("+displacement+"+"+offset+"); NXShadow o; UNITY_INITIALIZE_OUTPUT(NXShadow,o); UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o); o.uv=v.uv; o.uv1=v.uv1; o.uv2=v.uv2; o.uv3=v.uv3; o.originalWs=input.originalWs; o.originalLocal=input.originalLocal; o.ws=mul(unity_ObjectToWorld,v.vertex).xyz; o.normal=UnityObjectToWorldNormal(v.normal); o.local=v.vertex.xyz; TRANSFER_SHADOW_CASTER_NORMALOFFSET(o); return o;}\nfloat4 fragShadow(NXShadow i):SV_Target{UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i); NXInput input=(NXInput)0; input.uv=i.uv; input.uv1=i.uv1; input.uv2=i.uv2; input.uv3=i.uv3; input.originalWs=i.originalWs; input.originalLocal=i.originalLocal; input.ws=i.ws; input.n=i.normal; input.local=i.local; clip(("+color+").a*_Color.a*("+opacity+")-"+Prop(surface,"cutoff",.001)+"); SHADOW_CASTER_FRAGMENT(i);}\nENDCG\n}\n";
         }
         const string Helpers=@"
-struct NXApp { float4 vertex:POSITION; float3 normal:NORMAL; float4 tangent:TANGENT; float2 uv:TEXCOORD0; UNITY_VERTEX_INPUT_INSTANCE_ID };
-struct NXInput { float4 pos:SV_POSITION; float2 uv:TEXCOORD0; float3 ws:TEXCOORD1; float3 n:TEXCOORD2; float3 local:TEXCOORD3; float3 tangent:TEXCOORD4; float3 bitangent:TEXCOORD5; SHADOW_COORDS(6) UNITY_VERTEX_OUTPUT_STEREO };
-NXInput NX_Make(NXApp v){ NXInput o=(NXInput)0; o.pos=UnityObjectToClipPos(v.vertex); o.uv=v.uv; o.local=v.vertex.xyz; o.ws=mul(unity_ObjectToWorld,v.vertex).xyz; o.n=UnityObjectToWorldNormal(v.normal); o.tangent=UnityObjectToWorldDir(v.tangent.xyz); o.bitangent=cross(o.n,o.tangent)*v.tangent.w*unity_WorldTransformParams.w; return o; }
+struct NXApp { float4 vertex:POSITION; float3 normal:NORMAL; float4 tangent:TANGENT; float2 uv:TEXCOORD0; float2 uv1:TEXCOORD1; float2 uv2:TEXCOORD2; float2 uv3:TEXCOORD3; UNITY_VERTEX_INPUT_INSTANCE_ID };
+struct NXInput { float4 pos:SV_POSITION; float2 uv:TEXCOORD0; float2 uv1:TEXCOORD7; float2 uv2:TEXCOORD8; float2 uv3:TEXCOORD9; float3 ws:TEXCOORD1; float3 n:TEXCOORD2; float3 local:TEXCOORD3; float3 originalWs:TEXCOORD10; float3 originalLocal:TEXCOORD11; float3 tangent:TEXCOORD4; float3 bitangent:TEXCOORD5; SHADOW_COORDS(6) UNITY_VERTEX_OUTPUT_STEREO };
+NXInput NX_Make(NXApp v){ NXInput o=(NXInput)0; o.pos=UnityObjectToClipPos(v.vertex); o.uv=v.uv; o.uv1=v.uv1; o.uv2=v.uv2; o.uv3=v.uv3; o.local=v.vertex.xyz; o.ws=mul(unity_ObjectToWorld,v.vertex).xyz; o.originalLocal=o.local; o.originalWs=o.ws; o.n=UnityObjectToWorldNormal(v.normal); o.tangent=UnityObjectToWorldDir(v.tangent.xyz); o.bitangent=cross(o.n,o.tangent)*v.tangent.w*unity_WorldTransformParams.w; return o; }
 float4 NX_Splat(float x){return float4(x,x,x,x);}
 float NX_Div(float a,float b){return a/((b<0?-1:1)*max(abs(b),.00001));}
 float4 NX_Div(float4 a,float4 b){return a/((step(0,b)*2-1)*max(abs(b),.00001));}
@@ -339,6 +423,8 @@ float2 NX_Rotate(float2 uv,float2 center,float degrees){float a=radians(degrees)
 float2 NX_Polar(float2 uv,float2 center,float radial,float angular){float2 p=uv-center;return float2(length(p)*2*radial,(dot(p,p)<1e-12?.5:atan2(p.y,p.x)/6.28318530718+.5)*angular);}
 float NX_Hash(float2 p){return frac(sin(dot(p,float2(127.1,311.7)))*43758.5453);}
 float NX_Noise(float2 p){float2 i=floor(p),f=frac(p);f=f*f*(3-2*f);return lerp(lerp(NX_Hash(i),NX_Hash(i+float2(1,0)),f.x),lerp(NX_Hash(i+float2(0,1)),NX_Hash(i+float2(1,1)),f.x),f.y);}
+float2 NX_PanoUV(float3 d){return float2(atan2(d.x,d.z)/6.28318530718+.5,asin(clamp(d.y,-1,1))/3.14159265359+.5);}
+float2 NX_MatcapUV(float3 view,float3 normal){float3 n=normalize(mul((float3x3)UNITY_MATRIX_V,normal));return n.xy*.5+.5;}
 float2 NX_Flipbook(float2 uv,float frame,float cols,float rows){float count=cols*rows;frame=floor(frame);frame=frame-floor(frame/count)*count;return (frac(uv)+float2(fmod(frame,cols),rows-1-floor(frame/cols)))/float2(cols,rows);}
 float2 NX_Distort(float2 uv,float strength,float scale,float time){return uv+(float2(NX_Noise(uv*scale+time),NX_Noise(uv*scale+time+17.2))-.5)*strength;}
 float3 NX_Normal(float4 encoded,float strength){float3 n=UnpackNormal(encoded);n.xy*=strength;n.z=sqrt(saturate(1-dot(n.xy,n.xy)));return normalize(n);}

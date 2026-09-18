@@ -137,7 +137,11 @@ namespace NXSG.Core
             {
                 case "core.value": numeric = new[] { "value" }; break;
                 case "core.time": numeric = new[] { "speed", "offset" }; break;
-                case "core.noise": numeric = new[] { "scale", "speed" }; break;
+                case "core.noise": case "core.checker": numeric = new[] { "scale", "speed" }; break;
+                case "core.musgrave": numeric = new[] { "scale", "speed", "lacunarity", "gain" }; break;
+                case "core.voronoi": numeric = new[] { "scale", "speed", "randomness" }; break;
+                case "core.wave": numeric = new[] { "scale", "speed" }; break;
+                case "core.uv0": case "core.texture2D": break;
                 case "core.mix": numeric = new[] { "factor" }; break;
                 case "core.ramp": numeric = new[] { "blackPoint", "whitePoint", "smoothness" }; break;
                 case "core.emission": numeric = new[] { "strength" }; break;
@@ -160,6 +164,26 @@ namespace NXSG.Core
                 case "core.vertexMotion": numeric = new[] { "strength", "speed", "frequency" }; break;
                 case "core.uvDistort": numeric = new[] { "strength", "speed", "scale" }; break;
                 default: return;
+            }
+            if (node.Properties["coordinateSource"] != null)
+                CheckChoice(node.Properties["coordinateSource"], path + ".properties.coordinateSource", new[] { "uv0", "uv1", "uv2", "uv3", "object", "world", "polar", "panosphere", "matcap" }, diagnostics);
+            if (new[] { "core.noise", "core.musgrave", "core.voronoi", "core.checker", "core.wave" }.Contains(node.Operation))
+            {
+                CheckIntegerRange(node.Properties["dimensions"], path + ".properties.dimensions", node.Operation == "core.noise" ? 1 : 2, node.Operation == "core.noise" ? 4 : 3, diagnostics);
+                CheckChoice(node.Properties["coordinateSpace"], path + ".properties.coordinateSpace", new[] { "object", "world" }, diagnostics);
+            }
+            if (node.Operation == "core.musgrave")
+            {
+                CheckIntegerRange(node.Properties["octaves"], path + ".properties.octaves", 1, 8, diagnostics);
+                CheckIntegerRange(node.Properties["mode"], path + ".properties.mode", 0, 2, diagnostics);
+                CheckRange(node.Properties["lacunarity"], path + ".properties.lacunarity", 1, 4, diagnostics);
+                CheckRange(node.Properties["gain"], path + ".properties.gain", 0, 1, diagnostics);
+            }
+            if (node.Operation == "core.voronoi") CheckRange(node.Properties["randomness"], path + ".properties.randomness", 0, 1, diagnostics);
+            if (node.Operation == "core.wave")
+            {
+                CheckIntegerRange(node.Properties["mode"], path + ".properties.mode", 0, 1, diagnostics);
+                CheckIntegerRange(node.Properties["axis"], path + ".properties.axis", 0, 2, diagnostics);
             }
             if (numeric != null) foreach (var name in numeric) CheckNumber(node.Properties[name], path + ".properties." + name, diagnostics);
             if (vectors != null) foreach (var name in vectors) CheckVector2(node.Properties[name], path + ".properties." + name, diagnostics);
@@ -245,6 +269,18 @@ namespace NXSG.Core
         {
             CheckIntegerRange(node.Properties["rows"], path + ".properties.rows", 1, 64, diagnostics);
             CheckIntegerRange(node.Properties["columns"], path + ".properties.columns", 1, 64, diagnostics);
+        }
+
+        private static void CheckChoice(JToken token, string path, string[] choices, List<Diagnostic> diagnostics)
+        {
+            if (token != null && (token.Type != JTokenType.String || !choices.Contains((string)token)))
+                diagnostics.Add(new Diagnostic(DiagnosticSeverity.Error, "node.property.choice", path, "Choose one of: " + string.Join(", ", choices)));
+        }
+        private static void CheckRange(JToken token, string path, double min, double max, List<Diagnostic> diagnostics)
+        {
+            if (token == null) return;
+            if ((token.Type != JTokenType.Float && token.Type != JTokenType.Integer) || double.IsNaN((double)token) || (double)token < min || (double)token > max)
+                diagnostics.Add(new Diagnostic(DiagnosticSeverity.Error, "node.property.range", path, "Value must be between " + min + " and " + max + "."));
         }
 
         private static void CheckIntegerRange(JToken token, string path, int minimum, int maximum, List<Diagnostic> diagnostics)

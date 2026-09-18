@@ -1,6 +1,6 @@
 # Built-in node pack
 
-The canvas now offers 38 visible nodes, plus hidden Parameter and Preview Vector helpers. Socket color indicates data type: yellow color, gray scalar, blue UV coordinates, cyan normals, green surface. Drag from either end; compatible-node menus and clipboard operations use the same core catalog.
+The canvas now offers 42 visible nodes, plus hidden Parameter and Preview Vector helpers. Socket color indicates data type: yellow color, gray scalar, blue UV coordinates, cyan normals, green surface. Drag from either end; compatible-node menus and clipboard operations use the same core catalog.
 
 ## New nodes
 
@@ -15,7 +15,11 @@ The canvas now offers 38 visible nodes, plus hidden Parameter and Preview Vector
 | World Planar UVs | UV output | World X/Z coordinates; objects move through the pattern. |
 | UV Scroll | UV, scalar time → UV | Speed (0.1,0); unconnected time uses shader time |
 | Ramp | number → number | Black point 0, white point 1, smoothing 0; 2–16 editable curve points, initially a straight 0–1 line |
-| Noise | UV, scalar time → grayscale color and scalar value | Scale 5, speed 1; unconnected UV/time use UV0/shader time |
+| Noise | X, UV, Position, Time → color/value | 1D line, 2D UV noise, 3D volume or true 4D evolution. Scale 5, speed 1. |
+| Musgrave | UV, Position, Time → color/value | Soft fractal, ridged or turbulence; 1–8 detail layers, detail scale and strength. 2D/3D. |
+| Voronoi | UV, Position, Time → color/value | Nearest-cell distance, with randomness control. 2D/3D. |
+| Checkerboard | UV, Position, Time → color/value | Alternating squares/cubes. 2D/3D. |
+| Waves | UV, Position, Time → color/value | Sine bands or rings, selectable direction. 2D/3D. |
 | Add | numbers/colors A/B → matching result | Missing inputs are black |
 | Subtract | numbers/colors A/B → matching result | A minus B; missing inputs are black |
 | Divide | numbers/colors A/B → matching result | A divided by B; missing inputs are white. Denominator magnitude is at least 0.00001; zero uses positive sign. |
@@ -35,7 +39,7 @@ The original UV Coordinates, Texture, Color, Multiply, Toon Surface, and Output 
 ## Current boundaries
 
 - Reachable texture and sticker resources receive separate stable sampler properties. The first uses `_MainTex`; additional resources use `_NXSG_Tex_<hash>`. Resource assignment and runtime texture availability remain Unity material concerns.
-- Noise is smooth 2D value noise with a moving sampling position, not true evolving/4D noise.
+- Noise defaults to the original scrolling 2D value noise. 1D and 3D scroll along their coordinates; 4D interpolates a fourth axis driven by Time × Evolution speed. Speed 0 freezes the pattern. New procedural nodes start with speed 0. Musgrave is a normalized layered value-noise implementation, not bit-for-bit Blender output.
 - Emission adds unlit color. Bloom halos depend on the world's post-processing.
 - Live preview updates unsaved edits in a temporary material after a short pause; it pauses when the window is unfocused. Build updates the saved material. Shader Time animates the built shader when the rendering environment advances shader time.
 - PC Built-In backend only; VRChat client, headset, and mobile acceptance remain separate checks.
@@ -116,3 +120,14 @@ Select a node, choose **Preview output**, then **Preview selected node**. Number
 ## Ready-made effect examples
 
 Open `Assets/NXSGExamples/Nested Hologram.nxsg` for two shell layers, or `Audio Hologram.nxsg`, `Noise Color Ramp.nxsg`, or `Animated Sticker.nxsg` in the development project. Distributable copies live under `Samples~`. The sticker sample uses a white placeholder; assign a transparent atlas in its texture picker. Audio Hologram has a nonzero fallback, so its shell remains visible without music.
+
+
+## Coordinate choices and procedural dimensions
+
+UV Coordinates, Texture, Polar UVs and the procedural nodes expose a Coordinates dropdown: mesh UV0–UV3, Object XZ, World XZ, Polar, Panosphere and Matcap. A connected UV wire overrides it. For 3D/4D procedures, use Position input or choose Object/World position space. 1D Noise uses X input, falling back to UV.x. Unused dimension inputs do not affect the result.
+
+Mesh UV and Polar mappings do not depend on the camera. Panosphere uses viewing direction; Matcap uses the view-space normal, so both intentionally respond to the camera. Missing mesh UV channels read zero. Object/World planar modes project XZ and can stretch on side faces. Polar has a seam and a singular center. UV Distortion remains a separate connectable node.
+
+These coordinate choices use [Poiyomi's documented UV options](https://www.poiyomi.com/) as workflow context; NXSG's implementations are independent. This is not complete Poiyomi shader parity. Animated noise can make an otherwise fixed mapping appear to move: freeze Speed to check alignment. Object coordinates follow transforms and the supplied skinned vertex positions, not an undeformed bind-pose texture space.
+
+4D Noise interpolates 16 lattice corners. Voronoi searches 9 cells in 2D or 27 in 3D; Musgrave adds up to 8 octaves. Shells multiply the shading work. These are algorithmic costs, not measured GPU timings. Try `Assets/NXSGExamples/4D Clouds.nxsg` for an evolving volume.

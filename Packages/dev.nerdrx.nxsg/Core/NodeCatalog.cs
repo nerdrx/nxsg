@@ -11,6 +11,7 @@ namespace NXSG.Core
         {
             "core.ramp", "core.polarUV", "core.uvRotate", "core.objectUV", "core.worldUV",
             "core.value", "core.time", "core.uvTransform", "core.uvScroll", "core.noise",
+            "core.musgrave", "core.voronoi", "core.checker", "core.wave",
             "core.add", "core.subtract", "core.divide", "core.minimum", "core.maximum", "core.mix", "core.emission", "core.oneMinus", "core.clamp",
             "core.constant", "core.parameter", "core.uv0", "core.texture2D", "core.multiply",
             "core.toonSurface", "core.unlitSurface", "core.pbrSurface", "core.fresnel", "core.colorRamp",
@@ -25,7 +26,9 @@ namespace NXSG.Core
             ["core.objectUV"] = new string[0], ["core.worldUV"] = new string[0],
             ["core.value"] = new string[0], ["core.time"] = new string[0],
             ["core.uvTransform"] = new[] { "uv" }, ["core.uvScroll"] = new[] { "uv", "time" },
-            ["core.noise"] = new[] { "uv", "time" }, ["core.add"] = new[] { "a", "b" },
+            ["core.noise"] = new[] { "x", "uv", "position", "time" },
+            ["core.musgrave"] = new[] { "uv", "position", "time" }, ["core.voronoi"] = new[] { "uv", "position", "time" },
+            ["core.checker"] = new[] { "uv", "position", "time" }, ["core.wave"] = new[] { "uv", "position", "time" }, ["core.add"] = new[] { "a", "b" },
             ["core.subtract"] = new[] { "a", "b" }, ["core.divide"] = new[] { "a", "b" },
             ["core.minimum"] = new[] { "a", "b" }, ["core.maximum"] = new[] { "a", "b" },
             ["core.mix"] = new[] { "a", "b", "factor" }, ["core.emission"] = new[] { "color", "strength" },
@@ -52,7 +55,9 @@ namespace NXSG.Core
             ["core.objectUV"] = new[] { "uv" }, ["core.worldUV"] = new[] { "uv" },
             ["core.value"] = new[] { "value" }, ["core.time"] = new[] { "value" },
             ["core.uvTransform"] = new[] { "uv" }, ["core.uvScroll"] = new[] { "uv" },
-            ["core.noise"] = new[] { "color", "value" }, ["core.add"] = new[] { "value" },
+            ["core.noise"] = new[] { "color", "value" },
+            ["core.musgrave"] = new[] { "color", "value" }, ["core.voronoi"] = new[] { "color", "value" },
+            ["core.checker"] = new[] { "color", "value" }, ["core.wave"] = new[] { "color", "value" }, ["core.add"] = new[] { "value" },
             ["core.subtract"] = new[] { "value" }, ["core.divide"] = new[] { "value" },
             ["core.minimum"] = new[] { "value" }, ["core.maximum"] = new[] { "value" },
             ["core.mix"] = new[] { "value" }, ["core.emission"] = new[] { "color" },
@@ -81,7 +86,7 @@ namespace NXSG.Core
                 case "core.uv0": case "core.uvTransform": case "core.uvScroll": case "core.uvRotate":
                 case "core.polarUV": case "core.objectUV": case "core.worldUV": return "Coordinates";
                 case "core.value": case "core.time": case "core.constant": case "core.parameter": return "Inputs";
-                case "core.texture2D": case "core.noise": return "Textures";
+                case "core.texture2D": case "core.noise": case "core.musgrave": case "core.voronoi": case "core.checker": case "core.wave": return "Textures";
                 case "core.add": case "core.subtract": case "core.multiply": case "core.divide":
                 case "core.minimum": case "core.maximum": case "core.mix": case "core.oneMinus":
                 case "core.clamp": return "Math";
@@ -110,6 +115,7 @@ namespace NXSG.Core
                 case "core.worldUV": return "World Planar UVs";
                 case "core.value": return "Value"; case "core.time": return "Time";
                 case "core.uvTransform": return "UV Transform"; case "core.uvScroll": return "UV Scroll";
+                case "core.musgrave": return "Musgrave"; case "core.voronoi": return "Voronoi"; case "core.checker": return "Checkerboard"; case "core.wave": return "Waves";
                 case "core.noise": return "Noise"; case "core.add": return "Add"; case "core.subtract": return "Subtract";
                 case "core.divide": return "Divide"; case "core.minimum": return "Minimum"; case "core.maximum": return "Maximum";
                 case "core.mix": return "Mix";
@@ -141,7 +147,11 @@ namespace NXSG.Core
                 case "core.time": return "Time in seconds, with speed and offset controls. Use it to animate effects.";
                 case "core.uvTransform": return "Scale and shift texture coordinates to control tiling and placement.";
                 case "core.uvScroll": return "Move texture coordinates over time, like flowing water or scrolling stripes.";
-                case "core.noise": return "Create a smooth random grayscale pattern that can move over time.";
+                case "core.noise": return "Smooth random patterns in 1D, 2D, 3D or evolving 4D. Set Animation speed to 0 to freeze.";
+                case "core.musgrave": return "Layered fractal noise for clouds, terrain and smoky masks. Choose soft, ridged or turbulence.";
+                case "core.voronoi": return "Cell-like patterns from distance to scattered points. Useful for cracks, scales and organic masks.";
+                case "core.checker": return "Alternating black and white squares or 3D cubes. Useful for patterns and checking UVs.";
+                case "core.wave": return "Smooth repeating bands or rings. Choose a direction, scale and animation speed.";
                 case "core.add": return "Add two numbers or colors together to brighten or combine them.";
                 case "core.subtract": return "Subtract B from A, using numbers or color channels.";
                 case "core.divide": return "Divide A by B, using numbers or color channels. Very small divisors are limited to avoid division by zero.";
@@ -153,7 +163,7 @@ namespace NXSG.Core
                 case "core.clamp": return "Keep each color channel between 0 and 1. Values outside that range are clipped.";
                 case "core.constant": return "Choose a solid color to use on its own or combine with other nodes.";
                 case "core.parameter": return "Read a declared property that can control your material.";
-                case "core.uv0": return "The mesh's first texture coordinates: where each part of an image lands on the mesh.";
+                case "core.uv0": return "Choose mesh UV0–UV3, object/world mapping, polar or explicitly camera-relative mapping.";
                 case "core.texture2D": return "Read an image using texture coordinates and output its color.";
                 case "core.multiply": return "Multiply numbers or colors. Use colors to tint or darken. White keeps the other color unchanged.";
                 case "core.toonSurface": return "Give your base color cartoon-style lighting, with optional emission, opacity, and displacement.";
@@ -185,7 +195,8 @@ namespace NXSG.Core
                 case "core.worldUV": return "world space planar projection mapping xz";
                 case "core.value": return "constant scalar"; case "core.time": return "clock animation";
                 case "core.uvTransform": return "scale offset tiling"; case "core.uvScroll": return "pan animate";
-                case "core.noise": return "procedural random"; case "core.add": return "plus sum";
+                case "core.musgrave": return "fractal fbm clouds smoke turbulence ridged"; case "core.voronoi": return "cells cellular worley distance"; case "core.checker": return "checkerboard squares grid cubes"; case "core.wave": return "waves bands rings sine stripes";
+                case "core.noise": return "procedural random 1d 2d 3d 4d"; case "core.add": return "plus sum";
                 case "core.subtract": return "minus difference"; case "core.divide": return "division ratio safe divide";
                 case "core.minimum": return "min lower"; case "core.maximum": return "max higher";
                 case "core.mix": return "lerp blend"; case "core.emission": return "glow";
@@ -215,7 +226,7 @@ namespace NXSG.Core
                 case "core.uvRotate": return port == "uv" ? "vector2" : (port == "angle" ? "float" : null);
                 case "core.value": case "core.time": return port == "value" ? "float" : null;
                 case "core.uvTransform": case "core.uvScroll": return port == "uv" ? "vector2" : (port == "time" ? "float" : null);
-                case "core.noise": return port == "uv" ? "vector2" : (port == "time" ? "float" : (port == "value" ? "float" : (port == "color" ? "color" : null)));
+                case "core.noise": case "core.musgrave": case "core.voronoi": case "core.checker": case "core.wave": return port == "uv" ? "vector2" : port == "position" ? "vector3" : (port == "time" || port == "x" || port == "value") ? "float" : port == "color" ? "color" : null;
                 case "core.add": case "core.subtract": case "core.divide": case "core.minimum": case "core.maximum": return port == "a" || port == "b" || port == "value" ? "color" : null;
                 case "core.mix": return port == "factor" ? "float" : (port == "a" || port == "b" || port == "value" ? "color" : null);
                 case "core.emission": return port == "strength" ? "float" : (port == "color" ? "color" : null);
@@ -259,7 +270,13 @@ namespace NXSG.Core
                 case "core.time": node.Properties["speed"] = 1.0; node.Properties["offset"] = 0.0; break;
                 case "core.uvTransform": node.Properties["tiling"] = Vector(1, 1); node.Properties["offset"] = Vector(0, 0); break;
                 case "core.uvScroll": node.Properties["speed"] = Vector(.1, 0); break;
-                case "core.noise": node.Properties["scale"] = 5.0; node.Properties["speed"] = 1.0; break;
+                case "core.noise": node.Properties["dimensions"] = 2; node.Properties["coordinateSource"] = "uv0"; node.Properties["scale"] = 5.0; node.Properties["speed"] = 1.0; break;
+                case "core.musgrave": case "core.voronoi": case "core.checker": case "core.wave":
+                    node.Properties["dimensions"] = 2; node.Properties["coordinateSource"] = "uv0"; node.Properties["scale"] = 5.0; node.Properties["speed"] = 0.0;
+                    if (operation == "core.musgrave") { node.Properties["octaves"] = 4; node.Properties["lacunarity"] = 2.0; node.Properties["gain"] = .5; node.Properties["mode"] = 0; }
+                    if (operation == "core.voronoi") node.Properties["randomness"] = 1.0;
+                    if (operation == "core.wave") { node.Properties["mode"] = 0; node.Properties["axis"] = 0; }
+                    break;
                 case "core.mix": node.Properties["factor"] = .5; break;
                 case "core.emission": node.Properties["strength"] = 1.0; break;
                 case "core.constant": node.Properties["valueType"] = "color"; node.Properties["value"] = new JArray(1, 1, 1, 1); break;

@@ -45,6 +45,7 @@ internal static class Program
     {
         NodePackChecks.Run(Assert);
         DynamicTypeChecks.Run(Assert);
+        ProceduralChecks.Run(Assert);
         CheckClipboard();
         var fixtures = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../../Tests/Fixtures"));
         var example = GraphJson.Parse(File.ReadAllText(Path.Combine(fixtures, "../../Packages/dev.nerdrx.nxsg/Samples~/Animated Palette.nxsg")));

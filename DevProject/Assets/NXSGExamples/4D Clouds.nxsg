@@ -1,0 +1,142 @@
+{
+  "format": "nxsg",
+  "schemaVersion": 1,
+  "graphId": "4d-clouds",
+  "nodes": [
+    {
+      "id": "noise",
+      "operation": "core.noise",
+      "version": 1,
+      "properties": {
+        "dimensions": 4,
+        "scale": 5,
+        "speed": 0.25,
+        "coordinateSpace": "object"
+      }
+    },
+    {
+      "id": "ramp",
+      "operation": "core.ramp",
+      "version": 1,
+      "properties": {
+        "blackPoint": 0.25,
+        "whitePoint": 0.75
+      }
+    },
+    {
+      "id": "colors",
+      "operation": "core.colorRamp",
+      "version": 1,
+      "properties": {
+        "stops": [
+          [
+            0,
+            0.01,
+            0.02,
+            0.06,
+            1
+          ],
+          [
+            0.5,
+            0.1,
+            0.3,
+            0.5,
+            1
+          ],
+          [
+            1,
+            0.9,
+            0.95,
+            1,
+            1
+          ]
+        ]
+      }
+    },
+    {
+      "id": "surface",
+      "operation": "core.unlitSurface",
+      "version": 1,
+      "properties": {}
+    },
+    {
+      "id": "output",
+      "operation": "core.output",
+      "version": 1,
+      "properties": {}
+    }
+  ],
+  "connections": [
+    {
+      "id": "noise-ramp",
+      "from": {
+        "nodeId": "noise",
+        "portId": "value"
+      },
+      "to": {
+        "nodeId": "ramp",
+        "portId": "value"
+      }
+    },
+    {
+      "id": "ramp-colors",
+      "from": {
+        "nodeId": "ramp",
+        "portId": "value"
+      },
+      "to": {
+        "nodeId": "colors",
+        "portId": "value"
+      }
+    },
+    {
+      "id": "colors-surface",
+      "from": {
+        "nodeId": "colors",
+        "portId": "color"
+      },
+      "to": {
+        "nodeId": "surface",
+        "portId": "albedo"
+      }
+    },
+    {
+      "id": "surface-output",
+      "from": {
+        "nodeId": "surface",
+        "portId": "surface"
+      },
+      "to": {
+        "nodeId": "output",
+        "portId": "surface"
+      }
+    }
+  ],
+  "parameters": [],
+  "resources": [],
+  "patterns": [],
+  "layout": {
+    "nodes": {
+      "noise": {
+        "x": 0,
+        "y": 80
+      },
+      "ramp": {
+        "x": 250,
+        "y": 80
+      },
+      "colors": {
+        "x": 500,
+        "y": 80
+      },
+      "surface": {
+        "x": 750,
+        "y": 80
+      },
+      "output": {
+        "x": 1000,
+        "y": 80
+      }
+    }
+  }
+}
