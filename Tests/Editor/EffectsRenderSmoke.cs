@@ -40,6 +40,7 @@ public static class EffectsRenderSmoke
             Case("PBR metallic and roughness", () => CheckPbrResponse(camera,sphere,target));
             Case("AudioLink texture bands", () => CheckAudioTexture(camera,sphere,target));
             Case("shell passes and offset", () => CheckShell(camera, sphere, target));
+            Case("nested shell blend", () => CheckNestedShell(camera, sphere, target));
             Case("audio link preview and fallback", () => CheckAudioLink(camera, sphere, target));
             Case("vertex motion displacement", () => CheckVertexMotion());
             if (failures.Count != 0) throw new InvalidOperationException(string.Join("\n", failures));
@@ -167,6 +168,40 @@ public static class EffectsRenderSmoke
             if(Mathf.Abs(center.r-.5f)>.08f || center.b>.05f)throw new InvalidOperationException("Independent shell transparency: "+center);
         }
         if(large<=small*1.2f)throw new InvalidOperationException("Shell offset did not expand silhouette: "+small+"/"+large);
+    }
+
+    static void CheckNestedShell(Camera camera, GameObject sphere, RenderTexture target)
+    {
+        foreach (var nestInLayer in new[] { false, true })
+        {
+            var graph = Surface("core.shell");
+            Add(graph, new GraphNode { Id = "inner", Operation = "core.shell", Properties = new JObject { ["offset"] = .12 } });
+            graph.Nodes.Single(n => n.Id == "surface").Properties["offset"] = .2;
+            Add(graph, new GraphNode { Id = "base", Operation = "core.unlitSurface" });
+            Add(graph, new GraphNode { Id = "redSurface", Operation = "core.unlitSurface", Properties = new JObject { ["opacity"] = .5 } });
+            Add(graph, new GraphNode { Id = "blueSurface", Operation = "core.unlitSurface", Properties = new JObject { ["opacity"] = .5 } });
+            Add(graph, ColorNode("black", Color.black)); Add(graph, ColorNode("red", Color.red)); Add(graph, ColorNode("blue", Color.blue));
+            Connect(graph,"black","value","base","albedo","black"); Connect(graph,"red","value","redSurface","albedo","red"); Connect(graph,"blue","value","blueSurface","albedo","blue");
+            if (nestInLayer)
+            {
+                Connect(graph,"base","surface","surface","base","base"); Connect(graph,"inner","surface","surface","layer","inner");
+                Connect(graph,"redSurface","surface","inner","base","red-layer"); Connect(graph,"blueSurface","surface","inner","layer","blue-layer");
+            }
+            else
+            {
+                Connect(graph,"base","surface","inner","base","base"); Connect(graph,"redSurface","surface","inner","layer","red-layer");
+                Connect(graph,"inner","surface","surface","base","inner"); Connect(graph,"blueSurface","surface","surface","layer","blue-layer");
+            }
+            using (var preview = GraphPreview.Create(graph, null))
+            {
+                if (preview.Material.FindPass("Shell") < 0 || preview.Material.FindPass("Shell2") < 0 || preview.Material.FindPass("ShadowCaster") < 0)
+                    throw new InvalidOperationException("Nested shell passes missing");
+                sphere.GetComponent<Renderer>().sharedMaterial = preview.Material;
+                var image = Capture(camera, target); var center = image.GetPixel(Size/2, Size/2); UnityEngine.Object.DestroyImmediate(image);
+                if (Mathf.Abs(center.r - .25f) > .08f || Mathf.Abs(center.b - .5f) > .08f || center.g > .05f)
+                    throw new InvalidOperationException("Nested layers blended incorrectly: " + center + " layer nesting=" + nestInLayer);
+            }
+        }
     }
 
     static void CheckAudioLink(Camera camera, GameObject sphere, RenderTexture target) { var graph = Surface("core.unlitSurface"); Add(graph, NodeCatalog.Create("core.audioLink")); graph.Nodes.Single(n => n.Operation == "core.audioLink").Id = "audio"; graph.Nodes.Single(n => n.Id == "audio").Properties["fallback"] = .2; Connect(graph, "audio", "value", "surface", "albedo", "audio-albedo"); using (var preview = GraphPreview.Create(graph, null)) { sphere.GetComponent<Renderer>().sharedMaterial = preview.Material; preview.Material.SetFloat("_NXSG_AudioLinkPreview", 1); preview.Material.SetFloat("_NXSG_AudioLinkValue", .7f); var live = Render(camera, target, Vector3.zero); preview.Material.SetFloat("_NXSG_AudioLinkPreview", 0); var fallback = Render(camera, target, Vector3.zero); if (live.r < fallback.r + .2f || fallback.r < .1f) throw new InvalidOperationException("audio preview/fallback mismatch: " + live + " / " + fallback); } }

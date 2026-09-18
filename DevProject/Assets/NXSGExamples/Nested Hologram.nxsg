@@ -1,0 +1,332 @@
+{
+  "format": "nxsg",
+  "schemaVersion": 1,
+  "graphId": "nested-hologram-example",
+  "nodes": [
+    {
+      "id": "base",
+      "operation": "core.constant",
+      "version": 1,
+      "properties": {
+        "valueType": "color",
+        "value": [
+          0.02,
+          0.04,
+          0.1,
+          1
+        ]
+      }
+    },
+    {
+      "id": "audio",
+      "operation": "core.audioLink",
+      "version": 1,
+      "properties": {
+        "band": 0,
+        "gain": 1,
+        "smoothing": 0.5,
+        "fallback": 0.3
+      }
+    },
+    {
+      "id": "cyan",
+      "operation": "core.constant",
+      "version": 1,
+      "properties": {
+        "valueType": "color",
+        "value": [
+          0.02,
+          0.8,
+          1,
+          1
+        ]
+      }
+    },
+    {
+      "id": "opacity",
+      "operation": "core.multiply",
+      "version": 1,
+      "properties": {
+        "valueType": "float"
+      }
+    },
+    {
+      "id": "glow",
+      "operation": "core.emission",
+      "version": 1,
+      "properties": {
+        "strength": 1
+      }
+    },
+    {
+      "id": "toon",
+      "operation": "core.toonSurface",
+      "version": 1,
+      "properties": {}
+    },
+    {
+      "id": "unlit",
+      "operation": "core.unlitSurface",
+      "version": 1,
+      "properties": {
+        "opacity": 1,
+        "displacement": 0
+      }
+    },
+    {
+      "id": "shell",
+      "operation": "core.shell",
+      "version": 1,
+      "properties": {
+        "offset": 0.03
+      }
+    },
+    {
+      "id": "output",
+      "operation": "core.output",
+      "version": 1,
+      "properties": {}
+    },
+    {
+      "id": "violet",
+      "operation": "core.constant",
+      "version": 1,
+      "properties": {
+        "valueType": "color",
+        "value": [
+          0.5,
+          0.05,
+          1,
+          1
+        ]
+      }
+    },
+    {
+      "id": "outerSurface",
+      "operation": "core.unlitSurface",
+      "version": 1,
+      "properties": {
+        "opacity": 0.18
+      }
+    },
+    {
+      "id": "outerShell",
+      "operation": "core.shell",
+      "version": 1,
+      "properties": {
+        "offset": 0.07
+      }
+    }
+  ],
+  "connections": [
+    {
+      "id": "base-toon",
+      "from": {
+        "nodeId": "base",
+        "portId": "value"
+      },
+      "to": {
+        "nodeId": "toon",
+        "portId": "albedo"
+      }
+    },
+    {
+      "id": "toon-shell-base",
+      "from": {
+        "nodeId": "toon",
+        "portId": "surface"
+      },
+      "to": {
+        "nodeId": "shell",
+        "portId": "base"
+      }
+    },
+    {
+      "id": "cyan-unlit",
+      "from": {
+        "nodeId": "cyan",
+        "portId": "value"
+      },
+      "to": {
+        "nodeId": "unlit",
+        "portId": "albedo"
+      }
+    },
+    {
+      "id": "audio-opacity-a",
+      "from": {
+        "nodeId": "audio",
+        "portId": "value"
+      },
+      "to": {
+        "nodeId": "opacity",
+        "portId": "a"
+      }
+    },
+    {
+      "id": "audio-opacity-b",
+      "from": {
+        "nodeId": "audio",
+        "portId": "value"
+      },
+      "to": {
+        "nodeId": "opacity",
+        "portId": "b"
+      }
+    },
+    {
+      "id": "opacity-unlit",
+      "from": {
+        "nodeId": "opacity",
+        "portId": "value"
+      },
+      "to": {
+        "nodeId": "unlit",
+        "portId": "opacity"
+      }
+    },
+    {
+      "id": "audio-glow",
+      "from": {
+        "nodeId": "audio",
+        "portId": "value"
+      },
+      "to": {
+        "nodeId": "glow",
+        "portId": "strength"
+      }
+    },
+    {
+      "id": "cyan-glow",
+      "from": {
+        "nodeId": "cyan",
+        "portId": "value"
+      },
+      "to": {
+        "nodeId": "glow",
+        "portId": "color"
+      }
+    },
+    {
+      "id": "glow-unlit",
+      "from": {
+        "nodeId": "glow",
+        "portId": "color"
+      },
+      "to": {
+        "nodeId": "unlit",
+        "portId": "emission"
+      }
+    },
+    {
+      "id": "unlit-shell-layer",
+      "from": {
+        "nodeId": "unlit",
+        "portId": "surface"
+      },
+      "to": {
+        "nodeId": "shell",
+        "portId": "layer"
+      }
+    },
+    {
+      "id": "violet-outer",
+      "from": {
+        "nodeId": "violet",
+        "portId": "value"
+      },
+      "to": {
+        "nodeId": "outerSurface",
+        "portId": "albedo"
+      }
+    },
+    {
+      "id": "inner-outer",
+      "from": {
+        "nodeId": "shell",
+        "portId": "surface"
+      },
+      "to": {
+        "nodeId": "outerShell",
+        "portId": "base"
+      }
+    },
+    {
+      "id": "outer-layer",
+      "from": {
+        "nodeId": "outerSurface",
+        "portId": "surface"
+      },
+      "to": {
+        "nodeId": "outerShell",
+        "portId": "layer"
+      }
+    },
+    {
+      "id": "outer-output",
+      "from": {
+        "nodeId": "outerShell",
+        "portId": "surface"
+      },
+      "to": {
+        "nodeId": "output",
+        "portId": "surface"
+      }
+    }
+  ],
+  "parameters": [],
+  "resources": [],
+  "patterns": [],
+  "layout": {
+    "nodes": {
+      "base": {
+        "x": 0,
+        "y": 100
+      },
+      "audio": {
+        "x": 0,
+        "y": 300
+      },
+      "cyan": {
+        "x": 0,
+        "y": 500
+      },
+      "opacity": {
+        "x": 230,
+        "y": 300
+      },
+      "glow": {
+        "x": 440,
+        "y": 470
+      },
+      "toon": {
+        "x": 250,
+        "y": 80
+      },
+      "unlit": {
+        "x": 650,
+        "y": 350
+      },
+      "shell": {
+        "x": 900,
+        "y": 230
+      },
+      "output": {
+        "x": 1400,
+        "y": 230
+      },
+      "violet": {
+        "x": 650,
+        "y": 650
+      },
+      "outerSurface": {
+        "x": 900,
+        "y": 530
+      },
+      "outerShell": {
+        "x": 1150,
+        "y": 230
+      }
+    }
+  }
+}

@@ -96,7 +96,7 @@ can feed a surface or another effect.
 | UV Distort | UV, strength → UV | Procedural distortion is target-specific and may be cheaper when driven by a sampled texture. |
 | Vertex Motion | Time, strength → displacement | Normal displacement follows an analytic sine wave. Texture inputs evaluated in the vertex stage use explicit LOD 0. Expand renderer bounds for large offsets. |
 | AudioLink | Band, gain, smoothing, fallback → scalar | Uses the official `_AudioTexture` layout when available. Smoothing is normalized 0–1: 0 is least smoothed/raw and 1 is most smoothed. `_NXSG_AudioLinkPreview` and `_NXSG_AudioLinkValue` provide editor preview data. |
-| Shell | Base surface, layer surface, offset → surface | Emits one independent transparent normal-offset mesh pass. Base surface owns cutout opacity and shadows; shell geometry has no shadow caster. Bounds and transparent sorting need review on each mesh. |
+| Shell | Base surface, layer surface, offset → surface | Accepts nested Shells in Base or Layer, up to 8 transparent passes. Base chains keep each offset relative to the original mesh; nesting in Layer adds ancestor offsets. Layers render in graph order, base first. Each leaf retains its own surface settings; only the first base surface casts shadows. Extra passes increase draw calls and overdraw; bounds and transparent sorting need review on each mesh. |
 
 AudioLink support does not install or require the AudioLink package. Missing or
 too-small textures return the node fallback. A correctly sized but stale
@@ -115,4 +115,4 @@ Select a node, choose **Preview output**, then **Preview selected node**. Number
 
 ## Ready-made effect examples
 
-Open `Assets/NXSGExamples/Audio Hologram.nxsg`, `Noise Color Ramp.nxsg`, or `Animated Sticker.nxsg` in the development project. Distributable copies live under `Samples~`. The sticker sample uses a white placeholder; assign a transparent atlas in its texture picker. Audio Hologram has a nonzero fallback, so its shell remains visible without music.
+Open `Assets/NXSGExamples/Nested Hologram.nxsg` for two shell layers, or `Audio Hologram.nxsg`, `Noise Color Ramp.nxsg`, or `Animated Sticker.nxsg` in the development project. Distributable copies live under `Samples~`. The sticker sample uses a white placeholder; assign a transparent atlas in its texture picker. Audio Hologram has a nonzero fallback, so its shell remains visible without music.

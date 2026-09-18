@@ -61,6 +61,7 @@ internal static class Program
         }
         EffectsCoreChecks.Run(Assert);
         EffectsBackendChecks.Run(Assert);
+        NestedShellChecks.Run(Assert);
         FloatHashChecks.Run(Assert);
         var defaultGraph = Load(fixtures, "default-texture-toon-output.nxsg");
         Assert(GraphValidator.Validate(defaultGraph).IsValid, "default graph validates");

@@ -25,6 +25,12 @@ namespace NXSG.Backend
         readonly List<Diagnostic> diagnostics = new List<Diagnostic>();
         int depth;
 
+        sealed class SurfacePass
+        {
+            public GraphNode Surface;
+            public string Offset;
+        }
+
         public static bool IsAdvanced(ShaderGraph graph)
         {
             if (graph?.Nodes == null) return false;
@@ -72,10 +78,6 @@ namespace NXSG.Backend
             var output = nodes.Values.Single(n => n.Operation == "core.output");
             var root = Source(output, "surface");
             if (root == null) throw new InvalidOperationException("Connect a Surface to Output.");
-            var shell = root.Operation == "core.shell" ? root : null;
-            var surface = shell == null ? root : Source(shell, "base");
-            var overlay = shell == null ? null : Source(shell, "layer");
-            CheckSurface(surface); if (shell != null) CheckSurface(overlay);
             var name = options.ShaderName;
             if (string.IsNullOrEmpty(name) || name.Length > 180 || name.Any(c => char.IsControl(c) || c == '"' || c == '\\')) throw new InvalidOperationException("Invalid shader name.");
             var fallback = options.IncludeVrcFallback ? options.VrcFallbackTag : null;
@@ -94,6 +96,8 @@ namespace NXSG.Backend
                 textureNames.Add(id, symbol);
                 properties.Add(new MaterialProperty { Name = symbol, DisplayName = "Texture " + textureNames.Count, Type = GraphValueType.Texture2D, Binding = GraphBindingKind.Material, ResourceId = id, ResourceUri = resource.Uri });
             }
+            var passes = new List<SurfacePass>();
+            FlattenSurfaces(root, "0", 0, passes);
             var b = new StringBuilder();
             b.AppendLine("Shader \"" + name + "\" {\nProperties {");
             foreach (var prop in properties) b.AppendLine(prop.Name + " (\"" + prop.DisplayName + "\", 2D) = \"white\" {}");
@@ -112,11 +116,10 @@ namespace NXSG.Backend
                 b.AppendLine(symbol + " (\"" + (parameter.Name ?? parameter.Id).Replace("\"", "").Replace("\\", "").Replace("\n", " ").Replace("\r", " ") + "\", " + type + ") = " + (type == "Float" ? literal : literal.Substring(6)));
                 properties.Add(new MaterialProperty { Name = symbol, DisplayName = parameter.Name, Type = parameter.Type, Binding = parameter.Binding, ParameterId = parameter.Id });
             }
-            AddToonProperties(b, surface, false);
-            if (overlay != null) AddToonProperties(b, overlay, true);
-            var basePass = Pass(surface, false, null);
-            var shellPass = shell == null ? "" : Pass(overlay, true, shell);
-            var shadowPass = options.IncludeShadowCaster ? Shadow(surface) : "";
+            for (var i = 0; i < passes.Count; i++) AddToonProperties(b, passes[i].Surface, i);
+            var passCode = new StringBuilder();
+            for (var i = 0; i < passes.Count; i++) passCode.Append(Pass(passes[i].Surface, i, passes[i].Offset));
+            var shadowPass = options.IncludeShadowCaster ? Shadow(passes[0].Surface, passes[0].Offset) : "";
             b.AppendLine("}\nSubShader {\nTags { \"RenderType\"=\"Opaque\" \"Queue\"=\"Geometry\"" + (fallback == null ? "" : " \"VRCFallback\"=\"" + fallback + "\"") + " }");
             b.AppendLine("CGINCLUDE\n#include \"UnityCG.cginc\"\n#include \"Lighting.cginc\"\n#include \"AutoLight.cginc\"\n#include \"UnityPBSLighting.cginc\"");
             b.AppendLine("float4 _Color;");
@@ -125,8 +128,8 @@ namespace NXSG.Backend
             b.AppendLine("#ifndef SHADOW_COORDS\n#define SHADOW_COORDS(index)\n#endif");
             b.AppendLine(Helpers);
             b.AppendLine(code.ToString());
-            b.AppendLine("ENDCG\n" + basePass + shellPass + shadowPass + "}\nFallback Off\n}");
-            if (shell != null) diagnostics.Add(new Diagnostic(DiagnosticSeverity.Warning, "cost.shell", shell.Id, "One extra transparent mesh pass per view; normal offset does not expand renderer bounds. Overlapping transparent objects can sort imperfectly."));
+            b.AppendLine("ENDCG\n" + passCode + shadowPass + "}\nFallback Off\n}");
+            if (passes.Count > 1) diagnostics.Add(new Diagnostic(DiagnosticSeverity.Warning, "cost.shell", root.Id, (passes.Count - 1) + " extra transparent mesh pass" + (passes.Count == 2 ? "" : "es") + " per view; normal offset does not expand renderer bounds. Overlapping transparent objects can sort imperfectly."));
             if (live.Any(id => nodes[id].Operation == "core.vertexMotion")) diagnostics.Add(new Diagnostic(DiagnosticSeverity.Warning, "bounds.displacement", "$", "Vertex displacement requires mesh/SkinnedMeshRenderer bounds large enough for the motion."));
             return b.ToString();
         }
@@ -140,7 +143,16 @@ namespace NXSG.Backend
                 foreach (var port in NodeCatalog.Ports(current.Operation, false)) { var source = Source(current, port); if (source != null) queue.Enqueue(source); }
             }
         }
-        static void CheckSurface(GraphNode n) { if (n == null || !new[] { "core.toonSurface", "core.unlitSurface", "core.pbrSurface" }.Contains(n.Operation)) throw new InvalidOperationException("Connect Toon, Unlit or PBR to each surface socket. Nested shells are not supported."); }
+        void FlattenSurfaces(GraphNode node, string inheritedOffset, int traversalDepth, List<SurfacePass> result)
+        {
+            if (traversalDepth > 64) throw new InvalidOperationException("Nested shell traversal exceeds depth limit.");
+            if (node == null) throw new InvalidOperationException("Connect Toon, Unlit or PBR to each surface socket.");
+            if (node.Operation != "core.shell") { CheckSurface(node); if (result.Count >= 9) throw new InvalidOperationException("Nested shells support at most 8 transparent shell layers (9 leaf surfaces)."); result.Add(new SurfacePass { Surface = node, Offset = inheritedOffset }); return; }
+            FlattenSurfaces(Source(node, "base"), inheritedOffset, traversalDepth + 1, result);
+            var offset = "(" + inheritedOffset + "+" + Scalar(node, "offset", .02, true) + ")";
+            FlattenSurfaces(Source(node, "layer"), offset, traversalDepth + 1, result);
+        }
+        static void CheckSurface(GraphNode n) { if (n == null || !new[] { "core.toonSurface", "core.unlitSurface", "core.pbrSurface" }.Contains(n.Operation)) throw new InvalidOperationException("Connect Toon, Unlit or PBR to each surface socket."); }
         GraphNode Source(GraphNode n, string port) { return edges.TryGetValue(Key(n.Id, port), out var edge) ? nodes[edge.From.NodeId] : null; }
         static string Key(string a, string b) { return a + ":" + b; }
         static string Hash(string value) { using (var sha = SHA256.Create()) return string.Concat(sha.ComputeHash(Encoding.UTF8.GetBytes(value)).Select(b => b.ToString("x2"))); }
@@ -256,43 +268,44 @@ namespace NXSG.Backend
             return b.Append("return "+At(points.Last)+";").ToString();
         }
 
-        void AddToonProperties(StringBuilder b, GraphNode surface, bool shell)
+        void AddToonProperties(StringBuilder b, GraphNode surface, int passIndex)
         {
             if (surface.Operation != "core.toonSurface") return;
+            var shell = passIndex > 0;
             foreach (var setting in new[] { "threshold", "softness", "shadowStrength" })
             {
                 if (surface.Properties[setting + "ParameterId"] != null) continue;
-                var symbol = ToonSymbol(setting,shell);
-                b.AppendLine(symbol + " (\"" + (shell ? "Shell " : "") + setting + "\", Range(0,1)) = " + Prop(surface,setting,setting == "threshold" ? .5 : setting == "softness" ? .05 : 1));
+                var symbol = ToonSymbol(setting, passIndex);
+                b.AppendLine(symbol + " (\"" + (shell ? "Shell" + (passIndex == 1 ? "" : passIndex.ToString(CultureInfo.InvariantCulture)) + " " : "") + setting + "\", Range(0,1)) = " + Prop(surface,setting,setting == "threshold" ? .5 : setting == "softness" ? .05 : 1));
                 properties.Add(new MaterialProperty { Name=symbol, DisplayName=setting, Type=GraphValueType.Float, Binding=GraphBindingKind.Material });
             }
         }
-        static string ToonSymbol(string setting, bool shell)
+        static string ToonSymbol(string setting, int passIndex)
         {
-            return "_NXSG_" + (shell ? "Shell" : "") + (setting == "threshold" ? "ToonThreshold" : setting == "softness" ? "ToonSoftness" : "ShadowStrength");
+            return "_NXSG_" + (passIndex == 0 ? "" : "Shell" + (passIndex == 1 ? "" : passIndex.ToString(CultureInfo.InvariantCulture))) + (setting == "threshold" ? "ToonThreshold" : setting == "softness" ? "ToonSoftness" : "ShadowStrength");
         }
-        string ToonSetting(GraphNode surface,string setting,bool shell)
+        string ToonSetting(GraphNode surface,string setting,int passIndex)
         {
             if (surface.Operation != "core.toonSurface") return "0";
             var id=(string)surface.Properties[setting+"ParameterId"];
-            if(id==null) return ToonSymbol(setting,shell);
+            if(id==null) return ToonSymbol(setting,passIndex);
             var parameter=graph.Parameters.FirstOrDefault(p=>p.Id==id);
             if(parameter==null || parameter.Type!=GraphValueType.Float) throw new InvalidOperationException("Missing scalar Toon parameter: "+id);
             return parameter.Binding==GraphBindingKind.Constant ? Literal(parameter.DefaultValue,"float") : ParameterName(id);
         }
 
-        string Pass(GraphNode surface, bool shell, GraphNode shellNode)
+        string Pass(GraphNode surface, int passIndex, string offset)
         {
             var displacement = Scalar(surface,"displacement",0,true);
-            var offset = shell ? Scalar(shellNode,"offset",.02,true) : "0";
+            var shell = passIndex > 0;
             var color = Input(surface,"albedo","float4(1,1,1,1)","color");
             var emission = Input(surface,"emission","float4(0,0,0,1)","color");
             var opacity = Scalar(surface,"opacity",1);
             var normal = Input(surface,"normal","float3(0,0,1)","vector3");
             var metallic = Scalar(surface,"metallic",0);
             var roughness = Scalar(surface,"roughness",.5);
-            var threshold=ToonSetting(surface,"threshold",shell);var softness=ToonSetting(surface,"softness",shell);var shadow=ToonSetting(surface,"shadowStrength",shell);
-            var b=new StringBuilder("Pass {\nName \""+(shell?"Shell":"ForwardBase")+"\"\nTags { \"LightMode\"=\""+(shell?"Always":"ForwardBase")+"\" }\nCull Back\n"+(shell?"ZWrite Off\nBlend SrcAlpha OneMinusSrcAlpha":"ZWrite On")+"\nCGPROGRAM\n#pragma target 3.5\n#pragma vertex vert\n#pragma fragment frag\n#pragma multi_compile_fwdbase\n#pragma multi_compile_instancing\n");
+            var threshold=ToonSetting(surface,"threshold",passIndex);var softness=ToonSetting(surface,"softness",passIndex);var shadow=ToonSetting(surface,"shadowStrength",passIndex);
+            var b=new StringBuilder("Pass {\nName \""+(shell?(passIndex == 1 ? "Shell" : "Shell" + passIndex.ToString(CultureInfo.InvariantCulture)):"ForwardBase")+"\"\nTags { \"LightMode\"=\""+(shell?"Always":"ForwardBase")+"\" }\nCull Back\n"+(shell?"ZWrite Off\nBlend SrcAlpha OneMinusSrcAlpha":"ZWrite On")+"\nCGPROGRAM\n#pragma target 3.5\n#pragma vertex vert\n#pragma fragment frag\n#pragma multi_compile_fwdbase\n#pragma multi_compile_instancing\n");
             b.AppendLine("NXInput vert(NXApp v) { UNITY_SETUP_INSTANCE_ID(v); NXInput input=NX_Make(v); v.vertex.xyz+=v.normal*("+displacement+"+"+offset+"); NXInput o=NX_Make(v); UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o); TRANSFER_SHADOW(o); return o; }");
             b.AppendLine("float4 frag(NXInput input):SV_Target { UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input); float4 c="+color+"*_Color; float3 emission=("+emission+").rgb; float alpha=saturate(c.a*"+opacity+");");
             if(!shell)b.AppendLine("clip(alpha-"+Prop(surface,"cutoff",.001)+");");
@@ -308,12 +321,12 @@ namespace NXSG.Backend
             }
             return b.AppendLine("}\nENDCG\n}").ToString();
         }
-        string Shadow(GraphNode surface)
+        string Shadow(GraphNode surface, string offset)
         {
             var displacement=Scalar(surface,"displacement",0,true);
             var opacity=Scalar(surface,"opacity",1);
             var color=Input(surface,"albedo","float4(1,1,1,1)","color");
-            return "Pass {\nName \"ShadowCaster\"\nTags { \"LightMode\"=\"ShadowCaster\" }\nZWrite On\nCGPROGRAM\n#pragma target 3.5\n#pragma vertex vertShadow\n#pragma fragment fragShadow\n#pragma multi_compile_shadowcaster\n#pragma multi_compile_instancing\nstruct NXShadow { V2F_SHADOW_CASTER; float2 uv:TEXCOORD1; float3 ws:TEXCOORD2; float3 normal:TEXCOORD3; float3 local:TEXCOORD4; UNITY_VERTEX_OUTPUT_STEREO };\nNXShadow vertShadow(NXApp v){UNITY_SETUP_INSTANCE_ID(v); NXInput input=NX_Make(v); v.vertex.xyz+=v.normal*("+displacement+"); NXShadow o; UNITY_INITIALIZE_OUTPUT(NXShadow,o); UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o); o.uv=v.uv; o.ws=mul(unity_ObjectToWorld,v.vertex).xyz; o.normal=UnityObjectToWorldNormal(v.normal); o.local=v.vertex.xyz; TRANSFER_SHADOW_CASTER_NORMALOFFSET(o); return o;}\nfloat4 fragShadow(NXShadow i):SV_Target{UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i); NXInput input=(NXInput)0; input.uv=i.uv; input.ws=i.ws; input.n=i.normal; input.local=i.local; clip(("+color+").a*_Color.a*("+opacity+")-"+Prop(surface,"cutoff",.001)+"); SHADOW_CASTER_FRAGMENT(i);}\nENDCG\n}\n";
+            return "Pass {\nName \"ShadowCaster\"\nTags { \"LightMode\"=\"ShadowCaster\" }\nZWrite On\nCGPROGRAM\n#pragma target 3.5\n#pragma vertex vertShadow\n#pragma fragment fragShadow\n#pragma multi_compile_shadowcaster\n#pragma multi_compile_instancing\nstruct NXShadow { V2F_SHADOW_CASTER; float2 uv:TEXCOORD1; float3 ws:TEXCOORD2; float3 normal:TEXCOORD3; float3 local:TEXCOORD4; UNITY_VERTEX_OUTPUT_STEREO };\nNXShadow vertShadow(NXApp v){UNITY_SETUP_INSTANCE_ID(v); NXInput input=NX_Make(v); v.vertex.xyz+=v.normal*("+displacement+"+"+offset+"); NXShadow o; UNITY_INITIALIZE_OUTPUT(NXShadow,o); UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o); o.uv=v.uv; o.ws=mul(unity_ObjectToWorld,v.vertex).xyz; o.normal=UnityObjectToWorldNormal(v.normal); o.local=v.vertex.xyz; TRANSFER_SHADOW_CASTER_NORMALOFFSET(o); return o;}\nfloat4 fragShadow(NXShadow i):SV_Target{UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i); NXInput input=(NXInput)0; input.uv=i.uv; input.ws=i.ws; input.n=i.normal; input.local=i.local; clip(("+color+").a*_Color.a*("+opacity+")-"+Prop(surface,"cutoff",.001)+"); SHADOW_CASTER_FRAGMENT(i);}\nENDCG\n}\n";
         }
         const string Helpers=@"
 struct NXApp { float4 vertex:POSITION; float3 normal:NORMAL; float4 tangent:TANGENT; float2 uv:TEXCOORD0; UNITY_VERTEX_INPUT_INSTANCE_ID };

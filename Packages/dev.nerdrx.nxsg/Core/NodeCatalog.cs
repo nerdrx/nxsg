@@ -168,7 +168,7 @@ namespace NXSG.Core
                 case "core.uvDistort": return "Offset UVs using a strength-controlled distortion.";
                 case "core.vertexMotion": return "Drive vertex motion from time and strength inputs.";
                 case "core.audioLink": return "Read a smoothed audio band value with a fallback.";
-                case "core.shell": return "Wrap a base surface with an offset shell layer.";
+                case "core.shell": return "Wrap a surface or another Shell with a transparent layer. Up to 8 shell passes; nesting in Layer adds offsets.";
                 case "core.normalMap": return "Decode a normal map color into a normal vector.";
                 case "core.output": return "The final surface of your shader. Connect a Toon Surface here.";
                 default: return string.Empty;
