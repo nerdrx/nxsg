@@ -12,7 +12,9 @@ Toon / Unlit / PBR / Shell → Surface Particles → Output
 
 The shader keeps the base material and adds a geometry pass that emits camera-facing soft dots from the same mesh. No extra mesh, Particle System, or runtime script is required. **Assets → NXSGExamples → Surface Sparkles** is the ready-made example. Build it and assign the generated material to a mesh; for an existing graph, insert Surface Particles after the final surface.
 
-Controls: triangle density, size, lifetime, outward speed, local-Y gravity, velocity randomness, alpha/additive blending, opacity, and emitter mask. Time can be driven by another node. Emitter Mask uses the mesh UVs; particle Albedo/Emission/Opacity use the generated sprite UVs.
+Controls: triangle density, size, lifetime, outward speed, local-Y gravity, velocity randomness, alpha/additive blending, opacity, and emitter mask. Time can be driven by another node. Emitter Mask uses the mesh UVs. By default, particle Albedo/Emission/Opacity use generated sprite UVs.
+
+Enable **Color from mesh UVs** to sample connected Albedo and Emission textures at each particle's spawn point on mesh UV0. Connect your mesh texture to Albedo first; the toggle does not automatically copy the Base surface color. Each particle gets the color at its own source location. Opacity and the soft circular shape keep sprite UVs. Explicit alternate coordinate sources (such as UV1 or world coordinates) retain their selected mapping. Existing graphs keep sprite UVs until you enable the toggle.
 
 Current limits:
 

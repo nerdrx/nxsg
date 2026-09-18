@@ -21,6 +21,21 @@ public static class SurfaceParticleChecks
         assert(emitted.ShaderSource.Contains("maxvertexcount(4)") && emitted.ShaderSource.Contains("SV_PrimitiveID") && emitted.ShaderSource.Contains("TriangleStream"), "surfaceParticles emits bounded geometry pass");
         assert(emitted.ShaderSource.Contains("ForwardBase") && emitted.ShaderSource.Contains("originalLocal"), "surfaceParticles preserves base pass and source position");
         Reject(assert, graph, "density", -.01, "density lower bound"); Reject(assert, graph, "size", .00009, "size lower bound"); Reject(assert, graph, "size", 10.01, "size upper bound"); Reject(assert, graph, "lifetime", .0009, "lifetime lower bound"); Reject(assert, graph, "lifetime", 1000.01, "lifetime upper bound"); Reject(assert, graph, "spread", -.01, "spread lower bound"); Reject(assert, graph, "mask", 1.01, "mask upper bound"); Reject(assert, graph, "opacity", -.01, "opacity lower bound"); Reject(assert, graph, "blendMode", 2, "blend mode choice"); Reject(assert, graph, "speed", new JValue(double.NaN), "speed finite");
+        var endpoint = Graph();
+        var endpointNode = endpoint.Nodes.Single(n => n.Id == "particles");
+        endpointNode.Properties["size"] = .0001f;
+        endpointNode.Properties["lifetime"] = .001f;
+        assert(GraphValidator.Validate(endpoint).IsValid, "Unity float slider endpoints validate before saving");
+        assert(ShaderEmitter.Emit(endpoint).Succeeded, "Unity float endpoints build before saving");
+        assert(GraphValidator.Validate(GraphJson.Parse(GraphJson.Serialize(endpoint))).IsValid, "slider endpoints validate after saving");
+        Reject(assert, endpoint, "size", (double).0001f - 1e-11, "values below float endpoint remain rejected");
+        var gradient = NodeCatalog.Create("core.gradient"); gradient.Properties["radius"] = .000001f; endpoint.Nodes.Add(gradient);
+        assert(GraphValidator.Validate(endpoint).IsValid, "shared range check accepts gradient float endpoint");
+        var uvGraph = Graph();
+        uvGraph.Nodes.Single(n => n.Id == "particles").Properties["sourceUV"] = 1;
+        assert(ShaderEmitter.Emit(uvGraph).Succeeded, "source UV color mode emits");
+        assert((int)NodeCatalog.Create("core.surfaceParticles").Properties["sourceUV"] == 0, "source UV mode preserves sprite default");
+        Reject(assert, uvGraph, "sourceUV", 2, "source UV choice bounded");
         var nested = Graph(); nested.Nodes.Single(n => n.Id == "base").Operation = "core.surfaceParticles"; assert(!ShaderEmitter.Emit(nested).Succeeded, "surfaceParticles cannot nest itself");
     }
     private static ShaderGraph Graph()

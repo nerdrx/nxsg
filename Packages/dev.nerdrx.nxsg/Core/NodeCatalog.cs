@@ -315,7 +315,7 @@ namespace NXSG.Core
                 case "core.flipbook": node.Properties["rows"] = 1; node.Properties["columns"] = 1; node.Properties["speed"] = 1.0; break;
                 case "core.audioLink": node.Properties["band"] = 0; node.Properties["gain"] = 1.0; node.Properties["smoothing"] = 0.5; node.Properties["fallback"] = 0.0; break;
                 case "core.normalMap": node.Properties["strength"] = 1.0; break;
-                case "core.surfaceParticles": node.Properties["density"] = .1; node.Properties["size"] = .03; node.Properties["lifetime"] = 2.0; node.Properties["speed"] = .2; node.Properties["gravity"] = 0.0; node.Properties["spread"] = .05; node.Properties["blendMode"] = 1; node.Properties["opacity"] = 1.0; node.Properties["mask"] = 1.0; break;
+                case "core.surfaceParticles": node.Properties["sourceUV"] = 0; node.Properties["density"] = .1; node.Properties["size"] = .03; node.Properties["lifetime"] = 2.0; node.Properties["speed"] = .2; node.Properties["gravity"] = 0.0; node.Properties["spread"] = .05; node.Properties["blendMode"] = 1; node.Properties["opacity"] = 1.0; node.Properties["mask"] = 1.0; break;
                 case "core.particleSurface": node.Properties["opacity"] = 1.0; node.Properties["blendMode"] = 0; node.Properties["softDistance"] = 0.0; break;
                 case "core.unlitSurface": node.Properties["opacity"] = 1.0; node.Properties["displacement"] = 0.0; break;
                 case "core.pbrSurface": node.Properties["opacity"] = 1.0; node.Properties["displacement"] = 0.0; node.Properties["metallic"] = 0.0; node.Properties["roughness"] = 0.5; break;

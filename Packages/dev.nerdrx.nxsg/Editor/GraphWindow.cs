@@ -796,6 +796,10 @@ namespace NXSG.Editor
                     case "core.pbrSurface": AddNumber(node, "opacity", "Opacity", 1, "opacity"); AddNumber(node, "cutoff", "Cutoff", .001f); AddNumber(node, "displacement", "Displacement", 0, "displacement"); AddNumber(node, "metallic", "Metallic", 0, "metallic"); AddNumber(node, "roughness", "Roughness", .5f, "roughness"); break;
                     case "core.toonSurface": AddNumber(node, "opacity", "Opacity", 1, "opacity"); AddNumber(node, "cutoff", "Cutoff", .001f); AddNumber(node, "displacement", "Displacement", 0, "displacement"); break;
                     case "core.surfaceParticles":
+                        var sourceUvToggle = new Toggle("Color from mesh UVs") { value = (int?)node.Properties["sourceUV"] == 1,
+                            tooltip = "On: particle Albedo and Emission sample the connected texture at the spawn point on mesh UV0. Off: each particle displays the texture using its own sprite UVs. Opacity keeps sprite UVs." };
+                        sourceUvToggle.RegisterValueChangedCallback(evt => Edit("Change particle color UVs", () => node.Properties["sourceUV"] = evt.newValue ? 1 : 0));
+                        inspector.Add(sourceUvToggle);
                         AddIndexedChoice(node,"blendMode","Blending",new[]{"Alpha","Additive"},1);
                         AddBoundedNumber(node,"density","Triangle density",0,1,.1f);
                         AddBoundedNumber(node,"size","Particle size",.0001f,1,.03f);
@@ -805,7 +809,7 @@ namespace NXSG.Editor
                         AddBoundedNumber(node,"spread","Velocity randomness",0,5,.05f);
                         AddBoundedNumber(node,"opacity","Opacity",0,1,1,"opacity");
                         AddBoundedNumber(node,"mask","Emitter mask",0,1,1,"mask");
-                        inspector.Add(new Label("Connect your surface to Base, then this node to Output. Emits from the same mesh: up to one particle per triangle. Mask uses mesh UVs; particle textures use sprite UVs. Particles follow the current pose. Expand renderer bounds if particles disappear near screen edges.") { style = { whiteSpace = WhiteSpace.Normal } });
+                        inspector.Add(new Label("Connect your surface to Base, then this node to Output. Emits from the same mesh: up to one particle per triangle. Mask uses mesh UVs. Color from mesh UVs samples particle color at its spawn point; otherwise it uses sprite UVs. Particles follow the current pose. Expand renderer bounds if particles disappear near screen edges.") { style = { whiteSpace = WhiteSpace.Normal } });
                         break;
                     case "core.particleSurface":
                         AddIndexedChoice(node, "blendMode", "Blending", new[] { "Alpha · smoke / fluff", "Additive · sparks / glow" });

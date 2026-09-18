@@ -3,7 +3,7 @@ namespace NXSG.Backend
     // Geometry emission keeps particles attached to the mesh that owns the material.
     internal static class SurfaceParticleShader
     {
-        public static string Pass(string mask, string color, string emission, string opacity, string time, string density, string size, string lifetime, string speed, string gravity, string spread, int blendMode)
+        public static string Pass(string mask, string color, string emission, string opacity, string time, string density, string size, string lifetime, string speed, string gravity, string spread, int blendMode, bool sourceUV)
         {
             var blend = blendMode == 1 ? "One" : "OneMinusSrcAlpha";
             return @"
@@ -89,6 +89,7 @@ void geomEmit(triangle NXInput tri[3], inout TriangleStream<NXInput> stream, uin
         output.local = mul(unity_WorldToObject, float4(worldPosition, 1.0)).xyz;
         output.originalWs = input.originalWs;
         output.originalLocal = input.originalLocal;
+        output.sourceUV = input.uv;
         output.uv = spriteUV[i];
         output.color.a = input.color.a * fade * particleMask;
         output.n = normalize(_WorldSpaceCameraPos - worldPosition);
@@ -105,9 +106,11 @@ float4 fragEmit(NXInput input) : SV_Target
     float circle = saturate(1.0 - dot(circlePosition, circlePosition));
     circle *= circle;
     clip(circle - 0.001);
+    float particleOpacity = " + opacity + @";
+    " + (sourceUV ? "input.uv = input.sourceUV;" : "") + @"
     float4 c = (" + color + @") * _Color * input.color;
     float3 e = (" + emission + @").rgb * input.color.rgb;
-    float alpha = saturate(c.a * " + opacity + @" * circle);
+    float alpha = saturate(c.a * particleOpacity * circle);
     return float4(c.rgb + e, alpha);
 }
 ENDCG

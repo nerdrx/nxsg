@@ -127,3 +127,10 @@ Added the experimental **Surface Particles** decorator: existing surface → Sur
 ![Same-mesh surface emission captured in Unity](evidence/2026-09-18-surface-particles.png)
 
 An initial zero-density compile exposed a Unity OpenGL geometry-link issue: optimizing away every Append loses the output primitive declaration. Invisible particles now produce degenerate quads; density and mask reduce visibility, not the number of geometry invocations. Every source triangle is processed. The pass is an analytical loop following the current mesh pose, not stateful simulation. Source bounds remain unchanged; expand them for outward motion. Shader-driven base displacement, per-particle alpha sorting, GPU instancing, DX11, stereo VR and live VRChat behavior remain unverified or unsupported as detailed in [particle usage](PARTICLES.md).
+
+
+## Particle source color and slider endpoints — 2026-09-18
+
+**Color from mesh UVs** switches Surface Particles Albedo/Emission UV0 sampling to the interpolated source-mesh spawn UV. `Tests/Editor/ParticleSourceUvSmoke.cs` passed in hidden Unity 2022.3.22f1/Linux OpenGL (`work/unity/particle-source-uv.log`, `NXSG PARTICLE SOURCE UV SMOKE PASSED`): a red/blue texture spans each sprite with the toggle off, while a mesh with constant red-side UVs produces red particles with it on. Albedo and Emission paths are tested independently.
+
+The portable suite also passes mode defaults/range checks and single-precision slider endpoint regressions. Property validation accepts the nearest float representation of a declared boundary, fixing minimum Particle Size (0.0001) being rejected after Unity float rounding. Values below that representation, non-finite numbers and out-of-range values remain rejected. The saved user graph and material were not modified.

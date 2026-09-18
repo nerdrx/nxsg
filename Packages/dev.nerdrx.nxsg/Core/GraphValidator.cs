@@ -192,6 +192,7 @@ namespace NXSG.Core
             }
             if (node.Operation == "core.surfaceParticles")
             {
+                CheckIntegerRange(node.Properties["sourceUV"], path + ".properties.sourceUV", 0, 1, diagnostics);
                 CheckIntegerRange(node.Properties["blendMode"], path + ".properties.blendMode", 0, 1, diagnostics);
                 foreach (var setting in new[] { "density", "opacity", "mask" }) CheckRange(node.Properties[setting], path + ".properties." + setting, 0, 1, diagnostics);
                 CheckRange(node.Properties["size"], path + ".properties.size", .0001, 10, diagnostics);
@@ -309,7 +310,11 @@ namespace NXSG.Core
         private static void CheckRange(JToken token, string path, double min, double max, List<Diagnostic> diagnostics)
         {
             if (token == null) return;
-            if ((token.Type != JTokenType.Float && token.Type != JTokenType.Integer) || double.IsNaN((double)token) || (double)token < min || (double)token > max)
+            // Unity controls store single-precision values. Accept the exact decimal
+            // endpoint and its nearest shader-float representation (e.g. 0.0001f).
+            var lower = Math.Min(min, (double)(float)min);
+            var upper = Math.Max(max, (double)(float)max);
+            if ((token.Type != JTokenType.Float && token.Type != JTokenType.Integer) || double.IsNaN((double)token) || double.IsInfinity((double)token) || (double)token < lower || (double)token > upper)
                 diagnostics.Add(new Diagnostic(DiagnosticSeverity.Error, "node.property.range", path, "Value must be between " + min + " and " + max + "."));
         }
 

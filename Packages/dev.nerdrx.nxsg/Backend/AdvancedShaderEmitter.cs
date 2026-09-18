@@ -141,7 +141,7 @@ namespace NXSG.Backend
             else for (var i = 0; i < passes.Count; i++) passCode.Append(Pass(passes[i].Surface, i, passes[i].Offset));
             if (surfaceParticles) passCode.Append(SurfaceParticleShader.Pass(
                 Scalar(root,"mask",1,true), Input(root,"albedo","float4(1,1,1,1)","color"), Input(root,"emission","float4(0,0,0,1)","color"), Scalar(root,"opacity",1), Input(root,"time","_Time.y","float",true),
-                Prop(root,"density",.1), Prop(root,"size",.03), Prop(root,"lifetime",2), Prop(root,"speed",.2), Prop(root,"gravity",0), Prop(root,"spread",.05), IntProp(root,"blendMode",1,0,1)));
+                Prop(root,"density",.1), Prop(root,"size",.03), Prop(root,"lifetime",2), Prop(root,"speed",.2), Prop(root,"gravity",0), Prop(root,"spread",.05), IntProp(root,"blendMode",1,0,1), IntProp(root,"sourceUV",0,0,1) == 1));
             var shadowPass = !particle && options.IncludeShadowCaster ? Shadow(passes[0].Surface, passes[0].Offset) : "";
             b.AppendLine("}\nSubShader {\nTags { \"RenderType\"=\"" + (particle ? "Transparent" : "Opaque") + "\" \"Queue\"=\"" + (particle ? "Transparent" : "Geometry") + "\"" + (surfaceParticles ? " \"DisableBatching\"=\"True\"" : "") + (fallback == null ? "" : " \"VRCFallback\"=\"" + fallback + "\"") + " }");
             b.AppendLine("CGINCLUDE\n#include \"UnityCG.cginc\"\n#include \"Lighting.cginc\"\n#include \"AutoLight.cginc\"\n#include \"UnityPBSLighting.cginc\"");
@@ -463,7 +463,7 @@ namespace NXSG.Backend
         }
         const string Helpers=@"
 struct NXApp { float4 vertex:POSITION; float3 normal:NORMAL; float4 tangent:TANGENT; float2 uv:TEXCOORD0; float2 uv1:TEXCOORD1; float2 uv2:TEXCOORD2; float2 uv3:TEXCOORD3; float4 color:COLOR; UNITY_VERTEX_INPUT_INSTANCE_ID };
-struct NXInput { float4 pos:SV_POSITION; float2 uv:TEXCOORD0; float2 uv1:TEXCOORD7; float2 uv2:TEXCOORD8; float2 uv3:TEXCOORD9; float3 ws:TEXCOORD1; float3 n:TEXCOORD2; float3 local:TEXCOORD3; float3 originalWs:TEXCOORD10; float3 originalLocal:TEXCOORD11; float3 tangent:TEXCOORD4; float3 bitangent:TEXCOORD5; float4 color:TEXCOORD12; float4 screenPos:TEXCOORD13; SHADOW_COORDS(6) UNITY_VERTEX_OUTPUT_STEREO };
+struct NXInput { float4 pos:SV_POSITION; float2 uv:TEXCOORD0; float2 uv1:TEXCOORD7; float2 uv2:TEXCOORD8; float2 uv3:TEXCOORD9; float3 ws:TEXCOORD1; float3 n:TEXCOORD2; float3 local:TEXCOORD3; float3 originalWs:TEXCOORD10; float3 originalLocal:TEXCOORD11; float3 tangent:TEXCOORD4; float3 bitangent:TEXCOORD5; float4 color:TEXCOORD12; float4 screenPos:TEXCOORD13; float2 sourceUV:TEXCOORD14; SHADOW_COORDS(6) UNITY_VERTEX_OUTPUT_STEREO };
 NXInput NX_Make(NXApp v){ NXInput o=(NXInput)0; o.pos=UnityObjectToClipPos(v.vertex); o.uv=v.uv; o.uv1=v.uv1; o.uv2=v.uv2; o.uv3=v.uv3; o.local=v.vertex.xyz; o.ws=mul(unity_ObjectToWorld,v.vertex).xyz; o.originalLocal=o.local; o.originalWs=o.ws; o.color=v.color; o.n=UnityObjectToWorldNormal(v.normal); o.tangent=UnityObjectToWorldDir(v.tangent.xyz); o.bitangent=cross(o.n,o.tangent)*v.tangent.w*unity_WorldTransformParams.w; return o; }
 float4 NX_Splat(float x){return float4(x,x,x,x);}
 float NX_Div(float a,float b){return a/((b<0?-1:1)*max(abs(b),.00001));}
