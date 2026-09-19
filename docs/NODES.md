@@ -1,6 +1,10 @@
 # Built-in node pack
 
-The canvas now offers 138 visible nodes, including authored Float/Color Parameters, plus a hidden Preview Vector helper. Socket color indicates data type: yellow color, gray scalar, blue UV coordinates, cyan normals, green surface. Drag from either end; compatible-node menus and clipboard operations use the same core catalog.
+The canvas now offers 142 visible nodes, including authored Float/Color Parameters, plus a hidden Preview Vector helper. Socket color indicates data type: yellow color, gray scalar, blue UV coordinates, cyan normals, green surface. Drag from either end; compatible-node menus and clipboard operations use the same core catalog.
+
+## Motion and placement
+
+Avatar Motion provides locomotion speed and signed velocity components through a generated FX driver. Motion Response shapes effect strength; Motion Sway adds procedural flutter; Motion Stretch UVs deforms texture coordinates with speed. Sticker now has mesh placement and UV handles. [Setup and limits](MOTION_AND_HANDLES.md).
 
 ## Creator workflow additions
 

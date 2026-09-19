@@ -817,6 +817,7 @@ namespace NXSG.Editor
                     { style = { color = new Color(.7f, .8f, .9f), marginBottom = 4 } });
                 inspector.Add(new Label(NodeCatalog.Description(node.Operation)) { style = { whiteSpace = WhiteSpace.Normal, marginBottom = 6 } });
                 AddNodePreviewControls(node);
+                AddEffectHandlesInspectorHook(node);
                 if (node.Operation == "core.constant")
                 {
                     var values = node.Properties["value"] as JArray;

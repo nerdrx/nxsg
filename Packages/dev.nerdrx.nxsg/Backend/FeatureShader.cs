@@ -16,6 +16,11 @@ namespace NXSG.Backend
             string Pattern(string name,params string[] args) => name+"("+U()+","+string.Join(",",args)+")";
             switch(node.Operation)
             {
+                case "core.motionResponse": return "pow(saturate((abs("+s("speed",0)+")-"+prop("startSpeed",.1)+")/max("+prop("fullSpeed",4)+"-"+prop("startSpeed",.1)+",.0001)),max("+prop("curve",1)+",.001))";
+                case "core.motionSway": return "(sin("+T()+"*6.28318530718*"+prop("frequency",2)+"+dot(input.local,float3(1,1.37,.7))*"+prop("spatialScale",3)+")*"+prop("strength",.02)+"*saturate(abs("+s("speed",0)+")/max("+prop("fullSpeed",4)+",.0001))*saturate("+s("mask",1)+"))";
+                case "core.motionStretchUV":
+                    var stretch="(1+min(abs("+s("speed",0)+")*max(0,"+prop("strength",.25)+"),max(0,"+prop("maxStretch",3)+"-1)))";
+                    return "(("+U()+"-.5)/"+((int?)node.Properties["axis"]==1?"float2(1,"+stretch+")":"float2("+stretch+",1)")+"+.5)";
                 case "core.parallaxUV": return "("+U()+"-NX_ViewTangent(input).xy/max(abs(NX_ViewTangent(input).z),.1)*("+s("height",.5)+"-"+prop("reference",.5)+")*"+prop("strength",.05)+")";
                 case "core.parallaxOcclusion": return "NX_Parallax("+sampler+","+sampler+"_ST,"+U()+",NX_ViewTangent(input),"+prop("strength",.05)+","+prop("steps",16)+")";
                 case "core.furMask": return Pattern("NX_FurDots",prop("density",100),prop("thickness",.35),prop("height",0),prop("taper",1));

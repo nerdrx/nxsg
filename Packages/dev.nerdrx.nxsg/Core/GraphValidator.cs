@@ -161,6 +161,9 @@ namespace NXSG.Core
             string[] numeric = null, vectors = null;
             switch (node.Operation)
             {
+                case "core.motionResponse": numeric = new[]{"startSpeed","fullSpeed","curve"}; break;
+                case "core.motionSway": numeric = new[]{"strength","frequency","spatialScale","fullSpeed"}; break;
+                case "core.motionStretchUV": numeric = new[]{"strength","maxStretch","axis"}; break;
                 case "core.value": numeric = new[] { "value" }; break;
                 case "core.time": numeric = new[] { "speed", "offset" }; break;
                 case "core.noise": case "core.checker": numeric = new[] { "scale", "speed" }; break;
@@ -271,6 +274,20 @@ namespace NXSG.Core
                 CheckRange(node.Properties["roughness"], path + ".properties.roughness", 0, 1, diagnostics);
                 CheckRange(node.Properties["metallic"], path + ".properties.metallic", 0, 1, diagnostics);
                 CheckRange(node.Properties["strength"], path + ".properties.strength", 0, double.MaxValue, diagnostics);
+            }
+            if(node.Operation=="core.motionResponse")
+            {
+                CheckRange(node.Properties["startSpeed"],path+".properties.startSpeed",0,float.MaxValue,diagnostics);
+                CheckRange(node.Properties["curve"],path+".properties.curve",.001,float.MaxValue,diagnostics);
+                var start=node.Properties["startSpeed"]??new JValue(.1);var full=node.Properties["fullSpeed"]??new JValue(4);
+                if(IsNumber(start)&&IsNumber(full)&&(double)full<=(double)start)Add(diagnostics,DiagnosticSeverity.Error,"value.range",path+".properties.fullSpeed","Full speed must exceed start speed.");
+            }
+            if(node.Operation=="core.motionSway")CheckRange(node.Properties["fullSpeed"],path+".properties.fullSpeed",.0001,float.MaxValue,diagnostics);
+            if(node.Operation=="core.motionStretchUV")
+            {
+                CheckRange(node.Properties["maxStretch"],path+".properties.maxStretch",1,float.MaxValue,diagnostics);
+                CheckRange(node.Properties["strength"],path+".properties.strength",0,float.MaxValue,diagnostics);
+                CheckIntegerRange(node.Properties["axis"],path+".properties.axis",0,1,diagnostics);
             }
             if(node.Operation=="core.normalMap")CheckIntegerRange(node.Properties["flipGreen"],path+".properties.flipGreen",0,1,diagnostics);
             if (numeric != null) foreach (var name in numeric) CheckNumber(node.Properties[name], path + ".properties." + name, diagnostics);

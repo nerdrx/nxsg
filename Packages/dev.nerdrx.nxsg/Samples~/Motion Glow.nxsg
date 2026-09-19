@@ -1,0 +1,209 @@
+{
+  "format": "nxsg",
+  "schemaVersion": 1,
+  "graphId": "motion-glow-example",
+  "nodes": [
+    {
+      "id": "motion",
+      "operation": "core.avatarMotion",
+      "version": 1,
+      "properties": {}
+    },
+    {
+      "id": "response",
+      "operation": "core.motionResponse",
+      "version": 1,
+      "properties": {
+        "startSpeed": 0.1,
+        "fullSpeed": 4,
+        "curve": 1
+      }
+    },
+    {
+      "id": "color",
+      "operation": "core.constant",
+      "version": 1,
+      "properties": {
+        "valueType": "color",
+        "value": [
+          0.1,
+          0.6,
+          1,
+          1
+        ]
+      }
+    },
+    {
+      "id": "multiply",
+      "operation": "core.multiply",
+      "version": 1,
+      "properties": {}
+    },
+    {
+      "id": "base",
+      "operation": "core.constant",
+      "version": 1,
+      "properties": {
+        "valueType": "color",
+        "value": [
+          0.03,
+          0.03,
+          0.05,
+          1
+        ]
+      }
+    },
+    {
+      "id": "surface",
+      "operation": "core.unlitSurface",
+      "version": 1,
+      "properties": {}
+    },
+    {
+      "id": "output",
+      "operation": "core.output",
+      "version": 1,
+      "properties": {}
+    },
+    {
+      "id": "flutter",
+      "operation": "core.motionSway",
+      "version": 1,
+      "properties": {
+        "strength": 0.025,
+        "frequency": 2,
+        "spatialScale": 3,
+        "fullSpeed": 4
+      }
+    }
+  ],
+  "connections": [
+    {
+      "id": "motion-response-speed",
+      "from": {
+        "nodeId": "motion",
+        "portId": "speed"
+      },
+      "to": {
+        "nodeId": "response",
+        "portId": "speed"
+      }
+    },
+    {
+      "id": "response-multiply-b",
+      "from": {
+        "nodeId": "response",
+        "portId": "value"
+      },
+      "to": {
+        "nodeId": "multiply",
+        "portId": "b"
+      }
+    },
+    {
+      "id": "color-multiply-a",
+      "from": {
+        "nodeId": "color",
+        "portId": "value"
+      },
+      "to": {
+        "nodeId": "multiply",
+        "portId": "a"
+      }
+    },
+    {
+      "id": "multiply-surface-emission",
+      "from": {
+        "nodeId": "multiply",
+        "portId": "value"
+      },
+      "to": {
+        "nodeId": "surface",
+        "portId": "emission"
+      }
+    },
+    {
+      "id": "base-surface-albedo",
+      "from": {
+        "nodeId": "base",
+        "portId": "value"
+      },
+      "to": {
+        "nodeId": "surface",
+        "portId": "albedo"
+      }
+    },
+    {
+      "id": "motion-flutter-speed",
+      "from": {
+        "nodeId": "motion",
+        "portId": "speed"
+      },
+      "to": {
+        "nodeId": "flutter",
+        "portId": "speed"
+      }
+    },
+    {
+      "id": "flutter-surface-displacement",
+      "from": {
+        "nodeId": "flutter",
+        "portId": "value"
+      },
+      "to": {
+        "nodeId": "surface",
+        "portId": "displacement"
+      }
+    },
+    {
+      "id": "surface-output-surface",
+      "from": {
+        "nodeId": "surface",
+        "portId": "surface"
+      },
+      "to": {
+        "nodeId": "output",
+        "portId": "surface"
+      }
+    }
+  ],
+  "parameters": [],
+  "resources": [],
+  "patterns": [],
+  "layout": {
+    "nodes": {
+      "motion": {
+        "x": 0,
+        "y": 150
+      },
+      "response": {
+        "x": 240,
+        "y": 80
+      },
+      "color": {
+        "x": 240,
+        "y": 280
+      },
+      "multiply": {
+        "x": 480,
+        "y": 80
+      },
+      "base": {
+        "x": 480,
+        "y": 350
+      },
+      "flutter": {
+        "x": 240,
+        "y": 470
+      },
+      "surface": {
+        "x": 730,
+        "y": 180
+      },
+      "output": {
+        "x": 980,
+        "y": 180
+      }
+    }
+  }
+}

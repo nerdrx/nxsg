@@ -241,3 +241,29 @@ Linux Unity 2022.3.22f1, OpenGLCore, isolated headless Gamescope fixture:
 No additional Windows/D3D, headset or live VRChat claim is made. Static baking is UV-local, linear 8-bit PNG; unsupported scene/time/geometry branches are rejected rather than flattened silently. LTCGI playground checking locates an existing scene controller, not a simulated world.
 
 The published alpha.5 ZIP was downloaded again, SHA-256 verified against the generated listing, and installed into the isolated fixture. Creator tools, texture-channel/import isolation, and the actual playground window passed against that downloaded package. The playground test disposes its source graph preview before rendering to verify independent shader ownership. Fixture dependency changes were restored afterward.
+
+## Effect handles and avatar motion — 2026-09-19
+
+Alpha.6 portable checks cover motion graph emission, live uniform retention, range
+validation, and the Motion Glow sample. Hidden Gamescope tests in Unity
+2022.3.22f1/OpenGLCore passed:
+
+- `MotionEffectsSmoke`: GPU response at speed 0, 2 and 4 maps to 0, 0.5 and 1;
+  texture stretching changes rendered pixels; sway compiles vertex and shadow passes.
+- `MotionDriverSmoke`: saved/reloaded native blend trees drive speed and signed
+  XYZ material properties via Animator property blocks. Both MeshRenderer and
+  SkinnedMeshRenderer bindings were exercised. Existing FX layers survive merge,
+  Undo and Redo. Reload retains referenced state machines; wrong parameter types
+  and duplicate layers are rejected.
+- `EffectHandlesSmoke`: real EditorWindow mouse events place a sticker on the
+  sphere, drag it twice without cumulative overshoot, resize, rotate and undo.
+  Undo replaces the graph instance and stable node IDs remain usable. A triangle
+  ray test checks barycentric UV interpolation.
+
+![Actual UV placement window](evidence/2026-09-19-effect-handles.png)
+
+The white sticker matches the rotated handle outline in the captured GPU preview.
+This is editor evidence, not VRChat client, headset or Windows validation. Motion
+requires an installed FX driver and represents locomotion, not per-bone history.
+Mesh picking is limited to readable UV0 geometry; custom UV transforms use the
+UV plane.

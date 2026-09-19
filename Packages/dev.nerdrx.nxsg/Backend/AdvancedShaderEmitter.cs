@@ -136,6 +136,9 @@ namespace NXSG.Backend
                 textureNames.Add(id, symbol);
                 properties.Add(new MaterialProperty { Name = symbol, DisplayName = "Texture " + textureNames.Count, Type = GraphValueType.Texture2D, Binding = GraphBindingKind.Material, ResourceId = id, ResourceUri = resource.Uri });
             }
+            if(live.Any(id=>nodes[id].Operation=="core.avatarMotion"))
+                foreach(var axis in new[]{"Speed","X","Y","Z"})
+                    properties.Add(new MaterialProperty { Name="_NXSG_Motion"+axis, DisplayName="Motion "+axis, Type=GraphValueType.Float, Binding=GraphBindingKind.AnimatedMaterial });
             ltcgiEnabled = live.Any(id => nodes[id].Operation == "core.ltcgi");
             if (ltcgiEnabled && !options.LtcgiAvailable)
                 throw new InvalidOperationException("LTCGI Lighting requires the optional at.pimaker.ltcgi package. Install LTCGI from https://ltcgi.dev, then rebuild the graph.");
@@ -146,6 +149,8 @@ namespace NXSG.Backend
             foreach (var prop in properties.Where(p => p.Type == GraphValueType.Texture2D)) b.AppendLine(prop.Name + " (\"" + prop.DisplayName + "\", 2D) = \"white\" {}");
             b.AppendLine("_Color (\"Tint\", Color) = (1,1,1,1)");
             b.AppendLine(PreviewClock.Properties);
+            if(live.Any(id=>nodes[id].Operation=="core.avatarMotion"))
+                b.AppendLine("[Header(Avatar Motion Driver)] _NXSG_MotionSpeed (\"Motion speed (m/s)\", Float) = 0\n_NXSG_MotionX (\"Sideways speed (m/s)\", Float) = 0\n_NXSG_MotionY (\"Vertical speed (m/s)\", Float) = 0\n_NXSG_MotionZ (\"Forward speed (m/s)\", Float) = 0");
             b.AppendLine("[HideInInspector] _NXSG_AudioLinkPreview (\"Preview audio\", Float) = 0\n[HideInInspector] _NXSG_AudioLinkValue (\"Preview value\", Float) = 0");
             var symbols = new HashSet<string>(properties.Select(p => p.Name));
             string lastHeader = null;
@@ -194,6 +199,7 @@ namespace NXSG.Backend
             if (live.Any(id => nodes[id].Operation == "core.audioLink")) b.AppendLine(AudioLinkShader.Hlsl);
             b.AppendLine("#ifndef SHADOW_COORDS\n#define SHADOW_COORDS(index)\n#endif");
             b.AppendLine(PreviewClock.Hlsl);
+
             b.AppendLine(Helpers);
             if (ltcgiEnabled) b.AppendLine(LtcgiShader.Hlsl);
             if(refracts) b.AppendLine("sampler2D _NXSG_GrabTexture; float4 _NXSG_GrabTexture_TexelSize;");
@@ -406,6 +412,8 @@ namespace NXSG.Backend
                 case "core.uvTile": body = "NX_TileUV(" + P("uv",uv,"vector2") + "," + IntProp(n,"mode",0,0,2) + "," + Vec(n,"tiling",1,1) + "," + Vec(n,"offset",0,0) + ")"; break;
                 case "core.posterize": body = "NX_Posterize(" + S("value",0) + "," + S("levels",4) + ")"; break;
                 case "core.vertexMotion": body = "(sin(" + P("time", "NXSG_Time()", "float") + "*" + Prop(n, "speed", 1) + "+input.local.y*" + Prop(n, "frequency", 2) + ")*" + S("strength", .02) + ")"; break;
+                case "core.avatarMotion":
+                    body=port=="speed"?"max(0,_NXSG_MotionSpeed)":port=="sideways"?"_NXSG_MotionX":port=="vertical"?"_NXSG_MotionY":port=="forward"?"_NXSG_MotionZ":"float3(_NXSG_MotionX,_NXSG_MotionY,_NXSG_MotionZ)";break;
                 case "core.darknessGlow":
                     if(vertex)throw new InvalidOperationException("Darkness Glow is a fragment lighting effect. Connect it to Emission.");
                     body="NX_DarkGlow(input,"+P("color","float4(1,1,1,1)","color")+","+S("strength",1)+","+S("threshold",.4)+","+S("softness",.2)+")"; break;

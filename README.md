@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <img alt="138 visible nodes" src="https://img.shields.io/badge/nodes-138-7700FF?style=flat-square" />
+  <img alt="142 visible nodes" src="https://img.shields.io/badge/nodes-142-7700FF?style=flat-square" />
   <img alt="Unity development version 2022.3.22f1" src="https://img.shields.io/badge/Unity-2022.3.22f1-222222?style=flat-square" />
   <img alt="Tested on Linux" src="https://img.shields.io/badge/tested_on-Linux-222222?style=flat-square" />
   <img alt="Early development" src="https://img.shields.io/badge/status-early_development-7700FF?style=flat-square" />
@@ -52,9 +52,11 @@ stereo, and live VRChat client behavior remain unverified; see the
 | **Alive** | Shader-driven particles from the mesh wearing the material, UV motion, flipbooks, vertex animation and AudioLink inputs. |
 | **Procedural** | 1D–4D noise, Musgrave-style fractals, Voronoi, waves, texture bombing, distortion, gradients and shape masks. |
 
+**Place it. Move with it.** Pick sticker placement directly on a mesh preview, resize and rotate in UV space, and drive glow, flutter or texture stretch from avatar locomotion. [Effect handles and motion →](docs/MOTION_AND_HANDLES.md)
+
 **Create, compare, refine.** Import a reviewed texture set, inspect its channels, scrub animations in the material playground, keep A/B snapshots, bake a static branch, and save material presets. [Creator workflow →](docs/CREATOR_WORKFLOW.md)
 
-**138 visible nodes.** Compact controls for common effects; reusable Patterns when your graph grows. [Full node guide →](docs/NODES.md)
+**142 visible nodes.** Compact controls for common effects; reusable Patterns when your graph grows. [Full node guide →](docs/NODES.md)
 
 <table>
   <tr>

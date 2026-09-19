@@ -38,6 +38,7 @@ namespace NXSG.Editor
         private float _speed = 1f;
         private bool _audioEnabled;
         private float _audioValue;
+        private Vector3 _motionVelocity;
         private double _cpuMs;
         private string _gpuMs = "Unavailable";
         private string _status = "Drop a material here or call Show(material).";
@@ -216,6 +217,12 @@ namespace NXSG.Editor
             _audioValue = EditorGUILayout.Slider("Preview value", _audioValue, 0, 1);
             if (_previewMaterial != null) ApplyPreviewUniforms(_previewMaterial);
             EditorGUILayout.Space(3);
+            if(_previewMaterial!=null&&_previewMaterial.HasProperty("_NXSG_MotionSpeed"))
+            {
+                EditorGUILayout.LabelField("Avatar motion preview",EditorStyles.boldLabel);
+                _motionVelocity=EditorGUILayout.Vector3Field("Velocity (m/s)",_motionVelocity);
+                EditorGUILayout.LabelField("X sideways · Y vertical · Z forward",EditorStyles.miniLabel);
+            }
             EditorGUILayout.LabelField("LTCGI", EditorStyles.boldLabel);
             EditorGUILayout.HelpBox("Uses an active scene LTCGI controller when present. Preview does not create or fake one.", MessageType.Info);
             if (GUILayout.Button("Check active scene for LTCGI")) CheckLtcgiScene();
@@ -241,6 +248,9 @@ namespace NXSG.Editor
         private void ApplyPreviewUniforms(Material material)
         {
             PreviewClock.Apply(material, _time);
+            if(float.IsNaN(_motionVelocity.sqrMagnitude)||float.IsInfinity(_motionVelocity.sqrMagnitude))_motionVelocity=Vector3.zero;
+            SetFloatIfPresent(material,"_NXSG_MotionSpeed",_motionVelocity.magnitude);
+            SetFloatIfPresent(material,"_NXSG_MotionX",_motionVelocity.x);SetFloatIfPresent(material,"_NXSG_MotionY",_motionVelocity.y);SetFloatIfPresent(material,"_NXSG_MotionZ",_motionVelocity.z);
             SetFloatIfPresent(material, "_NXSG_AudioLinkPreview", _audioEnabled ? 1f : 0f);
             SetFloatIfPresent(material, "_NXSG_AudioLinkValue", _audioValue);
         }

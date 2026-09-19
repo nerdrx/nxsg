@@ -16,6 +16,8 @@ namespace NXSG.Editor
         {
             var tools = new ToolbarMenu { text="Create", tooltip="Preview, import, bake and organize your material" };
             tools.menu.AppendAction("Material playground / compare", _ => OpenMaterialPlayground());
+            tools.menu.AppendAction("Place selected sticker…", _ => OpenEffectHandlesForSelectedNode());
+            tools.menu.AppendAction("Create avatar motion driver…", _ => MotionDriverWindow.Open());
             tools.menu.AppendAction("Why does the scene look different?", _ => ShowPreviewDiagnostics());
             tools.menu.AppendAction("Bookmark current view…", _ => BookmarkDialog());
             tools.menu.AppendAction("Jump to bookmark…", _ => BookmarkMenu());
