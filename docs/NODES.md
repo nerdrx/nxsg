@@ -102,7 +102,7 @@ can feed a surface or another effect.
 | Node | Contract | Backend caveat |
 |---|---|---|
 | Unlit Surface | Albedo, emission, opacity, displacement → surface | Ignores scene lighting. Base opacity is cutout via Cutoff; a Shell layer uses transparency. |
-| PBR Surface | Albedo, metallic, roughness, normal, emission, opacity → surface | Uses Unity Built-In BRDF with main light, spherical-harmonic ambient, and one reflection probe. No ForwardAdd or lightmap pass is emitted. |
+| PBR Surface | Albedo, metallic, roughness, normal, emission, opacity → surface | Uses Unity Built-In BRDF with main light, spherical-harmonic ambient, and one reflection probe. Additional pixel lights use ForwardAdd on the base surface; no lightmap pass is emitted. |
 | Fresnel | Scalar output; power control | View-dependent rim factor; power is clamped by shader math. |
 | Color Ramp | Value → color | 2–8 ordered RGBA stops, linear interpolation. Native gradient editing; output holds endpoint colors outside the stop range. |
 | Layer | Base, overlay, mask → color | Mask is clamped to 0–1. |
@@ -125,7 +125,7 @@ too-small textures return the node fallback. A correctly sized but stale
 texture can still read zero; live runtime data requires an AudioLink provider.
 
 PBR uses Unity's Built-In BRDF with the main light, spherical-harmonic ambient,
-and one reflection probe. The generated pass does not add ForwardAdd or lightmap
+and one reflection probe. The base surface adds per-pixel lights with ForwardAdd, but does not add lightmap
 passes. Normal maps decode tangent-space input using the mesh tangent basis.
 
 Patterns are flat groups over ordinary nodes and wires. **Patterns → Group selection** folds selected nodes into one card with boundary sockets. Expand reveals the original nodes; ungroup keeps them. **Save selection as Pattern** exports a bounded `.nxsg` snippet; **Insert Pattern** makes a new independent group with fresh node IDs. These copies are not linked instances of an external asset.

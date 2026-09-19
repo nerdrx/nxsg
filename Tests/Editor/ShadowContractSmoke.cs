@@ -33,7 +33,7 @@ public static class ShadowContractSmoke
             Require(result.ShaderSource.Contains("o.bitangent=input.bitangent"), "Shadow vertex did not preserve bitangent");
             Require(result.ShaderSource.Contains("input.tangent=i.tangent"), "Shadow fragment did not restore tangent");
             Require(result.ShaderSource.Contains("input.bitangent=i.bitangent"), "Shadow fragment did not restore bitangent");
-            Require(result.Diagnostics.Any(d => d.Code == "lighting.forwardAdd"), "Missing additional-light limitation diagnostic");
+            Require(result.ShaderSource.Contains("Name \"ForwardAdd\""), "Missing additional-light pass");
             const string shaderPath = "Assets/ShadowContractSmoke.shader";
             System.IO.File.WriteAllText(System.IO.Path.Combine(Application.dataPath, "ShadowContractSmoke.shader"), result.ShaderSource);
             AssetDatabase.ImportAsset(shaderPath, ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate);

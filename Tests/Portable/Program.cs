@@ -73,6 +73,7 @@ internal static class Program
         ParticleChecks.Run(Assert);
         SurfaceParticleChecks.Run(Assert);
         EffectsBackendChecks.Run(Assert);
+        PixelLightChecks.Run(Assert);
         ShowcaseChecks.Run(Assert, fixtures);
         ShadowChecks.Run(Assert);
         NestedShellChecks.Run(Assert);

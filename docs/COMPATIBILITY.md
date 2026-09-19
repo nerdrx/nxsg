@@ -5,7 +5,7 @@
 | Unity editor | Unity 2022.3.22f1 on Linux | Other Unity patches are unverified. |
 | Graphics | Linux OpenGLCore on the pinned RX 7900 XTX fixture | This does not establish Windows/D3D or other GPU behavior. |
 | Shader target | PC Built-In forward rendering | Mobile/Quest shader support is not provided by this package. |
-| Lighting | ForwardBase pass | Additional per-pixel point/spot lights are not accumulated; no ForwardAdd yet. |
+| Lighting | ForwardBase + ForwardAdd for Toon/PBR base surfaces | Shell/fur overlays retain their existing lighting; additional lights increase draw calls. |
 | VRChat SDK | Base/Avatars 3.10.5 fixture imports and builds in the Linux Unity checks | SDK upload and avatar acceptance remain unverified. |
 | VRChat client | No live client result is claimed | Client rendering, fallback behavior, and upload acceptance remain open. |
 | Stereo/headset | No headset or per-eye result is claimed | Mirror and stereo parity require a separate integration check. |

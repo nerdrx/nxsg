@@ -97,6 +97,9 @@ public static class TessellationRenderSmoke
             var pixels=Capture(); RequireFinite(pixels);
             if(CountVisible(pixels)<8)throw new InvalidOperationException("Tessellation wireframe invisible");
         }
+        graph.Nodes.Single(n=>n.Id=="base").Operation="core.pbrSurface";
+        using(var p=GraphPreview.Create(graph,null))
+            if(p.Material.FindPass("ForwardAdd")<0) throw new InvalidOperationException("Lit tessellation wireframe missing additive pass");
     }
 
     static ShaderGraph Graph(string operation, int factor, int minFactor, double nearDistance, double farDistance, double strength, double reference, double smoothing, double height, bool textureHeight)

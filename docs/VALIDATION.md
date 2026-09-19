@@ -207,3 +207,12 @@ All checks below ran on Linux with Unity 2022.3.22f1/OpenGLCore in an isolated h
 - ShowcaseRender: hologram, pearl and warm fur rendered; deterministic hologram frames changed over time. PNGs and the 24-frame clip are actual Unity renders. WebM decoded without errors in FFmpeg; in-app H.264 playback crashed, so browser playback is not claimed as verified.
 
 Additional pixel lights are still not accumulated (no ForwardAdd); the compiler now warns explicitly. Windows/D3D, headset/stereo, live VRChat, live AudioLink/VRCFury and representative-avatar performance are not established by these checks.
+
+## Alpha.3 pixel-light checks — 2026-09-19
+
+- Portable harness and five packaging tests passed. `PixelLightChecks` covers both compiler paths, Unlit exclusion and scoped shell diagnostics.
+- `PixelLightSmoke` passed in hidden Gamescope, Unity 2022.3.22f1/OpenGLCore: directional lighting, point near/far falloff, spot on/off, white/transparent spot-cookie alpha, red/blue additive lights, emission isolation, Unlit invariance, and additional-light deltas on advanced Toon/PBR. Full-shadow/cookie variants were warmed; this does not establish rendered shadow quality.
+- `TessellationRenderSmoke` passed including instanced pass compilation, geometry/displacement checks and a lit tessellated wireframe additive pass. This exposed and fixed a pre-existing shadow TEXCOORD collision.
+- `ShadowContractSmoke` passed with POM and the new additive pass.
+
+The alpha.2 ForwardBase-only limitation is superseded for Toon/PBR **base** surfaces. Shell/fur overlays retain their existing lighting. Every extra pixel light adds a pass. Native Windows/D3D, VRChat client, stereo and representative-avatar performance remain unverified.

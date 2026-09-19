@@ -247,7 +247,7 @@ namespace NXSG.Backend
             var requiresLocalPosition = reachable.Any(id => nodes[id].Operation == ObjectUvOperation);
             var ramps = reachable.Where(id => nodes[id].Operation == RampOperation).Select(id => nodes[id]).OrderBy(node => node.Id, StringComparer.Ordinal).ToList();
             EmitForwardPass(builder, texture != null, texture == null ? "input.uv" : texture.UvExpression, requiresLocalPosition, tint, emission, threshold, softness, shadowStrength, properties, toon.Id, sourceMap, ramps);
-            AddWarning(diagnostics, "lighting.forwardAdd", "$", "Generated Built-In shader emits ForwardBase only; additional per-pixel point and spot lights are not accumulated.");
+            EmitForwardPass(builder, texture != null, texture == null ? "input.uv" : texture.UvExpression, requiresLocalPosition, tint, emission, threshold, softness, shadowStrength, properties, toon.Id, sourceMap, ramps, true);
             if (options.IncludeShadowCaster)
             {
                 EmitShadowPass(builder, toon.Id, sourceMap);
@@ -891,21 +891,23 @@ namespace NXSG.Backend
             List<MaterialProperty> materialProperties,
             string toonNodeId,
             List<SourceMapEntry> sourceMap,
-            List<GraphNode> ramps)
+            List<GraphNode> ramps,
+            bool additive = false)
         {
             builder.Line("Pass");
             builder.Line("{");
             builder.Indent++;
-            builder.Line("Name \"ForwardBase\"");
-            builder.Line("Tags { \"LightMode\" = \"ForwardBase\" }");
+            builder.Line("Name \"" + (additive ? "ForwardAdd" : "ForwardBase") + "\"");
+            builder.Line("Tags { \"LightMode\" = \"" + (additive ? "ForwardAdd" : "ForwardBase") + "\" }");
             builder.Line("Cull Back");
             builder.Line("ZTest LEqual");
-            builder.Line("ZWrite On");
+            builder.Line(additive ? "ZWrite Off" : "ZWrite On");
+            if (additive) builder.Line("Blend One One\nColorMask RGB");
             builder.Line("CGPROGRAM");
             builder.Line("#pragma target 3.0");
             builder.Line("#pragma vertex vert");
             builder.Line("#pragma fragment frag");
-            builder.Line("#pragma multi_compile_fwdbase");
+            builder.Line(additive ? "#pragma multi_compile_fwdadd_fullshadows" : "#pragma multi_compile_fwdbase");
             builder.Line("#pragma multi_compile_instancing");
             builder.Line("#include \"UnityCG.cginc\"");
             builder.Line("#include \"Lighting.cginc\"");
@@ -932,10 +934,10 @@ namespace NXSG.Backend
                     : "fixed4 " + property.Name + ";");
             }
             builder.Line("struct appdata { float4 vertex : POSITION; float3 normal : NORMAL; float2 uv : TEXCOORD0; UNITY_VERTEX_INPUT_INSTANCE_ID };");
-            builder.Line("struct v2f { float4 pos : SV_POSITION; float2 uv : TEXCOORD0; half3 normalWS : TEXCOORD1; float3 positionWS : TEXCOORD2;" + (requiresLocalPosition ? " float3 localPosition : TEXCOORD3;" : "") + " SHADOW_COORDS(" + (requiresLocalPosition ? "4" : "3") + ") UNITY_VERTEX_OUTPUT_STEREO };");
+            builder.Line("struct v2f { float4 pos : SV_POSITION; float2 uv : TEXCOORD0; half3 normalWS : TEXCOORD1; float3 positionWS : TEXCOORD2;" + (requiresLocalPosition ? " float3 localPosition : TEXCOORD3;" : "") + " LIGHTING_COORDS(" + (requiresLocalPosition ? "4,5" : "3,4") + ") UNITY_VERTEX_OUTPUT_STEREO };");
             var start = builder.LineNumber + 1;
             builder.Line("#line 1 \"nxsg://node/texture\"");
-            builder.Line("v2f vert(appdata v) { v2f output; UNITY_SETUP_INSTANCE_ID(v); UNITY_INITIALIZE_OUTPUT(v2f, output); UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(output); float4 positionWS = mul(unity_ObjectToWorld, v.vertex); output.pos = UnityWorldToClipPos(positionWS.xyz); output.positionWS = positionWS.xyz; output.normalWS = UnityObjectToWorldNormal(v.normal); output.uv = v.uv;" + (requiresLocalPosition ? " output.localPosition = v.vertex.xyz;" : "") + " TRANSFER_SHADOW(output); return output; }");
+            builder.Line("v2f vert(appdata v) { v2f output; UNITY_SETUP_INSTANCE_ID(v); UNITY_INITIALIZE_OUTPUT(v2f, output); UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(output); float4 positionWS = mul(unity_ObjectToWorld, v.vertex); output.pos = UnityWorldToClipPos(positionWS.xyz); output.positionWS = positionWS.xyz; output.normalWS = UnityObjectToWorldNormal(v.normal); output.uv = v.uv;" + (requiresLocalPosition ? " output.localPosition = v.vertex.xyz;" : "") + " TRANSFER_VERTEX_TO_FRAGMENT(output); return output; }");
             var end = builder.LineNumber;
             sourceMap.Add(new SourceMapEntry { NodeId = toonNodeId, PortId = "vertex", StartLine = start, EndLine = end });
             start = builder.LineNumber + 1;
@@ -959,7 +961,10 @@ namespace NXSG.Backend
                 builder.Line("float NXSG_SafeDivideScalar(float a, float b) { float d=max(abs(b),1e-5); return a/(b<0 ? -d : d); }");
             for (var i = 0; i < ramps.Count; i++)
                 builder.Line(RampHelper(ramps[i]));
-            builder.Line("fixed4 frag(v2f input) : SV_Target { UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input); half3 normalWS = normalize(input.normalWS); half3 lightDirection = normalize(UnityWorldSpaceLightDir(input.positionWS)); half ndotl = saturate(dot(normalWS, lightDirection)); half softness = max(" + HlslValue(softness) + ", 0.001h); half toonBand = smoothstep(" + HlslValue(threshold) + " - softness, " + HlslValue(threshold) + " + softness, ndotl); half shadow = SHADOW_ATTENUATION(input); shadow = lerp(1.0h, shadow, saturate(" + HlslValue(shadowStrength) + ")); half3 ambient = ShadeSH9(half4(normalWS, 1.0h)); half3 direct = _LightColor0.rgb * lerp(0.35h, 1.0h, toonBand) * shadow; fixed4 textureColor = " + colorExpression + "; return fixed4(textureColor.rgb * (ambient + direct) + (" + HlslValue(emission) + ").rgb, 1.0h); }");
+            var lighting = additive
+                ? "UNITY_LIGHT_ATTENUATION(atten,input,input.positionWS); half3 ambient=0; half3 direct=_LightColor0.rgb*lerp(0.35h,1.0h,toonBand)*atten;"
+                : "half shadow=SHADOW_ATTENUATION(input); shadow=lerp(1.0h,shadow,saturate(" + HlslValue(shadowStrength) + ")); half3 ambient=ShadeSH9(half4(normalWS,1.0h)); half3 direct=_LightColor0.rgb*lerp(0.35h,1.0h,toonBand)*shadow;";
+            builder.Line("fixed4 frag(v2f input) : SV_Target { UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input); half3 normalWS=normalize(input.normalWS); half3 lightDirection=normalize(UnityWorldSpaceLightDir(input.positionWS)); half ndotl=saturate(dot(normalWS,lightDirection)); half softness=max(" + HlslValue(softness) + ",0.001h); half toonBand=smoothstep(" + HlslValue(threshold) + "-softness," + HlslValue(threshold) + "+softness,ndotl); " + lighting + " fixed4 textureColor=" + colorExpression + "; return fixed4(textureColor.rgb*(ambient+direct)" + (additive ? "" : " + (" + HlslValue(emission) + ").rgb") + "," + (additive ? "0" : "1") + "); }");
             end = builder.LineNumber;
             sourceMap.Add(new SourceMapEntry { NodeId = toonNodeId, PortId = "surface", StartLine = start, EndLine = end });
             builder.Line("ENDCG");
