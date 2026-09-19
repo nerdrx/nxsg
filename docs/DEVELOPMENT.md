@@ -2,8 +2,8 @@
 
 NXSG is developed and tested primarily on Linux. The current compatibility
 tuple is Unity **2022.3.22f1**, VRChat Base/Avatars **3.10.5**, and the pinned
-`com.unity.nuget.newtonsoft-json` **3.2.1**. The first implementation is a
-small PC VRChat Built-In texture/toon backend. It is not yet a complete avatar
+`com.unity.nuget.newtonsoft-json` **3.2.1**. The current implementation is a
+PC Built-In graph editor with 135 visible nodes and generated ShaderLab/HLSL. It is not yet a complete avatar
 tool, mobile shader adapter, or proof of VRChat client compatibility.
 
 ## First-time setup
@@ -97,9 +97,9 @@ headset, or live VRChat behavior.
 
 For normal visible editing, open `DevProject` through Unity Hub. The custom
 canvas currently covers the small graph workflow: create/open/save, search and
-add nodes, connections, pan/zoom, selection, undo, and local Build. The
-prototype backend remains limited to a single texture/toon surface and its
-current generated material contract.
+add nodes, connections, pan/zoom, selection, undo, and local Build. The backend supports Toon, Unlit and PBR surfaces, layered effects,
+procedural nodes and additional geometry features. See [the node guide](NODES.md)
+for current capabilities and per-feature limits.
 
 ## What to record
 
