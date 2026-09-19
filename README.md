@@ -165,6 +165,7 @@ These are roadmap items, not promised features of the current package. [Full des
 
 - **Target:** PC Built-In forward rendering. Mobile/Quest avatars are not supported by this custom-shader package.
 - **Test environment:** Linux Unity 2022.3.22f1/OpenGLCore. Native Windows/D3D and headset/client rendering need separate checks.
+- **Lighting:** ForwardBase only; additional per-pixel point/spot lights are not accumulated (no ForwardAdd). The compiler reports this limitation.
 - **Integrations:** AudioLink shader inputs and conventional animatable material properties are implemented. Live AudioLink and VRCFury acceptance remain open.
 - **Effects:** refraction samples the screen; interiors, iridescence and subsurface are approximations. Fur fins use triangle edges without mesh adjacency. Transparent ordering and expanded renderer bounds matter for shells, fur and particles.
 - **Performance:** cost warnings help expose expensive operations; they are not a measured GPU budget. Tessellation, overdraw and many shell passes can become expensive quickly.
