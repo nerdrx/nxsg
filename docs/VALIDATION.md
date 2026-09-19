@@ -292,3 +292,8 @@ Alpha.7 extends the existing hidden Unity checks:
 All passed in the pinned Linux graphics fixture. Portable checks also passed.
 
 ![Placement controls in Unity](evidence/2026-09-19-placement-polish.png)
+
+The downloaded alpha.7 archive matched SHA-256
+`6e7bfcb01eeea67770d1c5aaea937fc6cc04c9fbff83eebb01c77a594d8c9eac`.
+Installed from that archive, `MotionDriverSmoke` passed again. The fixture was
+then restored to the source package.
