@@ -110,6 +110,8 @@ namespace NXSG.Backend
             if (particle && fallback == "toonstandard") fallback = "Particle";
             var live = new HashSet<string>();
             Visit(root, live);
+            var refracts = live.Any(id => nodes[id].Operation == "core.refraction");
+            if(refracts && (particle || surfaceParticles)) throw new InvalidOperationException("Screen refraction currently supports regular mesh surfaces, not particle surfaces.");
             var wireNode = live.Select(id => nodes[id]).FirstOrDefault(n => n.Operation == "core.wireframe");
             wireframeEnabled = wireNode != null;
             if (wireframeEnabled && particle) throw new InvalidOperationException("Wireframe currently supports Toon, Unlit, PBR and Shell surfaces; use those for mesh edges.");
@@ -124,7 +126,7 @@ namespace NXSG.Backend
             foreach (var node in live.Select(id => nodes[id]).OrderBy(n => n.Id, StringComparer.Ordinal))
             {
                 if (node.Version != 1) throw new InvalidOperationException("Unsupported node version: " + node.Id);
-                if (node.Operation != "core.texture2D" && node.Operation != "core.sticker" && node.Operation != "core.triplanarTexture" && node.Operation != "core.matcapTexture" && node.Operation != "core.parallaxOcclusion" && node.Operation != "core.chromaticTexture") continue;
+                if (node.Operation != "core.texture2D" && node.Operation != "core.sticker" && node.Operation != "core.triplanarTexture" && node.Operation != "core.matcapTexture" && node.Operation != "core.parallaxOcclusion" && node.Operation != "core.chromaticTexture" && node.Operation != "core.interiorMapping" && node.Operation != "core.textureBomb") continue;
                 var id = (string)node.Properties["resourceId"];
                 var resource = (graph.Resources ?? new List<GraphResource>()).FirstOrDefault(r => r.Id == id);
                 if (resource == null || resource.Kind != "texture2D") throw new InvalidOperationException("Missing texture resource: " + id);
@@ -162,22 +164,31 @@ namespace NXSG.Backend
                 passCode.Append(FurShader.Pass(
                     Input(furNode, "rootColor", "float4(.2,.1,.05,1)", "color"), Input(furNode, "tipColor", "float4(.8,.6,.3,1)", "color"), Scalar(furNode, "length", .04, true), Scalar(furNode, "density", 100), Scalar(furNode, "thickness", .35), Scalar(furNode, "mask", 1), Input(furNode, "groom", "float3(0,0,0)", "vector3", true), Input(furNode, "time", "_Time.y", "float", true), IntProp(furNode, "layers", 16, 4, 32), double.Parse(Prop(furNode, "taper", 1), CultureInfo.InvariantCulture), double.Parse(Prop(furNode, "gravity", .1), CultureInfo.InvariantCulture), double.Parse(Prop(furNode, "windStrength", .1), CultureInfo.InvariantCulture), double.Parse(Prop(furNode, "windSpeed", 1), CultureInfo.InvariantCulture), double.Parse(Prop(furNode, "windScale", 2), CultureInfo.InvariantCulture), double.Parse(Prop(furNode, "rimStrength", .25), CultureInfo.InvariantCulture), double.Parse(Prop(furNode, "lodNear", 5), CultureInfo.InvariantCulture), double.Parse(Prop(furNode, "lodFar", 15), CultureInfo.InvariantCulture), IntProp(furNode, "minLayers", 4, 1, 32)));
             }
+            if (furNode != null && IntProp(furNode, "fins", 0, 0, 1) == 1)
+            {
+                passCode.Append(FurFinShader.Pass(Input(furNode,"rootColor","float4(.2,.1,.05,1)","color"),Input(furNode,"tipColor","float4(.8,.6,.3,1)","color"),Scalar(furNode,"length",.04,true),Scalar(furNode,"density",100,true),Scalar(furNode,"thickness",.35),Scalar(furNode,"mask",1),Input(furNode,"groom","float3(0,0,0)","vector3",true),Input(furNode,"time","_Time.y","float",true),double.Parse(Prop(furNode,"taper",1),CultureInfo.InvariantCulture),double.Parse(Prop(furNode,"gravity",.1),CultureInfo.InvariantCulture),double.Parse(Prop(furNode,"windStrength",.1),CultureInfo.InvariantCulture),double.Parse(Prop(furNode,"windSpeed",1),CultureInfo.InvariantCulture),double.Parse(Prop(furNode,"windScale",2),CultureInfo.InvariantCulture),double.Parse(Prop(furNode,"rimStrength",.25),CultureInfo.InvariantCulture),double.Parse(Prop(furNode,"finOpacity",.7),CultureInfo.InvariantCulture)));
+                diagnostics.Add(new Diagnostic(DiagnosticSeverity.Warning,"cost.furFins",furNode.Id,"Fur fins add one geometry pass with three edge strips per source triangle. Grazing opacity approximates silhouettes without mesh adjacency; bounds and transparent sorting still apply."));
+            }
             if (surfaceParticles) passCode.Append(SurfaceParticleShader.Pass(
                 Scalar(root,"mask",1,true), Input(root,"albedo","float4(1,1,1,1)","color"), Input(root,"emission","float4(0,0,0,1)","color"), Scalar(root,"opacity",1), Input(root,"time","_Time.y","float",true),
                 Prop(root,"density",.1), root.Properties["emissionRate"] == null ? "1.0/max(" + Prop(root,"lifetime",2) + ",0.0001)" : Prop(root,"emissionRate",0), Prop(root,"size",.03), Prop(root,"lifetime",2), Prop(root,"speed",.2), Prop(root,"gravity",0), Prop(root,"spread",.05), IntProp(root,"blendMode",1,0,1), IntProp(root,"sourceUV",0,0,1) == 1));
             var shadowPass = !particle && options.IncludeShadowCaster ? Shadow(passes[0].Surface, passes[0].Offset, tessNode) : "";
-            b.AppendLine("}\nSubShader {\nTags { \"RenderType\"=\"" + (particle ? "Transparent" : "Opaque") + "\" \"Queue\"=\"" + (particle ? "Transparent" : "Geometry") + "\"" + (surfaceParticles ? " \"DisableBatching\"=\"True\"" : "") + (fallback == null ? "" : " \"VRCFallback\"=\"" + fallback + "\"") + " }");
+            b.AppendLine("}\nSubShader {\nTags { \"RenderType\"=\"" + (particle || refracts ? "Transparent" : "Opaque") + "\" \"Queue\"=\"" + (particle || refracts ? "Transparent" : "Geometry") + "\"" + (surfaceParticles ? " \"DisableBatching\"=\"True\"" : "") + (fallback == null ? "" : " \"VRCFallback\"=\"" + fallback + "\"") + " }");
+            if(refracts) b.AppendLine("GrabPass { \"_NXSG_GrabTexture\" }");
             b.AppendLine("CGINCLUDE\n#include \"UnityCG.cginc\"\n#include \"Lighting.cginc\"\n#include \"AutoLight.cginc\"\n#include \"UnityPBSLighting.cginc\"");
             b.AppendLine("float4 _Color;");
             foreach (var prop in properties) b.AppendLine(prop.Type == GraphValueType.Texture2D ? "sampler2D " + prop.Name + "; float4 " + prop.Name + "_ST;" : (prop.Type == GraphValueType.Float ? "float " : "float4 ") + prop.Name + ";");
             if (live.Any(id => nodes[id].Operation == "core.audioLink")) b.AppendLine(AudioLinkShader.Hlsl);
             b.AppendLine("#ifndef SHADOW_COORDS\n#define SHADOW_COORDS(index)\n#endif");
             b.AppendLine(Helpers);
+            if(refracts) b.AppendLine("sampler2D _NXSG_GrabTexture; float4 _NXSG_GrabTexture_TexelSize;");
             b.AppendLine(FeatureShader.Helpers);
             b.AppendLine(ProceduralShader.Hlsl);
             b.AppendLine(DistortionShader.Hlsl);
             b.AppendLine(code.ToString());
             b.AppendLine("ENDCG\n" + passCode + shadowPass + "}\nFallback Off\n}");
+            if (refracts) diagnostics.Add(new Diagnostic(DiagnosticSeverity.Warning,"cost.refraction","$","Refraction copies the framebuffer into a shared named GrabPass texture and uses the transparent queue. It cannot refract off-screen objects; overlapping transparent materials and stereo need validation."));
+            if (live.Any(id => nodes[id].Operation == "core.textureBomb")) diagnostics.Add(new Diagnostic(DiagnosticSeverity.Warning,"cost.textureBomb","$","Texture Bomb blends four transformed texture samples, plus plain sampling when Blend is not constant one."));
             if (passes.Count > 1) diagnostics.Add(new Diagnostic(DiagnosticSeverity.Warning, "cost.shell", root.Id, (passes.Count - 1) + " extra transparent mesh pass" + (passes.Count == 2 ? "" : "es") + " per view; normal offset does not expand renderer bounds. Overlapping transparent objects can sort imperfectly."));
             if (live.Any(id => nodes[id].Operation == "core.musgrave" || nodes[id].Operation == "core.voronoi" || (nodes[id].Operation == "core.noise" && (int?)nodes[id].Properties["dimensions"] == 4)))
                 diagnostics.Add(new Diagnostic(DiagnosticSeverity.Warning, "cost.procedural", "$", "Fractal, cellular and 4D patterns cost more than 2D noise; start with few detail layers, especially across shells."));
@@ -567,7 +578,7 @@ namespace NXSG.Backend
         const string Helpers=@"
 struct NXApp { float4 vertex:POSITION; float3 normal:NORMAL; float4 tangent:TANGENT; float2 uv:TEXCOORD0; float2 uv1:TEXCOORD1; float2 uv2:TEXCOORD2; float2 uv3:TEXCOORD3; float4 color:COLOR; UNITY_VERTEX_INPUT_INSTANCE_ID };
 struct NXInput { float4 pos:SV_POSITION; float2 uv:TEXCOORD0; float2 uv1:TEXCOORD7; float2 uv2:TEXCOORD8; float2 uv3:TEXCOORD9; float3 ws:TEXCOORD1; float3 n:TEXCOORD2; float3 local:TEXCOORD3; float3 originalWs:TEXCOORD10; float3 originalLocal:TEXCOORD11; float3 tangent:TEXCOORD4; float3 bitangent:TEXCOORD5; float4 color:TEXCOORD12; float4 screenPos:TEXCOORD13; float2 sourceUV:TEXCOORD14; float3 wireBary:TEXCOORD15; SHADOW_COORDS(6) UNITY_VERTEX_OUTPUT_STEREO };
-NXInput NX_Make(NXApp v){ NXInput o=(NXInput)0; o.pos=UnityObjectToClipPos(v.vertex); o.uv=v.uv; o.uv1=v.uv1; o.uv2=v.uv2; o.uv3=v.uv3; o.local=v.vertex.xyz; o.ws=mul(unity_ObjectToWorld,v.vertex).xyz; o.originalLocal=o.local; o.originalWs=o.ws; o.color=v.color; o.n=UnityObjectToWorldNormal(v.normal); o.tangent=UnityObjectToWorldDir(v.tangent.xyz); o.bitangent=cross(o.n,o.tangent)*v.tangent.w*unity_WorldTransformParams.w; return o; }
+NXInput NX_Make(NXApp v){ NXInput o=(NXInput)0; o.pos=UnityObjectToClipPos(v.vertex); o.screenPos=ComputeGrabScreenPos(o.pos); o.uv=v.uv; o.uv1=v.uv1; o.uv2=v.uv2; o.uv3=v.uv3; o.local=v.vertex.xyz; o.ws=mul(unity_ObjectToWorld,v.vertex).xyz; o.originalLocal=o.local; o.originalWs=o.ws; o.color=v.color; o.n=UnityObjectToWorldNormal(v.normal); o.tangent=UnityObjectToWorldDir(v.tangent.xyz); o.bitangent=cross(o.n,o.tangent)*v.tangent.w*unity_WorldTransformParams.w; return o; }
 float4 NX_Splat(float x){return float4(x,x,x,x);}
 
 float NX_ShapeEdge(float d,float softness){return 1-smoothstep(-max(abs(softness),.00001),max(abs(softness),.00001),d);}

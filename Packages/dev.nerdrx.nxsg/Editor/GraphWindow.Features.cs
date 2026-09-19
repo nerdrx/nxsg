@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using Newtonsoft.Json.Linq;
 using NXSG.Core;
 using UnityEditor.UIElements;
 using UnityEngine;
@@ -50,6 +51,11 @@ namespace NXSG.Editor
                 case "core.snowMask": AddBoundedNumber(node, "coverage", "Snow coverage", 0, 1, .5f); AddBoundedNumber(node, "breakup", "Surface breakup", 0, 1, .3f); AddNumber(node, "scale", "Breakup scale", 10); return true;
                 case "core.wetnessColor": AddBoundedNumber(node, "strength", "Wet strength", 0, 1, .5f); AddBoundedNumber(node, "mask", "Wetness mask", 0, 1, 1, "mask"); return true;
                 case "core.anisotropicHighlight": AddBoundedNumber(node, "roughness", "Highlight roughness", 0, 1, .3f, "roughness"); return true;
+                case "core.iridescence": AddBoundedNumber(node, "thickness", "Film thickness", 0, 1, .5f, "thickness"); AddBoundedNumber(node, "strength", "Color strength", 0, 2, 1); AddNumber(node, "phase", "Phase", 0); return true;
+                case "core.refraction": AddBoundedNumber(node, "strength", "Refraction strength", 0, 1, .05f, "strength"); AddBoundedNumber(node, "ior", "Index of refraction", 1, 4, 1.33f, "ior"); FeatureNote("Uses a screen GrabPass. Refraction bends the captured screen and does not trace scene geometry."); return true;
+                case "core.interiorMapping": AddCoordinateChoice(node); AddTexturePicker(node, "Room atlas"); AddIntegerField(node, "roomsX", "Rooms across", 1, 32, 4); AddIntegerField(node, "roomsY", "Rooms down", 1, 32, 4); AddNumber(node, "depth", "Room depth", 1, "depth"); FeatureNote("Tangent view ray enters a box room and samples a UV atlas. No interior geometry is created."); return true;
+                case "core.textureBomb": AddCoordinateChoice(node); AddTexturePicker(node, "Texture"); AddIntegerField(node, "cells", "Cells", 1, 32, 4); AddBoundedNumber(node, "blend", "Cell blend", 0, 1, 1, "blend"); AddNumber(node, "seed", "Seed", 0); AddBoundedNumber(node, "rotation", "Rotation", 0, 1, 1); FeatureNote("Cell transforms are deterministic. Soft edge blending reduces seams."); return true;
+                case "core.subsurface": AddBoundedNumber(node, "thickness", "Thickness", 0, 1, .5f, "thickness"); AddBoundedNumber(node, "strength", "Scatter strength", 0, 2, .7f); AddColorField(node, "tint", "Scatter tint", new Color(1f, .35f, .2f, 1f), "tint"); FeatureNote("Wrapped and backlight terms approximate shallow scattering from the main light."); return true;
                 case "core.tessellation":
                     AddIntegerField(node, "factor", "Tessellation factor", 1, 63, 8);
                     AddIntegerField(node, "minFactor", "Minimum factor", 1, 63, 1);
@@ -67,6 +73,11 @@ namespace NXSG.Editor
 
         void AddFurControls(GraphNode node)
         {
+            var fins = new Toggle("Fur fins") { value = (int?)node.Properties["fins"] == 1, tooltip = "Add grazing edge strips to fill the fur silhouette. Extra geometry pass; triangle edges are approximated." };
+            fins.RegisterValueChangedCallback(e => Edit("Toggle fur fins", () => node.Properties["fins"] = e.newValue ? 1 : 0));
+            inspector.Add(fins);
+            AddBoundedNumber(node, "finOpacity", "Fin opacity", 0, 1, .7f);
+
             FurSection("Shells", () =>
             {
                 AddIntegerField(node, "layers", "Shell layers", 4, 32, 16);
@@ -109,6 +120,16 @@ namespace NXSG.Editor
         void FeatureNote(string text)
         {
             inspector.Add(new Label(text) { style = { whiteSpace = WhiteSpace.Normal, marginTop = 4, marginBottom = 4 } });
+        }
+
+        void AddColorField(GraphNode node, string property, string label, Color fallback, string inputPort = null)
+        {
+            var values = node.Properties[property] as JArray;
+            var value = values != null && values.Count == 4 ? new Color((float)values[0], (float)values[1], (float)values[2], (float)values[3]) : fallback;
+            var field = new ColorField(label) { value = value };
+            if (inputPort != null) field.SetEnabled(!graph.Connections.Any(e => e.To.NodeId == node.Id && e.To.PortId == inputPort));
+            field.RegisterValueChangedCallback(evt => Edit("Change " + label, () => node.Properties[property] = new JArray(evt.newValue.r, evt.newValue.g, evt.newValue.b, evt.newValue.a)));
+            inspector.Add(field);
         }
 
         void AddIntegerField(GraphNode node, string property, string label, int min, int max, int fallback, string inputPort = null)

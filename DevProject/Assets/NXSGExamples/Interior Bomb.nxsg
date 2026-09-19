@@ -1,0 +1,20 @@
+{
+  "format":"nxsg","schemaVersion":1,"graphId":"interior-bomb-example",
+  "nodes":[
+    {"id":"uv","operation":"core.uv0","version":1,"properties":{}},
+    {"id":"room","operation":"core.interiorMapping","version":1,"properties":{"resourceId":"atlas","roomsX":4,"roomsY":4,"depth":1}},
+    {"id":"bomb","operation":"core.textureBomb","version":1,"properties":{"resourceId":"atlas","cells":3,"blend":0.8,"seed":7,"rotation":1}},
+    {"id":"mix","operation":"core.mix","version":1,"properties":{"factor":0.5}},
+    {"id":"surface","operation":"core.unlitSurface","version":1,"properties":{}},
+    {"id":"output","operation":"core.output","version":1,"properties":{}}
+  ],
+  "connections":[
+    {"id":"uv-room","from":{"nodeId":"uv","portId":"uv"},"to":{"nodeId":"room","portId":"uv"}},
+    {"id":"uv-bomb","from":{"nodeId":"uv","portId":"uv"},"to":{"nodeId":"bomb","portId":"uv"}},
+    {"id":"room-mix","from":{"nodeId":"room","portId":"color"},"to":{"nodeId":"mix","portId":"a"}},
+    {"id":"bomb-mix","from":{"nodeId":"bomb","portId":"color"},"to":{"nodeId":"mix","portId":"b"}},
+    {"id":"mix-surface","from":{"nodeId":"mix","portId":"value"},"to":{"nodeId":"surface","portId":"albedo"}},
+    {"id":"surface-output","from":{"nodeId":"surface","portId":"surface"},"to":{"nodeId":"output","portId":"surface"}}
+  ],
+  "parameters":[],"resources":[{"id":"atlas","kind":"texture2D","uri":"builtin://white"}]
+}

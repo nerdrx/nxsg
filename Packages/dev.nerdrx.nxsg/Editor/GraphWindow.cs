@@ -86,6 +86,8 @@ namespace NXSG.Editor
             Undo.undoRedoPerformed += Restore;
             EditorApplication.update += UpdateLivePreview;
             EditorApplication.update += UpdateScene;
+            EditorApplication.update += TickRecovery;
+            EditorApplication.update += TickInlinePreviews;
             Restore();
         }
 
@@ -95,6 +97,9 @@ namespace NXSG.Editor
             Undo.undoRedoPerformed -= Restore;
             EditorApplication.update -= UpdateLivePreview;
             EditorApplication.update -= UpdateScene;
+            EditorApplication.update -= TickRecovery;
+            EditorApplication.update -= TickInlinePreviews;
+            recoveryDue=0; TickRecovery(); DisposeInlinePreviews();
             ClearPreview();
         }
 
@@ -114,6 +119,7 @@ namespace NXSG.Editor
             }) { text = "Open" });
             toolbar.Add(new ToolbarButton(() => SaveGraph()) { text = "Save" });
             toolbar.Add(new ToolbarButton(SaveCopy) { text = "Save as" });
+            toolbar.Add(new ToolbarButton(ShowRecoveryMenu) { text = "Recovery", tooltip = "Create checkpoints or recover local graph snapshots." });
             toolbar.Add(new ToolbarButton(Undo.PerformUndo) { text = "Undo" });
             toolbar.Add(new ToolbarButton(Undo.PerformRedo) { text = "Redo" });
             toolbar.Add(new ToolbarButton(CopySelection) { text = "Copy", tooltip = "Copy selected nodes (Ctrl+C)" });
@@ -382,6 +388,7 @@ namespace NXSG.Editor
         void QueueLivePreview()
         {
             QueueSceneUpdate();
+            QueueInlinePreviews();
             if (!livePreview || graph == null) return;
             previewPending = true;
             previewDue = EditorApplication.timeSinceStartup + .45;
@@ -488,7 +495,7 @@ namespace NXSG.Editor
                             SetPosition(pair.Key, point);
                             nodes[pair.Key].style.left = point.x; nodes[pair.Key].style.top = point.y;
                         }
-                        layer.MarkDirtyRepaint(); evt.StopPropagation();
+                        UpdateInsertionTarget(node.Id); layer.MarkDirtyRepaint(); evt.StopPropagation();
                     });
                     title.RegisterCallback<PointerUpEvent>(evt =>
                     {
@@ -505,12 +512,14 @@ namespace NXSG.Editor
                             ShowOperationMenu(node.Id); evt.StopPropagation(); return;
                         }
                         Undo.IncrementCurrentGroup();
+                        if (InsertOnHighlightedWire(node.Id)) { evt.StopPropagation(); return; }
                         Undo.RegisterCompleteObjectUndo(session, "Move node");
                         session.json = GraphJson.Serialize(graph, true); hasUnsavedChanges = true; EditorUtility.SetDirty(session);
                         canvas.Focus(); evt.StopPropagation();
                     });
                     foreach (var port in Ports(node.Operation, false)) AddSocket(box, node, port, false);
                     foreach (var port in Ports(node.Operation, true)) AddSocket(box, node, port, true);
+                    AddInlineControls(node, box);
                     box.RegisterCallback<FocusInEvent>(_ => { if (!selection.Contains(node.Id)) SelectNode(node.Id); });
                     box.RegisterCallback<PointerDownEvent>(evt => { if (evt.button == 0) SelectNode(node.Id, evt.shiftKey || selection.Contains(node.Id)); });
                     layer.Add(box); nodes[node.Id] = box;
@@ -1157,7 +1166,7 @@ namespace NXSG.Editor
         GraphNode CreateNode(string operation, Vector2 position)
         {
             var node = NodeCatalog.Create(operation);
-            if (operation == "core.texture2D" || operation == "core.sticker" || operation == "core.triplanarTexture" || operation == "core.matcapTexture" || operation == "core.parallaxOcclusion" || operation == "core.chromaticTexture")
+            if (operation == "core.texture2D" || operation == "core.sticker" || operation == "core.triplanarTexture" || operation == "core.matcapTexture" || operation == "core.parallaxOcclusion" || operation == "core.chromaticTexture" || operation == "core.interiorMapping" || operation == "core.textureBomb")
             {
                 var resource = new GraphResource { Id = "texture-" + node.Id, Kind = "texture2D", Uri = "builtin://white" };
                 graph.Resources.Add(resource); node.Properties["resourceId"] = resource.Id;
@@ -1450,6 +1459,7 @@ namespace NXSG.Editor
                 var from = sockets.FirstOrDefault(s => s.output && s.node == edge.From.NodeId && s.port == edge.From.PortId);
                 var to = sockets.FirstOrDefault(s => !s.output && s.node == edge.To.NodeId && s.port == edge.To.PortId);
                 if (from == null || to == null) continue;
+                painter.lineWidth = edge.Id == insertionEdge ? 7 : 3;
                 painter.strokeGradient = WireGradient(from.type, to.type);
                 DrawWire(painter, layer.WorldToLocal(from.hit.worldBound.center), layer.WorldToLocal(to.hit.worldBound.center));
             }

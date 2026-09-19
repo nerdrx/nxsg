@@ -1,0 +1,19 @@
+{
+  "format":"nxsg","schemaVersion":1,"graphId":"shiny-surface-example",
+  "nodes":[
+    {"id":"color","operation":"core.constant","version":1,"properties":{"valueType":"color","value":[0.08,0.35,0.8,1]}},
+    {"id":"normal","operation":"core.normalDirection","version":1,"properties":{}},
+    {"id":"film","operation":"core.iridescence","version":1,"properties":{"thickness":0.45,"strength":0.8,"phase":0}},
+    {"id":"skin","operation":"core.subsurface","version":1,"properties":{"thickness":0.35,"strength":0.35,"tint":[1,0.3,0.15,1]}},
+    {"id":"surface","operation":"core.unlitSurface","version":1,"properties":{}},
+    {"id":"output","operation":"core.output","version":1,"properties":{}}
+  ],
+  "connections":[
+    {"id":"color-film","from":{"nodeId":"color","portId":"value"},"to":{"nodeId":"film","portId":"color"}},
+    {"id":"normal-film","from":{"nodeId":"normal","portId":"normal"},"to":{"nodeId":"film","portId":"normal"}},
+    {"id":"film-skin","from":{"nodeId":"film","portId":"color"},"to":{"nodeId":"skin","portId":"color"}},
+    {"id":"normal-skin","from":{"nodeId":"normal","portId":"normal"},"to":{"nodeId":"skin","portId":"normal"}},
+    {"id":"skin-surface","from":{"nodeId":"skin","portId":"color"},"to":{"nodeId":"surface","portId":"albedo"}},
+    {"id":"surface-output","from":{"nodeId":"surface","portId":"surface"},"to":{"nodeId":"output","portId":"surface"}}
+  ],"parameters":[],"resources":[]
+}

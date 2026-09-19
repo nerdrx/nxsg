@@ -1,14 +1,16 @@
 # Built-in node pack
 
-The canvas now offers 130 visible nodes, plus hidden Parameter and Preview Vector helpers. Socket color indicates data type: yellow color, gray scalar, blue UV coordinates, cyan normals, green surface. Drag from either end; compatible-node menus and clipboard operations use the same core catalog.
+The canvas now offers 135 visible nodes, plus hidden Parameter and Preview Vector helpers. Socket color indicates data type: yellow color, gray scalar, blue UV coordinates, cyan normals, green surface. Drag from either end; compatible-node menus and clipboard operations use the same core catalog.
 
 ## New feature nodes
 
-The current pack adds these 40 nodes:
+The current pack adds these 45 nodes:
 
-Fur, Parallax UVs, Parallax Occlusion, Fur Strand Mask, Flow Map UVs, Dither Mask, Truchet Tiles, Woven Fabric, Scale Pattern, Polka Dots, Scratches, Cracks, Wood Rings, Marble, Clouds, Sparkle Mask, Hologram Scanlines, Glitch UVs, Pixelate UVs, Kaleidoscope UVs, Swap UV Axes, Spherize UVs, Pinch UVs, Barrel Distortion, Chromatic Texture, Blend Normals, Normal Strength, Normal from Height, Reflection Direction, Object Scale, Object Origin, Object Random, Distance to Point, Sphere Volume Mask, Box Volume Mask, Capsule Mask, Volume Stripes, Snow Coverage, Wet Color, and Anisotropic Highlight.
+Fur, Parallax UVs, Parallax Occlusion, Fur Strand Mask, Flow Map UVs, Dither Mask, Truchet Tiles, Woven Fabric, Scale Pattern, Polka Dots, Scratches, Cracks, Wood Rings, Marble, Clouds, Sparkle Mask, Hologram Scanlines, Glitch UVs, Pixelate UVs, Kaleidoscope UVs, Swap UV Axes, Spherize UVs, Pinch UVs, Barrel Distortion, Chromatic Texture, Blend Normals, Normal Strength, Normal from Height, Reflection Direction, Object Scale, Object Origin, Object Random, Distance to Point, Sphere Volume Mask, Box Volume Mask, Capsule Mask, Volume Stripes, Snow Coverage, Wet Color, Anisotropic Highlight, Iridescence, Refraction, Interior Mapping, Texture Bomb, and Subsurface.
 
-Fur uses layered shell passes with root/tip color, groom, wind, density, thickness, and LOD controls. Parallax UVs offset sampling coordinates; Parallax Occlusion ray-marches a height texture and needs mesh tangents. These effects alter texture depth or shell appearance while preserving the mesh silhouette unless a future geometry feature says otherwise.
+Fur uses layered shell passes with root/tip color, groom, wind, density, thickness, and LOD controls. Parallax UVs offset sampling coordinates; Parallax Occlusion ray-marches a height texture and needs mesh tangents. Parallax changes texture sampling without changing the silhouette. Fur shells and fins add geometry outside the base mesh.
+
+Fur fins add one geometry pass with three edge strips per source triangle. They approximate grazing silhouettes and do not provide fur self-shadowing or mesh adjacency. Refraction uses a Built-In `GrabPass` screen sample and transparent queue; it cannot see through geometry with ray tracing and is unsupported on particle surfaces. Iridescence uses normal, view angle, thickness and phase for an artistic thin-film color shift. Subsurface wraps main-light/backlight response; it is view-independent and is not a transport simulation. Interior Mapping ray-box samples a 2D room atlas. Texture Bomb randomizes cell offsets and rotations with deterministic seed values, then blends neighboring cells.
 
 ## New nodes
 
@@ -131,7 +133,11 @@ Patterns are flat groups over ordinary nodes and wires. **Patterns → Group sel
 
 ## Preview an intermediate result
 
-Select a node, choose **Preview output**, then **Preview selected node**. Numbers, colors, UV coordinates, tangent normals, and surfaces can be inspected without changing the output connection or saved material. With Live preview enabled, edits update that selected output. **Back to material preview** restores the whole graph. UVs appear as red/green channels; normals map −1…1 to 0…1. Only the sidebar preview is rendered, not a thumbnail on every card.
+Select a node, choose **Preview output**, then **Preview selected node**. Numbers, colors, UV coordinates, tangent normals, and surfaces can be inspected without changing the output connection or saved material. With Live preview enabled, edits update that selected output. **Back to material preview** restores the whole graph. UVs appear as red/green channels; normals map −1…1 to 0…1. Node cards can enable optional live thumbnails for their first supported output; at most four thumbnails render at once, and previews remain temporary editor materials.
+
+Drop a compatible node onto an existing wire to insert it. NXSG reconnects the source and destination when the new node has matching port types; Undo restores the original wire. Color Ramp nodes also show an inline Gradient field. Edits use the normal graph Undo history.
+
+The **Recovery** toolbar menu stores local graph snapshots under `Library/NXSG/Recovery`. NXSG keeps up to 30 automatic snapshots and 30 manual checkpoints per project. **Create checkpoint** writes a manual copy; restoring opens a copy and does not overwrite the source graph or generated material. These files are local editor recovery data, not package assets or cross-machine backups.
 
 ## Ready-made effect examples
 

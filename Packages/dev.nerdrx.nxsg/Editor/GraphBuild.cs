@@ -170,8 +170,14 @@ namespace NXSG.Editor
             var material = new Material(shader) { hideFlags = HideFlags.HideAndDontSave };
             try
             {
+                var subshader = ShaderUtil.GetShaderData(shader).ActiveSubshader;
                 for (var pass = 0; pass < material.passCount; pass++)
+                {
+                    // GrabPass executes during camera rendering, not Material.SetPass.
+                    if (subshader?.GetPass(pass)?.IsGrabPass == true) continue;
+                    ShaderUtil.CompilePass(material, pass, true);
                     if (!material.SetPass(pass)) throw new InvalidOperationException("Shader pass " + pass + " failed on " + SystemInfo.graphicsDeviceType);
+                }
                 if (ShaderUtil.ShaderHasError(shader))
                     throw new InvalidOperationException(string.Join("\n", ShaderUtil.GetShaderMessages(shader).Select(m => m.message)));
             }

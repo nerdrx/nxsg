@@ -72,8 +72,11 @@ namespace NXSG.Editor
 
         private static void CheckCompilation(Material material, Shader shader)
         {
+            var subshader = ShaderUtil.GetShaderData(shader).ActiveSubshader;
             for (var pass = 0; pass < material.passCount; pass++)
             {
+                // Framebuffer capture has no programmable pass to bind.
+                if (subshader?.GetPass(pass)?.IsGrabPass == true) continue;
                 ShaderUtil.CompilePass(material, pass, true);
                 if (!material.SetPass(pass))
                     throw new InvalidOperationException("Preview shader pass " + pass + " failed compilation.");

@@ -99,8 +99,10 @@ namespace NXSG.Core
             if (FeatureNodes.TryGet(node.Operation, out var feature))
             {
                 foreach (var name in FeatureNodes.Numeric(node.Operation)) CheckNumber(node.Properties[name], path + ".properties." + name, diagnostics);
-                if (node.Operation == "core.fur") { CheckIntegerRange(node.Properties["layers"], path + ".properties.layers", 4, 32, diagnostics); CheckIntegerRange(node.Properties["minLayers"], path + ".properties.minLayers", 1, 32, diagnostics); }
+                if (node.Operation == "core.fur") { CheckIntegerRange(node.Properties["fins"], path + ".properties.fins", 0, 1, diagnostics); CheckRange(node.Properties["finOpacity"], path + ".properties.finOpacity", 0, 1, diagnostics); CheckIntegerRange(node.Properties["layers"], path + ".properties.layers", 4, 32, diagnostics); CheckIntegerRange(node.Properties["minLayers"], path + ".properties.minLayers", 1, 32, diagnostics); }
                 if (node.Operation == "core.parallaxOcclusion") CheckIntegerRange(node.Properties["steps"], path + ".properties.steps", 4, 64, diagnostics);
+                if (node.Operation == "core.interiorMapping") { CheckIntegerRange(node.Properties["roomsX"], path + ".properties.roomsX", 1, 32, diagnostics); CheckIntegerRange(node.Properties["roomsY"], path + ".properties.roomsY", 1, 32, diagnostics); }
+                if (node.Operation == "core.textureBomb") CheckIntegerRange(node.Properties["cells"], path + ".properties.cells", 1, 32, diagnostics);
                 if (node.Operation == "core.kaleidoscopeUV") CheckIntegerRange(node.Properties["segments"], path + ".properties.segments", 1, 64, diagnostics);
                 if (node.Operation == "core.stripes3D") CheckIntegerRange(node.Properties["axis"], path + ".properties.axis", 0, 2, diagnostics);
                 if (node.Operation == "core.tessellation")
@@ -134,7 +136,7 @@ namespace NXSG.Core
                         "Parameter node must reference a declared parameter.");
                 }
             }
-            else if (node.Operation == "core.texture2D" || node.Operation == "core.triplanarTexture" || node.Operation == "core.matcapTexture" || node.Operation == "core.parallaxOcclusion" || node.Operation == "core.chromaticTexture")
+            else if (node.Operation == "core.texture2D" || node.Operation == "core.triplanarTexture" || node.Operation == "core.matcapTexture" || node.Operation == "core.parallaxOcclusion" || node.Operation == "core.chromaticTexture" || node.Operation == "core.interiorMapping" || node.Operation == "core.textureBomb")
             {
                 var resourceId = (string)node.Properties["resourceId"];
                 if (string.IsNullOrWhiteSpace(resourceId) || resources.All(item => item == null || item.Id != resourceId))

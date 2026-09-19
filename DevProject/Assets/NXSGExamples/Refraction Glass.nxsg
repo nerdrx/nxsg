@@ -1,0 +1,16 @@
+{
+  "format":"nxsg","schemaVersion":1,"graphId":"refraction-glass-example",
+  "nodes":[
+    {"id":"tint","operation":"core.constant","version":1,"properties":{"valueType":"color","value":[0.25,0.75,1,0.65]}},
+    {"id":"normal","operation":"core.normalDirection","version":1,"properties":{}},
+    {"id":"glass","operation":"core.refraction","version":1,"properties":{"strength":0.08,"ior":1.33}},
+    {"id":"surface","operation":"core.unlitSurface","version":1,"properties":{"opacity":0.7}},
+    {"id":"output","operation":"core.output","version":1,"properties":{}}
+  ],
+  "connections":[
+    {"id":"tint-glass","from":{"nodeId":"tint","portId":"value"},"to":{"nodeId":"glass","portId":"color"}},
+    {"id":"normal-glass","from":{"nodeId":"normal","portId":"normal"},"to":{"nodeId":"glass","portId":"normal"}},
+    {"id":"glass-surface","from":{"nodeId":"glass","portId":"color"},"to":{"nodeId":"surface","portId":"albedo"}},
+    {"id":"surface-output","from":{"nodeId":"surface","portId":"surface"},"to":{"nodeId":"output","portId":"surface"}}
+  ],"parameters":[],"resources":[]
+}
