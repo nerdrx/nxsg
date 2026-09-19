@@ -297,3 +297,23 @@ The downloaded alpha.7 archive matched SHA-256
 `6e7bfcb01eeea67770d1c5aaea937fc6cc04c9fbff83eebb01c77a594d8c9eac`.
 Installed from that archive, `MotionDriverSmoke` passed again. The fixture was
 then restored to the source package.
+
+## Fur scene shadows and self-shadowing — 2026-09-19
+
+`FurShadowRenderSmoke` passed in hidden Unity 2022.3.22f1/OpenGLCore:
+
+- Isolated shell and fin passes receive a directional light's hard shadow.
+- The complete material receives soft shadows with two cascades.
+- All three self-shadow sample counts compile and render finite pixels.
+- Strength zero matches Off within 0.0001 per green channel.
+- With the test's grazing light, mean green energy changes from 0.16931 to
+  0.12213 on shells and from 0.05847 to 0.02647 on fins at High/strength 2.
+
+Self-shadowing off / High:
+
+![Self-shadowing off](evidence/2026-09-19-fur-self-off.png)
+![Self-shadowing high](evidence/2026-09-19-fur-self-on.png)
+
+The existing `FurFinRenderSmoke` and portable checks also passed. This tests
+local directional occlusion, not exact strand geometry or cross-body fur
+shadows. Windows, headset and live VRChat validation remain open.

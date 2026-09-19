@@ -43,6 +43,7 @@ internal static class Program
 
     private static int Main()
     {
+        FurShadowChecks.Run(Assert);
         MotionChecks.Run(Assert);
         NodePackChecks.Run(Assert);
         DynamicTypeChecks.Run(Assert);

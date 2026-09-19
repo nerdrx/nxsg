@@ -103,6 +103,17 @@ namespace NXSG.Editor
                 AddNumber(node, "windScale", "Wind scale", 2);
                 FeatureNote("Connect Groom to a 3D vector to control strand direction in object space.");
             });
+            FurSection("Shadows", () =>
+            {
+                var receive = new Toggle("Receive scene shadows") { value = ((int?)node.Properties["receiveShadows"] ?? 1) == 1,
+                    tooltip = "Receive shadows from the main directional light on fur shells and fins." };
+                receive.RegisterValueChangedCallback(e => Edit("Toggle fur scene shadows", () => node.Properties["receiveShadows"] = e.newValue ? 1 : 0));
+                inspector.Add(receive);
+                AddIndexedChoice(node, "selfShadowQuality", "Self-shadow samples", new[] { "Off", "Low · 4", "Medium · 8", "High · 16" });
+                AddBoundedNumber(node, "selfShadowStrength", "Self-shadow strength", 0, 4, 1);
+                AddBoundedNumber(node, "selfShadowBias", "Self-shadow bias", 0, .25f, .03f);
+                FeatureNote("Samples through local fur volume using the main light only. Ambient and rim lighting stay unchanged. Cost steps multiply by shell count.");
+            });
             FurSection("Distance LOD", () =>
             {
                 AddNumber(node, "lodNear", "Full detail distance (m)", 5);

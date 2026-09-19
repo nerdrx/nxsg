@@ -99,7 +99,17 @@ namespace NXSG.Core
             if (FeatureNodes.TryGet(node.Operation, out var feature))
             {
                 foreach (var name in FeatureNodes.Numeric(node.Operation)) CheckNumber(node.Properties[name], path + ".properties." + name, diagnostics);
-                if (node.Operation == "core.fur") { CheckIntegerRange(node.Properties["fins"], path + ".properties.fins", 0, 1, diagnostics); CheckRange(node.Properties["finOpacity"], path + ".properties.finOpacity", 0, 1, diagnostics); CheckIntegerRange(node.Properties["layers"], path + ".properties.layers", 4, 32, diagnostics); CheckIntegerRange(node.Properties["minLayers"], path + ".properties.minLayers", 1, 32, diagnostics); }
+                if (node.Operation == "core.fur")
+                {
+                    CheckIntegerRange(node.Properties["fins"], path + ".properties.fins", 0, 1, diagnostics);
+                    CheckRange(node.Properties["finOpacity"], path + ".properties.finOpacity", 0, 1, diagnostics);
+                    CheckIntegerRange(node.Properties["layers"], path + ".properties.layers", 4, 32, diagnostics);
+                    CheckIntegerRange(node.Properties["minLayers"], path + ".properties.minLayers", 1, 32, diagnostics);
+                    CheckIntegerRange(node.Properties["receiveShadows"], path + ".properties.receiveShadows", 0, 1, diagnostics);
+                    CheckIntegerRange(node.Properties["selfShadowQuality"], path + ".properties.selfShadowQuality", 0, 3, diagnostics);
+                    CheckRange(node.Properties["selfShadowStrength"], path + ".properties.selfShadowStrength", 0, 4, diagnostics);
+                    CheckRange(node.Properties["selfShadowBias"], path + ".properties.selfShadowBias", 0, .25, diagnostics);
+                }
                 if (node.Operation == "core.parallaxOcclusion") CheckIntegerRange(node.Properties["steps"], path + ".properties.steps", 4, 64, diagnostics);
                 if (node.Operation == "core.interiorMapping") { CheckIntegerRange(node.Properties["roomsX"], path + ".properties.roomsX", 1, 32, diagnostics); CheckIntegerRange(node.Properties["roomsY"], path + ".properties.roomsY", 1, 32, diagnostics); }
                 if (node.Operation == "core.textureBomb") CheckIntegerRange(node.Properties["cells"], path + ".properties.cells", 1, 32, diagnostics);
