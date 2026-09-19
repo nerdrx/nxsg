@@ -38,6 +38,12 @@ This is an independent community listing. It is not a VRChat-curated package or 
 
 Keep old versions in the listing and retain their release assets so existing projects remain reproducible. Tests for deterministic packaging and version preservation live in `Tests/Packaging/test_vpm.py`.
 
+## Verified initial release
+
+On 2026-09-19, official VPM CLI **0.1.28** added the public NXSG repository and installed `dev.nerdrx.nxsg@0.1.0-alpha.1` into an isolated Unity test project. Prereleases and community repositories were enabled in that test configuration; the installed VPM lock entry recorded the correct version.
+
+The public listing's ZIP passed SHA-256, CRC, archive-path and packaged-manifest checks. The downloaded package then passed the hidden Unity 2022.3.22f1/OpenGLCore `ShinyRenderSmoke`, including rendered effects, generated refraction builds and the four new example shaders. The Pages deployment completed successfully. This does not establish VCC desktop GUI, Windows or headset acceptance.
+
 ## References
 
 Checked 2026-09-19 against [VRChat's package format](https://vcc.docs.vrchat.com/vpm/packages/), [repository format](https://vcc.docs.vrchat.com/vpm/repos/), [listing guide](https://vcc.docs.vrchat.com/guides/create-listing/), and [community repository instructions](https://vcc.docs.vrchat.com/guides/community-repositories/). [Poiyomi's listing](https://github.com/poiyomi/vpm) was a structural reference; its site and implementation were not copied.

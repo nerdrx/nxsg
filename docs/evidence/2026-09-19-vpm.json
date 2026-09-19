@@ -1,0 +1,20 @@
+{
+  "date": "2026-09-19",
+  "version": "0.1.0-alpha.1",
+  "listing": "https://nerdrx.github.io/nxsg/index.json",
+  "zipSHA256": "23651eb96a6a53f6554b60cbfa1288ff03013be18dbc135eaeb8a0ff0904f5be",
+  "githubPagesRun": 35434409021,
+  "officialVpmCli": "0.1.28",
+  "vpmInstall": "passed; isolated project with prereleases and community providers enabled",
+  "downloadVerification": "passed",
+  "downloadedPackageUnityCheck": "ShinyRenderSmoke passed",
+  "unity": "2022.3.22f1",
+  "graphicsApi": "OpenGLCore",
+  "os": "Linux",
+  "notVerified": [
+    "VCC desktop GUI",
+    "Windows/D3D",
+    "headset stereo",
+    "VRChat client"
+  ]
+}
