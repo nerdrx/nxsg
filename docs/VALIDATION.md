@@ -267,3 +267,9 @@ This is editor evidence, not VRChat client, headset or Windows validation. Motio
 requires an installed FX driver and represents locomotion, not per-bone history.
 Mesh picking is limited to readable UV0 geometry; custom UV transforms use the
 UV plane.
+
+Release verification: the downloaded GitHub `v0.1.0-alpha.6` archive matched
+SHA-256 `7d8634c84193f1c08669a97697f45f08fa11fc3550c939d6faa14fc1a798e14f`.
+The extracted archive was installed in the isolated Unity fixture and
+`MotionEffectsSmoke` passed again. The fixture was restored to the source package
+afterward.
