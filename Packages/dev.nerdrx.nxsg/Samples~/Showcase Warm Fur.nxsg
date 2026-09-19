@@ -1,0 +1,221 @@
+{
+  "format": "nxsg",
+  "schemaVersion": 1,
+  "graphId": "showcase-warm-fur",
+  "nodes": [
+    {
+      "id": "time",
+      "operation": "core.time",
+      "version": 1,
+      "properties": {
+        "speed": 0.35,
+        "offset": 0
+      }
+    },
+    {
+      "id": "baseColor",
+      "operation": "core.constant",
+      "version": 1,
+      "properties": {
+        "valueType": "color",
+        "value": [
+          0.12,
+          0.047,
+          0.02,
+          1
+        ]
+      }
+    },
+    {
+      "id": "base",
+      "operation": "core.toonSurface",
+      "version": 1,
+      "properties": {}
+    },
+    {
+      "id": "rootColor",
+      "operation": "core.constant",
+      "version": 1,
+      "properties": {
+        "valueType": "color",
+        "value": [
+          0.2,
+          0.075,
+          0.025,
+          1
+        ]
+      }
+    },
+    {
+      "id": "tipColor",
+      "operation": "core.constant",
+      "version": 1,
+      "properties": {
+        "valueType": "color",
+        "value": [
+          0.42,
+          0.22,
+          0.09,
+          1
+        ]
+      }
+    },
+    {
+      "id": "groom",
+      "operation": "core.constant",
+      "version": 1,
+      "properties": {
+        "valueType": "vector3",
+        "value": [
+          0,
+          -0.12,
+          0.06
+        ]
+      }
+    },
+    {
+      "id": "fur",
+      "operation": "core.fur",
+      "version": 1,
+      "properties": {
+        "layers": 24,
+        "length": 0.026,
+        "density": 420,
+        "thickness": 0.72,
+        "taper": 1,
+        "gravity": 0.08,
+        "windStrength": 0.06,
+        "windSpeed": 0.8,
+        "windScale": 2,
+        "rimStrength": 0.4,
+        "lodNear": 5,
+        "lodFar": 15,
+        "minLayers": 4
+      }
+    },
+    {
+      "id": "output",
+      "operation": "core.output",
+      "version": 1,
+      "properties": {}
+    }
+  ],
+  "connections": [
+    {
+      "id": "baseColor-base",
+      "from": {
+        "nodeId": "baseColor",
+        "portId": "value"
+      },
+      "to": {
+        "nodeId": "base",
+        "portId": "albedo"
+      }
+    },
+    {
+      "id": "base-fur",
+      "from": {
+        "nodeId": "base",
+        "portId": "surface"
+      },
+      "to": {
+        "nodeId": "fur",
+        "portId": "base"
+      }
+    },
+    {
+      "id": "root-fur",
+      "from": {
+        "nodeId": "rootColor",
+        "portId": "value"
+      },
+      "to": {
+        "nodeId": "fur",
+        "portId": "rootColor"
+      }
+    },
+    {
+      "id": "tip-fur",
+      "from": {
+        "nodeId": "tipColor",
+        "portId": "value"
+      },
+      "to": {
+        "nodeId": "fur",
+        "portId": "tipColor"
+      }
+    },
+    {
+      "id": "groom-fur",
+      "from": {
+        "nodeId": "groom",
+        "portId": "value"
+      },
+      "to": {
+        "nodeId": "fur",
+        "portId": "groom"
+      }
+    },
+    {
+      "id": "time-fur",
+      "from": {
+        "nodeId": "time",
+        "portId": "value"
+      },
+      "to": {
+        "nodeId": "fur",
+        "portId": "time"
+      }
+    },
+    {
+      "id": "fur-output",
+      "from": {
+        "nodeId": "fur",
+        "portId": "surface"
+      },
+      "to": {
+        "nodeId": "output",
+        "portId": "surface"
+      }
+    }
+  ],
+  "parameters": [],
+  "resources": [],
+  "patterns": [],
+  "layout": {
+    "nodes": {
+      "time": {
+        "x": 0,
+        "y": 0
+      },
+      "baseColor": {
+        "x": 0,
+        "y": 220
+      },
+      "base": {
+        "x": 260,
+        "y": 220
+      },
+      "rootColor": {
+        "x": 0,
+        "y": 420
+      },
+      "tipColor": {
+        "x": 0,
+        "y": 620
+      },
+      "groom": {
+        "x": 260,
+        "y": 420
+      },
+      "fur": {
+        "x": 560,
+        "y": 220
+      },
+      "output": {
+        "x": 900,
+        "y": 220
+      }
+    }
+  }
+}

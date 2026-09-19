@@ -1,6 +1,6 @@
 # Built-in node pack
 
-The canvas now offers 135 visible nodes, plus hidden Parameter and Preview Vector helpers. Socket color indicates data type: yellow color, gray scalar, blue UV coordinates, cyan normals, green surface. Drag from either end; compatible-node menus and clipboard operations use the same core catalog.
+The canvas now offers 136 visible nodes, including authored Float/Color Parameters, plus a hidden Preview Vector helper. Socket color indicates data type: yellow color, gray scalar, blue UV coordinates, cyan normals, green surface. Drag from either end; compatible-node menus and clipboard operations use the same core catalog.
 
 ## New feature nodes
 

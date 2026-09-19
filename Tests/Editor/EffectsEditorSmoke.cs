@@ -81,7 +81,7 @@ public static class EffectsEditorSmoke
     static void CheckCategoriesAndRamp()
     {
         var inspector = (VisualElement)Field("inspector");
-        var library = inspector.Q<VisualElement>("node-library");
+        var library = (VisualElement)Field("libraryPanel");
         Require(library.Q<Foldout>("category-Color") != null, "Color category missing");
         Require(library.Q<Foldout>("category-Animation") != null, "Animation category missing");
         Invoke("SelectNode", "ramp", false);

@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <img alt="135 visible nodes" src="https://img.shields.io/badge/nodes-135-7700FF?style=flat-square" />
+  <img alt="136 visible nodes" src="https://img.shields.io/badge/nodes-136-7700FF?style=flat-square" />
   <img alt="Unity development version 2022.3.22f1" src="https://img.shields.io/badge/Unity-2022.3.22f1-222222?style=flat-square" />
   <img alt="Tested on Linux" src="https://img.shields.io/badge/tested_on-Linux-222222?style=flat-square" />
   <img alt="Early development" src="https://img.shields.io/badge/status-early_development-7700FF?style=flat-square" />
@@ -33,6 +33,11 @@ Rim-lit fluff. Shifting pearl colors. A hologram floating above your skin. Parti
 
 **Furry-first. Linux-developed. Built for experimentation.**
 
+**Current status (2026-09-19):** Linux Unity 2022.3.22f1/OpenGLCore editor
+and rendering checks are the supported evidence baseline. Windows/D3D, headset
+stereo, and live VRChat client behavior remain unverified; see the
+[compatibility record](docs/COMPATIBILITY.md).
+
 > **Available to try today:** a working Unity editor package targeting PC Built-In shaders. Rendering and editor checks run on Linux with Unity 2022.3.22f1. This is early development: Windows/D3D, headset stereo and VRChat client acceptance are still unverified. [What has been tested →](docs/GOODIES.md#verification)
 
 ## Pick your kind of extra
@@ -46,21 +51,25 @@ Rim-lit fluff. Shifting pearl colors. A hologram floating above your skin. Parti
 | **Alive** | Shader-driven particles from the mesh wearing the material, UV motion, flipbooks, vertex animation and AudioLink inputs. |
 | **Procedural** | 1D–4D noise, Musgrave-style fractals, Voronoi, waves, texture bombing, distortion, gradients and shape masks. |
 
-**135 visible nodes.** Compact controls for common effects; reusable Patterns when your graph grows. [Full node guide →](docs/NODES.md)
+**136 visible nodes.** Compact controls for common effects; reusable Patterns when your graph grows. [Full node guide →](docs/NODES.md)
 
 <table>
   <tr>
-    <td align="center" width="50%"><img src="docs/evidence/2026-09-18-surface-particles.png" width="256" alt="GPU render of orange shader particles surrounding a sphere" /><br /><strong>Let the surface spill into space.</strong><br />Shader-driven particles emitted from the source mesh.</td>
-    <td align="center" width="50%"><img src="docs/evidence/2026-09-18-feature-nodes.png" width="460" alt="GPU test montage of procedural patterns, coordinate effects and masks" /><br /><strong>Build your own visual language.</strong><br />Procedural textures, coordinates and masks.</td>
+    <td align="center" width="33%"><img src="docs/assets/hologram-study.png" alt="Violet and cyan scanlines floating over dark PBR sphere and capsule" /><br /><strong>Layered hologram</strong></td>
+    <td align="center" width="33%"><img src="docs/assets/pearl-study.png" alt="Soft iridescent pearl PBR finish on a sphere and capsule" /><br /><strong>Pearl finish</strong></td>
+    <td align="center" width="33%"><img src="docs/assets/fur-study.png" alt="Dense warm short fur on a sphere and capsule" /><br /><strong>Short plush fur</strong></td>
   </tr>
 </table>
 
-<sub>Actual Linux GPU test renders. These are test fixtures, not finished avatar artwork. The top banner is a concept illustration.</sub>
+**[Watch the hologram animate →](https://nerdrx.github.io/nxsg/#material-studies)** · [Open the example graphs](Packages/dev.nerdrx.nxsg/Samples~/README.md)
+
+<sub>Actual Linux Unity GPU renders of included, texture-free graphs. Simple mesh studies, not avatar/client validation. Fur uses 24 shell layers; measure its cost on your target. The top banner is a concept illustration.</sub>
 
 ## A canvas that lets you keep playing
 
 - **Pull a wire, find an idea.** Drag from either socket direction. Drop into empty space to search compatible nodes, or drop a node onto a wire to insert it.
 - **See what you are changing.** Live material previews, intermediate output inspection, and up to four optional node thumbnails. Edit Color Ramp gradients right on the card.
+- **Expose your own controls.** Author Float/Color parameters with stable shader references for material animation.
 - **Stay in the flow.** Box selection, copy/paste, duplicate, category search, operation dropdowns, automatic number/color types and wires that fade between those types.
 - **Make the scene catch up.** Auto scene saves and builds after a short pause. Build for VRChat applies edits immediately; failed builds preserve the last working shader.
 - **Experiment with a way back.** Undo/Redo buttons, manual checkpoints and local recovery snapshots. Turn a useful selection into a reusable Pattern.
@@ -70,7 +79,7 @@ Rim-lit fluff. Shifting pearl colors. A hologram floating above your skin. Parti
 
 ![NXSG custom graph editor running in Unity on Linux](docs/assets/editor-preview.png)
 
-*Early editor capture. The current package adds more nodes, previews, categories and recovery controls.*
+*Current Linux editor capture: compact menus, resizable sidebar, separate node browser, diagnostics and material parameters.*
 
 | Action | Control |
 | :--- | :--- |
@@ -121,7 +130,7 @@ The setup script downloads and verifies the pinned VRChat Base/Avatars **3.10.5*
 
 **Build for VRChat generates a local shader and material. It does not upload an avatar.** Auto scene is enabled by default and applies subsequent shader edits after roughly 0.65 seconds of inactivity; switch it off for manual saves/builds.
 
-[Linux setup and troubleshooting](docs/DEVELOPMENT.md) · [Particle quick start](docs/PARTICLES.md) · [Fur and parallax](docs/FUR_AND_PARALLAX.md) · [Tessellation](docs/TESSELLATION.md)
+[First material walkthrough](docs/QUICK_START.md) · [Compatibility table](docs/COMPATIBILITY.md) · [Linux setup and troubleshooting](docs/DEVELOPMENT.md) · [Particle quick start](docs/PARTICLES.md) · [Fur and parallax](docs/FUR_AND_PARALLAX.md) · [Tessellation](docs/TESSELLATION.md)
 
 ### Start with a ready-made idea
 

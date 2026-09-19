@@ -37,6 +37,13 @@ def repo(tmp_path: Path, version: str = "1.0.0") -> Path:
 
 
 class VpmBuilderTests(unittest.TestCase):
+    def test_rejects_dirty_tracked_package(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = repo(Path(directory))
+            (root / "Packages" / builder.PACKAGE_ID / "Core.cs").write_text("changed\n")
+            with self.assertRaisesRegex(ValueError, "uncommitted tracked changes"):
+                builder.build(root, Path(directory) / "output", Path(directory) / "index.json")
+
     def test_deterministic_archive_and_meta_root(self) -> None:
         with __import__("tempfile").TemporaryDirectory() as directory:
             root = repo(Path(directory))
@@ -82,6 +89,7 @@ class VpmBuilderTests(unittest.TestCase):
             package = root / "Packages" / builder.PACKAGE_ID
             (package / "link").symlink_to("Core.cs")
             subprocess.run(["git", "-C", str(root), "add", "-A"], check=True)
+            subprocess.run(["git", "-C", str(root), "-c", "user.name=test", "-c", "user.email=test@example.test", "commit", "-qm", "symlink"], check=True)
             with self.assertRaisesRegex(ValueError, "symlink"):
                 builder.build(root, Path(directory) / "vpm", root / "listing.json")
 

@@ -33,6 +33,11 @@ public static class EffectsBackendChecks
             }
             var before=GraphJson.Serialize(graph);var result=ShaderEmitter.Emit(graph);
             assert(result.Succeeded,op+" emits: "+string.Join(";",result.Diagnostics.Select(d=>d.Message)));
+            if (op == "core.scanlines")
+            {
+                assert(result.ShaderSource.Contains("fwidth(x)"), "scanlines fragment uses derivative filtering");
+                assert(result.ShaderSource.Contains("hiIntegral-loIntegral"), "scanlines fragment uses periodic box integral");
+            }
             assert(before==GraphJson.Serialize(graph),op+" emission preserves source");
             graph.Nodes.Reverse();graph.Connections.Reverse();assert(result.ShaderSource==ShaderEmitter.Emit(graph).ShaderSource,op+" deterministic order");
         }

@@ -247,6 +247,7 @@ namespace NXSG.Backend
             var requiresLocalPosition = reachable.Any(id => nodes[id].Operation == ObjectUvOperation);
             var ramps = reachable.Where(id => nodes[id].Operation == RampOperation).Select(id => nodes[id]).OrderBy(node => node.Id, StringComparer.Ordinal).ToList();
             EmitForwardPass(builder, texture != null, texture == null ? "input.uv" : texture.UvExpression, requiresLocalPosition, tint, emission, threshold, softness, shadowStrength, properties, toon.Id, sourceMap, ramps);
+            AddWarning(diagnostics, "lighting.forwardAdd", "$", "Generated Built-In shader emits ForwardBase only; additional per-pixel point and spot lights are not accumulated.");
             if (options.IncludeShadowCaster)
             {
                 EmitShadowPass(builder, toon.Id, sourceMap);

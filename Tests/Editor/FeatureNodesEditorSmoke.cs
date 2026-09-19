@@ -90,7 +90,7 @@ public static class FeatureNodesEditorSmoke
         Invoke("SelectNode", "tessellation", false);
         Require(Inspector.Query<IntegerField>().ToList().Single(field => field.label == "Tessellation factor").value == 8, "Tessellation factor default missing");
         Require(!Inspector.Query<FloatField>().ToList().Single(field => field.label == "Height").enabledSelf, "Connected tessellation height stayed enabled");
-        var library = Inspector.Q<VisualElement>("node-library");
+        var library = (VisualElement)Field("libraryPanel");
         var search = library.Q<ToolbarSearchField>("node-search");
         search.value = "parallax";
         Require(library.Query<Button>().ToList().Count >= 2, "Feature search metadata did not find both parallax nodes");
@@ -99,7 +99,7 @@ public static class FeatureNodesEditorSmoke
     static void StartFramingCheck()
     {
         var toolbar = window.rootVisualElement.Query<Button>().ToList();
-        Require(toolbar.Any(button => button.text == "Fit graph") && toolbar.Any(button => button.text == "Frame selected") && toolbar.Any(button => button.text == "Add node"), "Framing/search toolbar actions missing");
+        Require(window.rootVisualElement.Query<ToolbarMenu>().ToList().Any(menu => menu.text == "View") && toolbar.Any(button => button.text == "+ Add node"), "View/framing/search toolbar actions missing");
         Invoke("FrameNodes", false);
     }
 
@@ -118,7 +118,8 @@ public static class FeatureNodesEditorSmoke
         var nodeViews = (Dictionary<string, VisualElement>)Field("nodes");
         Require(canvas.worldBound.Contains(nodeViews["objectOrigin"].worldBound.center), "Frame selected missed selected node");
         Invoke("FocusNodeSearch");
-        var search = Inspector.Q<ToolbarSearchField>("node-search");
+        var library = (VisualElement)Field("libraryPanel");
+        var search = library.Q<ToolbarSearchField>("node-search");
         var focused = search.panel?.focusController?.focusedElement as VisualElement;
         var insideSearch = false;
         for (var current = focused; current != null; current = current.parent)

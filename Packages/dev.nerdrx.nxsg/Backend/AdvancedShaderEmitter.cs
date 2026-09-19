@@ -156,6 +156,7 @@ namespace NXSG.Backend
                 properties.Add(new MaterialProperty { Name = symbol, DisplayName = parameter.Name, Type = parameter.Type, Binding = parameter.Binding, ParameterId = parameter.Id });
             }
             for (var i = 0; i < passes.Count; i++) AddToonProperties(b, passes[i].Surface, i);
+            diagnostics.Add(new Diagnostic(DiagnosticSeverity.Warning, "lighting.forwardAdd", "$", "Generated Built-In shader emits ForwardBase only; additional per-pixel point and spot lights are not accumulated."));
             var passCode = new StringBuilder();
             if (particle) passCode.Append(ParticlePass(root));
             else for (var i = 0; i < passes.Count; i++) passCode.Append(Pass(passes[i].Surface, i, passes[i].Offset, tessNode));
@@ -172,7 +173,11 @@ namespace NXSG.Backend
             if (surfaceParticles) passCode.Append(SurfaceParticleShader.Pass(
                 Scalar(root,"mask",1,true), Input(root,"albedo","float4(1,1,1,1)","color"), Input(root,"emission","float4(0,0,0,1)","color"), Scalar(root,"opacity",1), Input(root,"time","_Time.y","float",true),
                 Prop(root,"density",.1), root.Properties["emissionRate"] == null ? "1.0/max(" + Prop(root,"lifetime",2) + ",0.0001)" : Prop(root,"emissionRate",0), Prop(root,"size",.03), Prop(root,"lifetime",2), Prop(root,"speed",.2), Prop(root,"gravity",0), Prop(root,"spread",.05), IntProp(root,"blendMode",1,0,1), IntProp(root,"sourceUV",0,0,1) == 1));
-            var shadowPass = !particle && options.IncludeShadowCaster ? Shadow(passes[0].Surface, passes[0].Offset, tessNode) : "";
+            var screenDependentShadow = !particle && options.IncludeShadowCaster &&
+                (ContainsScreenDependentOperation(passes[0].Surface, "albedo") || ContainsScreenDependentOperation(passes[0].Surface, "opacity"));
+            if (screenDependentShadow)
+                diagnostics.Add(new Diagnostic(DiagnosticSeverity.Warning, "shadow.screenDependent", passes[0].Surface.Id, "Screen-dependent albedo disables the generated shadow caster because light-space shadows cannot sample the camera framebuffer."));
+            var shadowPass = !particle && options.IncludeShadowCaster && !screenDependentShadow ? Shadow(passes[0].Surface, passes[0].Offset, tessNode) : "";
             b.AppendLine("}\nSubShader {\nTags { \"RenderType\"=\"" + (particle || refracts ? "Transparent" : "Opaque") + "\" \"Queue\"=\"" + (particle || refracts ? "Transparent" : "Geometry") + "\"" + (surfaceParticles ? " \"DisableBatching\"=\"True\"" : "") + (fallback == null ? "" : " \"VRCFallback\"=\"" + fallback + "\"") + " }");
             if(refracts) b.AppendLine("GrabPass { \"_NXSG_GrabTexture\" }");
             b.AppendLine("CGINCLUDE\n#include \"UnityCG.cginc\"\n#include \"Lighting.cginc\"\n#include \"AutoLight.cginc\"\n#include \"UnityPBSLighting.cginc\"");
@@ -223,6 +228,26 @@ namespace NXSG.Backend
         }
         static void CheckSurface(GraphNode n) { if (n == null || !new[] { "core.toonSurface", "core.unlitSurface", "core.pbrSurface" }.Contains(n.Operation)) throw new InvalidOperationException(n != null && n.Operation == "core.particleSurface" ? "Particle Surface cannot be combined with Shell or other surface passes." : "Connect Toon, Unlit or PBR to each surface socket."); }
         GraphNode Source(GraphNode n, string port) { return edges.TryGetValue(Key(n.Id, port), out var edge) ? nodes[edge.From.NodeId] : null; }
+        bool ContainsScreenDependentOperation(GraphNode root, string port)
+        {
+            var operations = new HashSet<string> { "core.refraction", "core.screenUV", "core.cameraDistance", "core.viewDirection", "core.fresnel", "core.rimGlow", "core.matcapTexture", "core.interiorMapping" };
+            var seen = new HashSet<string>();
+            var stack = new Stack<GraphNode>();
+            var first = Source(root, port);
+            if (first != null) stack.Push(first);
+            while (stack.Count > 0)
+            {
+                var node = stack.Pop();
+                if (!seen.Add(node.Id)) continue;
+                if (operations.Contains(node.Operation)) return true;
+                foreach (var input in NodeCatalog.Ports(node.Operation, false))
+                {
+                    var source = Source(node, input);
+                    if (source != null) stack.Push(source);
+                }
+            }
+            return false;
+        }
         static string Key(string a, string b) { return a + ":" + b; }
         static string Hash(string value) { using (var sha = SHA256.Create()) return string.Concat(sha.ComputeHash(Encoding.UTF8.GetBytes(value)).Select(b => b.ToString("x2"))); }
         static string ParameterName(string id) { if (!Regex.IsMatch(id, "^[A-Za-z0-9_-]{1,96}$")) throw new InvalidOperationException("Unsupported parameter ID."); return "_NXSG_P_" + id.Replace('-', '_'); }
@@ -560,7 +585,7 @@ namespace NXSG.Backend
             var tessHeight = tessellation == null ? "0" : "(" + Scalar(tessellation, "height", .5, true) + "-" + Prop(tessellation, "reference", .5) + ")*" + Prop(tessellation, "strength", .1);
             var opacity=Scalar(surface,"opacity",1);
             var color=Input(surface,"albedo","float4(1,1,1,1)","color");
-            var shader = "Pass {\nName \"ShadowCaster\"\nTags { \"LightMode\"=\"ShadowCaster\" }\nZWrite On\nCGPROGRAM\n#pragma target 3.5\n#pragma vertex vertShadow\n#pragma fragment fragShadow\n#pragma multi_compile_shadowcaster\n#pragma multi_compile_instancing\nstruct NXShadow { V2F_SHADOW_CASTER; float2 uv:TEXCOORD1; float3 ws:TEXCOORD2; float3 normal:TEXCOORD3; float3 local:TEXCOORD4; float2 uv1:TEXCOORD5; float2 uv2:TEXCOORD6; float2 uv3:TEXCOORD7; float3 originalWs:TEXCOORD8; float3 originalLocal:TEXCOORD9; float4 color:TEXCOORD10; UNITY_VERTEX_OUTPUT_STEREO };\nNXShadow vertShadow(NXApp v){UNITY_SETUP_INSTANCE_ID(v); NXInput input=NX_Make(v); v.vertex.xyz+=(v.normal*("+displacement+"+"+offset+")); NXShadow o; UNITY_INITIALIZE_OUTPUT(NXShadow,o); UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o); o.uv=v.uv; o.uv1=v.uv1; o.uv2=v.uv2; o.uv3=v.uv3; o.originalWs=input.originalWs; o.originalLocal=input.originalLocal; o.color=input.color; o.ws=mul(unity_ObjectToWorld,v.vertex).xyz; o.normal=UnityObjectToWorldNormal(v.normal); o.local=v.vertex.xyz; TRANSFER_SHADOW_CASTER_NORMALOFFSET(o); return o;}\nfloat4 fragShadow(NXShadow i):SV_Target{UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i); NXInput input=(NXInput)0; input.uv=i.uv; input.uv1=i.uv1; input.uv2=i.uv2; input.uv3=i.uv3; input.originalWs=i.originalWs; input.originalLocal=i.originalLocal; input.color=i.color; input.ws=i.ws; input.n=i.normal; input.local=i.local; clip(("+color+").a*_Color.a*("+opacity+")-"+Prop(surface,"cutoff",.001)+"); SHADOW_CASTER_FRAGMENT(i);}\nENDCG\n}\n";
+            var shader = "Pass {\nName \"ShadowCaster\"\nTags { \"LightMode\"=\"ShadowCaster\" }\nZWrite On\nCGPROGRAM\n#pragma target 3.5\n#pragma vertex vertShadow\n#pragma fragment fragShadow\n#pragma multi_compile_shadowcaster\n#pragma multi_compile_instancing\nstruct NXShadow { V2F_SHADOW_CASTER; float2 uv:TEXCOORD1; float3 ws:TEXCOORD2; float3 normal:TEXCOORD3; float3 local:TEXCOORD4; float2 uv1:TEXCOORD5; float2 uv2:TEXCOORD6; float2 uv3:TEXCOORD7; float3 originalWs:TEXCOORD8; float3 originalLocal:TEXCOORD9; float4 color:TEXCOORD10; float3 tangent:TEXCOORD11; float3 bitangent:TEXCOORD12; float2 sourceUV:TEXCOORD13; UNITY_VERTEX_OUTPUT_STEREO };\nNXShadow vertShadow(NXApp v){UNITY_SETUP_INSTANCE_ID(v); NXInput input=NX_Make(v); v.vertex.xyz+=(v.normal*("+displacement+"+"+offset+")); NXShadow o; UNITY_INITIALIZE_OUTPUT(NXShadow,o); UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o); o.uv=v.uv; o.uv1=v.uv1; o.uv2=v.uv2; o.uv3=v.uv3; o.originalWs=input.originalWs; o.originalLocal=input.originalLocal; o.color=input.color; o.tangent=input.tangent; o.bitangent=input.bitangent; o.sourceUV=input.sourceUV; o.ws=mul(unity_ObjectToWorld,v.vertex).xyz; o.normal=UnityObjectToWorldNormal(v.normal); o.local=v.vertex.xyz; TRANSFER_SHADOW_CASTER_NORMALOFFSET(o); return o;}\nfloat4 fragShadow(NXShadow i):SV_Target{UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i); NXInput input=(NXInput)0; input.uv=i.uv; input.uv1=i.uv1; input.uv2=i.uv2; input.uv3=i.uv3; input.originalWs=i.originalWs; input.originalLocal=i.originalLocal; input.color=i.color; input.ws=i.ws; input.n=i.normal; input.local=i.local; input.tangent=i.tangent; input.bitangent=i.bitangent; input.sourceUV=i.sourceUV; clip(("+color+").a*_Color.a*("+opacity+")-"+Prop(surface,"cutoff",.001)+"); SHADOW_CASTER_FRAGMENT(i);}\nENDCG\n}\n";
             if (tessellation != null)
             {
                 shader = shader.Replace("#pragma target 3.5", "#pragma target 4.6\n#pragma hull hullTess\n#pragma domain domainTess")

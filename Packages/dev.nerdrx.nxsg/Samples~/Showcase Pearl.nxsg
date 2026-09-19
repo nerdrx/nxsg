@@ -1,0 +1,201 @@
+{
+  "format": "nxsg",
+  "schemaVersion": 1,
+  "graphId": "showcase-pearl",
+  "nodes": [
+    {
+      "id": "color",
+      "operation": "core.constant",
+      "version": 1,
+      "properties": {
+        "valueType": "color",
+        "value": [
+          0.63,
+          0.52,
+          0.73,
+          1
+        ]
+      }
+    },
+    {
+      "id": "normal",
+      "operation": "core.normalDirection",
+      "version": 1,
+      "properties": {}
+    },
+    {
+      "id": "film",
+      "operation": "core.iridescence",
+      "version": 1,
+      "properties": {
+        "thickness": 0.35,
+        "strength": 0.3,
+        "phase": 0.18
+      }
+    },
+    {
+      "id": "skin",
+      "operation": "core.subsurface",
+      "version": 1,
+      "properties": {
+        "thickness": 0.28,
+        "strength": 0.26,
+        "tint": [
+          0.7,
+          0.9,
+          1,
+          1
+        ]
+      }
+    },
+    {
+      "id": "surface",
+      "operation": "core.pbrSurface",
+      "version": 1,
+      "properties": {
+        "opacity": 1,
+        "metallic": 0.25,
+        "roughness": 0.2
+      }
+    },
+    {
+      "id": "shell",
+      "operation": "core.shell",
+      "version": 1,
+      "properties": {
+        "offset": 0.003
+      }
+    },
+    {
+      "id": "output",
+      "operation": "core.output",
+      "version": 1,
+      "properties": {}
+    }
+  ],
+  "connections": [
+    {
+      "id": "color-film",
+      "from": {
+        "nodeId": "color",
+        "portId": "value"
+      },
+      "to": {
+        "nodeId": "film",
+        "portId": "color"
+      }
+    },
+    {
+      "id": "normal-film",
+      "from": {
+        "nodeId": "normal",
+        "portId": "normal"
+      },
+      "to": {
+        "nodeId": "film",
+        "portId": "normal"
+      }
+    },
+    {
+      "id": "film-skin",
+      "from": {
+        "nodeId": "film",
+        "portId": "color"
+      },
+      "to": {
+        "nodeId": "skin",
+        "portId": "color"
+      }
+    },
+    {
+      "id": "normal-skin",
+      "from": {
+        "nodeId": "normal",
+        "portId": "normal"
+      },
+      "to": {
+        "nodeId": "skin",
+        "portId": "normal"
+      }
+    },
+    {
+      "id": "skin-surface",
+      "from": {
+        "nodeId": "skin",
+        "portId": "color"
+      },
+      "to": {
+        "nodeId": "surface",
+        "portId": "albedo"
+      }
+    },
+    {
+      "id": "surface-shell-base",
+      "from": {
+        "nodeId": "surface",
+        "portId": "surface"
+      },
+      "to": {
+        "nodeId": "shell",
+        "portId": "base"
+      }
+    },
+    {
+      "id": "surface-shell-layer",
+      "from": {
+        "nodeId": "surface",
+        "portId": "surface"
+      },
+      "to": {
+        "nodeId": "shell",
+        "portId": "layer"
+      }
+    },
+    {
+      "id": "shell-output",
+      "from": {
+        "nodeId": "shell",
+        "portId": "surface"
+      },
+      "to": {
+        "nodeId": "output",
+        "portId": "surface"
+      }
+    }
+  ],
+  "parameters": [],
+  "resources": [],
+  "patterns": [],
+  "layout": {
+    "nodes": {
+      "color": {
+        "x": 0,
+        "y": 0
+      },
+      "normal": {
+        "x": 0,
+        "y": 220
+      },
+      "film": {
+        "x": 260,
+        "y": 0
+      },
+      "skin": {
+        "x": 520,
+        "y": 0
+      },
+      "surface": {
+        "x": 780,
+        "y": 0
+      },
+      "shell": {
+        "x": 1040,
+        "y": 0
+      },
+      "output": {
+        "x": 1300,
+        "y": 0
+      }
+    }
+  }
+}

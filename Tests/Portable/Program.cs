@@ -73,6 +73,8 @@ internal static class Program
         ParticleChecks.Run(Assert);
         SurfaceParticleChecks.Run(Assert);
         EffectsBackendChecks.Run(Assert);
+        ShowcaseChecks.Run(Assert, fixtures);
+        ShadowChecks.Run(Assert);
         NestedShellChecks.Run(Assert);
         FloatHashChecks.Run(Assert);
         var defaultGraph = Load(fixtures, "default-texture-toon-output.nxsg");

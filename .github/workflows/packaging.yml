@@ -1,0 +1,25 @@
+name: Package validation
+
+on:
+  pull_request:
+  push:
+
+permissions:
+  contents: read
+
+jobs:
+  packaging:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9
+        with:
+          dotnet-version: 8.0.x
+      - name: Check .NET 8
+        run: dotnet --info
+      - name: Run portable graph and compiler checks
+        run: dotnet run --project Tests/Portable/NXSG.Portable.Tests.csproj
+      - name: Run packaging self-check
+        run: python3 Tests/Packaging/test_vpm.py
+      - name: Build package in temporary output
+        run: python3 scripts/build-vpm.py --output "$RUNNER_TEMP/vpm" --listing "$RUNNER_TEMP/index.json" --check

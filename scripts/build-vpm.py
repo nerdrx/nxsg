@@ -30,6 +30,15 @@ def _json_bytes(value: Any) -> bytes:
 
 def _tracked_files(repo: Path, package: Path) -> list[Path]:
     relative_root = package.relative_to(repo).as_posix()
+    for diff_args in (("diff", "--quiet"), ("diff", "--cached", "--quiet")):
+        result = subprocess.run(
+            ["git", "-C", str(repo), *diff_args, "--", relative_root],
+            capture_output=True,
+        )
+        if result.returncode == 1:
+            raise ValueError(f"Package has uncommitted tracked changes: {relative_root}")
+        if result.returncode != 0:
+            raise subprocess.CalledProcessError(result.returncode, result.args, result.stdout, result.stderr)
     result = subprocess.run(
         ["git", "-C", str(repo), "ls-files", "--stage", "-z", "--", relative_root],
         check=True,

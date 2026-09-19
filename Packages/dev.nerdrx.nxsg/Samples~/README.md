@@ -17,3 +17,11 @@ Noise currently animates by moving through a smooth noise field. It is not true 
 `Interior Bomb.nxsg` combines room-atlas Interior Mapping with seeded Texture Bomb sampling. Assign a tiled atlas in the texture pickers to see room variation. The shipped `builtin://white` resource keeps the graph portable and valid before assignment.
 
 These samples target Unity 2022.3.22f1, PC Built-In shader generation on Linux. They prove graph validation and emission paths when the portable checks pass; they do not prove native Windows, VR headset, VRChat client, or GPU performance behavior.
+
+## Self-contained material studies
+
+- **Showcase Hologram:** animated scanlines above a dark PBR base, tinted violet/cyan.
+- **Showcase Pearl:** a restrained iridescent PBR finish with a close shell layer.
+- **Showcase Warm Fur:** dense short shell fur with root/tip color and gentle movement. Uses 24 shell layers; measure its cost on your intended avatar and target.
+
+These graphs need no external textures. Render previews use simple meshes; they are not avatar/client validation.

@@ -88,6 +88,7 @@ namespace NXSG.Editor
             EditorApplication.update += UpdateScene;
             EditorApplication.update += TickRecovery;
             EditorApplication.update += TickInlinePreviews;
+            EditorApplication.update += UpdateDiagnostics;
             Restore();
         }
 
@@ -99,6 +100,7 @@ namespace NXSG.Editor
             EditorApplication.update -= UpdateScene;
             EditorApplication.update -= TickRecovery;
             EditorApplication.update -= TickInlinePreviews;
+            EditorApplication.update -= UpdateDiagnostics;
             recoveryDue=0; TickRecovery(); DisposeInlinePreviews();
             ClearPreview();
         }
@@ -109,23 +111,12 @@ namespace NXSG.Editor
         {
             rootVisualElement.Clear();
             rootVisualElement.style.backgroundColor = new Color(.055f, .055f, .055f);
-            var toolbar = new Toolbar();
-            toolbar.Add(new ToolbarButton(NewGraph) { text = "New" });
-            toolbar.Add(new ToolbarButton(() =>
-            {
-                if (!CanDiscard()) return;
-                var path = EditorUtility.OpenFilePanel("Open NXSG graph", Application.dataPath, "nxsg");
-                if (!string.IsNullOrEmpty(path)) LoadPath(path);
-            }) { text = "Open" });
-            toolbar.Add(new ToolbarButton(() => SaveGraph()) { text = "Save" });
-            toolbar.Add(new ToolbarButton(SaveCopy) { text = "Save as" });
-            toolbar.Add(new ToolbarButton(ShowRecoveryMenu) { text = "Recovery", tooltip = "Create checkpoints or recover local graph snapshots." });
+            var toolbar = new Toolbar { style = { flexWrap = Wrap.Wrap, height = StyleKeyword.Auto, minHeight = 28 } };
+            AddFileAndEditMenus(toolbar);
+            toolbar.Add(new ToolbarButton(() => SaveGraph()) { text = "Save", tooltip = "Save graph (Ctrl+S)" });
             toolbar.Add(new ToolbarButton(Undo.PerformUndo) { text = "Undo" });
             toolbar.Add(new ToolbarButton(Undo.PerformRedo) { text = "Redo" });
-            toolbar.Add(new ToolbarButton(CopySelection) { text = "Copy", tooltip = "Copy selected nodes (Ctrl+C)" });
-            toolbar.Add(new ToolbarButton(PasteSelection) { text = "Paste", tooltip = "Paste nodes (Ctrl+V)" });
-            toolbar.Add(new ToolbarButton(DuplicateSelection) { text = "Duplicate", tooltip = "Duplicate selected nodes (Ctrl+D)" });
-            toolbar.Add(new ToolbarButton(Build) { text = "Build for VRChat" });
+            toolbar.Add(new ToolbarButton(Build) { text = "Build for VRChat", tooltip = "Build and apply this graph locally. Does not upload an avatar." });
             var liveToggle = new ToolbarToggle { text = "Live preview", value = livePreview,
                 tooltip = "Preview unsaved edits without changing your material. Pauses while this window is unfocused." };
             liveToggle.RegisterValueChangedCallback(evt =>
@@ -136,17 +127,15 @@ namespace NXSG.Editor
             });
             toolbar.Add(liveToggle);
             AddSceneToggle(toolbar);
-            toolbar.Add(new ToolbarButton(() => { pan = new Vector2(30, 70); zoom = 1; TransformCanvas(); }) { text = "Reset view" });
-            toolbar.Add(new ToolbarButton(() => FrameNodes(false)) { text = "Fit graph", tooltip = "Frame the whole graph (Home)." });
-            toolbar.Add(new ToolbarButton(() => FrameNodes(true)) { text = "Frame selected", tooltip = "Focus the selected nodes (F)." });
-            toolbar.Add(new ToolbarButton(FocusNodeSearch) { text = "Add node", tooltip = "Search nodes (Space on canvas)." });
+            AddViewMenu(toolbar);
+            toolbar.Add(new ToolbarButton(FocusNodeSearch) { text = "+ Add node", tooltip = "Search nodes (Space on canvas)." });
             AddPatternToolbar(toolbar);
             rootVisualElement.Add(toolbar);
             identity = new Label { style = { whiteSpace = WhiteSpace.Normal, paddingLeft = 10, paddingTop = 5, paddingBottom = 5 } };
             rootVisualElement.Add(identity);
             sceneStatus = new Label { style = { whiteSpace = WhiteSpace.Normal, paddingLeft = 10, paddingBottom = 5 } };
             rootVisualElement.Add(sceneStatus);
-            var body = new VisualElement { style = { flexDirection = FlexDirection.Row, flexGrow = 1 } };
+            var body = new TwoPaneSplitView(1, sidebarWidth, TwoPaneSplitViewOrientation.Horizontal) { style = { flexGrow = 1 } };
             canvas = new VisualElement { focusable = true, style = { flexGrow = 1, overflow = Overflow.Hidden } };
             layer = new VisualElement { style = { position = UnityEngine.UIElements.Position.Absolute, width = 4000, height = 4000 } };
             layer.style.transformOrigin = new TransformOrigin(0, 0, 0);
@@ -181,8 +170,8 @@ namespace NXSG.Editor
                 if (evt.actionKey && evt.keyCode == KeyCode.S) { SaveGraph(); evt.StopPropagation(); }
             });
             body.Add(canvas);
-            inspector = new ScrollView(ScrollViewMode.Vertical) { horizontalScrollerVisibility = ScrollerVisibility.Hidden, style = { width = 270, paddingLeft = 12, paddingRight = 12, paddingTop = 12, backgroundColor = new Color(.10f, .10f, .10f) } };
-            body.Add(inspector);
+            inspector = new ScrollView(ScrollViewMode.Vertical) { horizontalScrollerVisibility = ScrollerVisibility.Hidden, style = { flexGrow = 1, minWidth = 240, paddingLeft = 12, paddingRight = 12, paddingTop = 12, backgroundColor = new Color(.10f, .10f, .10f) } };
+            body.Add(CreateSidebar());
             rootVisualElement.Add(body);
             status = new Label("Create or open a graph. Drag empty space to box-select; Shift adds. Middle-drag pans; wheel zooms. Drag between matching sockets in either direction. Drop on empty space to add a node. Esc cancels.")
             { style = { whiteSpace = WhiteSpace.Normal, paddingLeft = 10, paddingTop = 6, paddingBottom = 6 } };
@@ -194,6 +183,8 @@ namespace NXSG.Editor
                 if (IsEditingText(element) || IsEditingText(rootVisualElement.panel?.focusController.focusedElement as VisualElement)) return;
                 switch (evt.keyCode)
                 {
+                    case KeyCode.Z: if (evt.shiftKey) Undo.PerformRedo(); else Undo.PerformUndo(); break;
+                    case KeyCode.Y: Undo.PerformRedo(); break;
                     case KeyCode.C: CopySelection(); break;
                     case KeyCode.V: PasteSelection(); break;
                     case KeyCode.D: DuplicateSelection(); break;
@@ -389,6 +380,7 @@ namespace NXSG.Editor
         {
             QueueSceneUpdate();
             QueueInlinePreviews();
+            QueueDiagnostics();
             if (!livePreview || graph == null) return;
             previewPending = true;
             previewDue = EditorApplication.timeSinceStartup + .45;
@@ -462,7 +454,7 @@ namespace NXSG.Editor
                 {
                     var position = Position(node.Id);
                     var box = new VisualElement { focusable = true, style = { position = UnityEngine.UIElements.Position.Absolute, left = position.x, top = position.y, width = 175, backgroundColor = new Color(.14f, .14f, .14f), borderLeftWidth = 2, borderRightWidth = 2, borderTopWidth = 2, borderBottomWidth = 2, borderTopLeftRadius = 8, borderTopRightRadius = 8, borderBottomLeftRadius = 8, borderBottomRightRadius = 8, paddingBottom = 8 } };
-                    var title = new Label(Title(node.Operation)) { style = { paddingLeft = 12, paddingTop = 10, paddingBottom = 10, unityFontStyleAndWeight = FontStyle.Bold, backgroundColor = NodeColor(node.Operation) } };
+                    var title = new Label(NodeTitle(node)) { style = { paddingLeft = 12, paddingTop = 10, paddingBottom = 10, unityFontStyleAndWeight = FontStyle.Bold, backgroundColor = NodeColor(node.Operation) } };
                     var alternatives = OperationAlternatives(node.Operation);
                     if (alternatives.Length > 0)
                     {
@@ -595,6 +587,7 @@ namespace NXSG.Editor
             if (!additive) selection.Clear();
             if (id != null && !selection.Contains(id)) selection.Add(id);
             selected = id;
+            if (id != null) ShowSidebarTab(0);
             UpdateSelectionOutline();
             RebuildInspector();
         }
@@ -624,9 +617,10 @@ namespace NXSG.Editor
 
         void FocusNodeSearch()
         {
-            var search=inspector?.Q<ToolbarSearchField>("node-search");
+            ShowSidebarTab(1);
+            var search=libraryPanel?.Q<ToolbarSearchField>("node-search");
             if(search==null)return;
-            (inspector as ScrollView)?.ScrollTo(search);
+            libraryPanel?.ScrollTo(search);
             search.Focus();
         }
 
@@ -634,12 +628,12 @@ namespace NXSG.Editor
         {
             if(graph==null||canvas==null)return;
             var ids=selectedOnly && selection.Count>0?selection:graph.Nodes.Select(n=>n.Id).ToList();
-            var visible=ids.Where(id=>nodes.ContainsKey(id)&&graph.Layout.Nodes.ContainsKey(id)).ToList();
+            var visible=ids.Where(id=>nodes.ContainsKey(id)).ToList();
             if(visible.Count==0){SetStatus("Add a node to frame the graph.");return;}
             var min=new Vector2(float.MaxValue,float.MaxValue);var max=new Vector2(float.MinValue,float.MinValue);
             foreach(var id in visible)
             {
-                var layout=graph.Layout.Nodes[id];var position=new Vector2((float)layout.X,(float)layout.Y);
+                var position=Position(id);
                 var height=nodes[id].resolvedStyle.height;if(float.IsNaN(height)||height<40)height=120;
                 min=Vector2.Min(min,position);max=Vector2.Max(max,position+new Vector2(175,height));
             }
@@ -780,7 +774,7 @@ namespace NXSG.Editor
             {
                 choices.Clear();
                 var searching = !string.IsNullOrWhiteSpace(query);
-                var matches = NodeCatalog.All.Where(op => op != "core.parameter" && op != "core.previewVector" &&
+                var matches = NodeCatalog.All.Where(op => op != "core.previewVector" &&
                     MatchesNodeSearch(op, query)).ToList();
                 foreach (var category in new[] { "Inputs", "Coordinates", "Textures", "Math", "Color", "Animation", "Surface" })
                 {
@@ -916,7 +910,8 @@ namespace NXSG.Editor
                 inspector.Add(new Button(() => Edit("Disconnect node", () => graph.Connections.RemoveAll(e => e.From.NodeId == selected || e.To.NodeId == selected))) { text = "Disconnect node" });
                 inspector.Add(new Button(DeleteSelection) { text = "Delete node" });
             }
-            inspector.Add(library);
+            if (libraryPanel != null) { libraryPanel.Clear(); libraryPanel.Add(library); }
+            AddParameterControls();
         }
 
         void AddNodePreviewControls(GraphNode node)
@@ -1166,6 +1161,17 @@ namespace NXSG.Editor
         GraphNode CreateNode(string operation, Vector2 position)
         {
             var node = NodeCatalog.Create(operation);
+            if (operation == "core.parameter")
+            {
+                var parameter = graph.Parameters.FirstOrDefault(p => p.Id == selectedParameterId) ?? graph.Parameters.FirstOrDefault();
+                if (parameter == null)
+                {
+                    parameter = new GraphParameter { Id = Guid.NewGuid().ToString("N"), Name = "Value", Type = GraphValueType.Float,
+                        Binding = GraphBindingKind.Material, Exposed = true, DefaultValue = new JValue(.5f) };
+                    graph.Parameters.Add(parameter);
+                }
+                node.Properties["parameterId"] = parameter.Id; selectedParameterId = parameter.Id;
+            }
             if (operation == "core.texture2D" || operation == "core.sticker" || operation == "core.triplanarTexture" || operation == "core.matcapTexture" || operation == "core.parallaxOcclusion" || operation == "core.chromaticTexture" || operation == "core.interiorMapping" || operation == "core.textureBomb")
             {
                 var resource = new GraphResource { Id = "texture-" + node.Id, Kind = "texture2D", Uri = "builtin://white" };

@@ -1,6 +1,13 @@
-# First Linux implementation slice
+# Validation record
 
-**Date:** 2026-09-17. This records implementation evidence, not completion of the full design or roadmap.
+**Current status (2026-09-19):** Linux Unity/OpenGL checks are the current
+evidence baseline. Windows/D3D, headset stereo, and live VRChat client checks
+remain open. The dated sections below are append-only evidence records; the
+older opening sections describe the initial implementation slice and are
+historical context, not the current acceptance boundary.
+
+**Initial implementation slice (historical, 2026-09-17):** This records
+implementation evidence, not completion of the full design or roadmap.
 
 ## Environment
 
@@ -184,3 +191,19 @@ Portable checks passed catalog defaults, numeric bounds and distance ordering (i
 `FeatureNodesEditorSmoke` passed the 41 feature inspectors, including Tessellation defaults, connected Height disabling, search, framing and focus. The full portable suite also passed.
 
 The screenshot is a real GPU capture of a coarse quad, not a modeled example. These checks do not establish performance, displaced shadow image parity, instanced draw correctness, skinned-avatar behavior, stereo/VRChat client acceptance or Windows compatibility. Fur/Surface Particles composition is explicitly unsupported; renderer bounds and seam continuity remain author responsibilities. See [usage and source references](TESSELLATION.md).
+
+## Alpha.2 quality sprint — 2026-09-19
+
+All checks below ran on Linux with Unity 2022.3.22f1/OpenGLCore in an isolated headless Gamescope project, except the portable and Python checks.
+
+- Portable graph/compiler harness: passed, including new shadow contracts and three showcase graphs.
+- Packaging: 5 tests passed; dirty tracked package changes now reject release builds.
+- UsabilitySmoke: retained slider controls, typed values outside slider range, NaN rejection, synchronized fields, synthetic Ctrl+Z routing, sidebar tabs, diagnostics and splitter passed. Native keyboard delivery remains a separate manual check.
+- ParameterAuthoringSmoke: parameter creation, stable identifiers, serialization, shader property references, type changes, referenced deletion protection and undo/redo passed.
+- SceneSyncSmoke and RecoverySmoke: passed.
+- NodeSwitchSmoke and EffectsEditorSmoke: passed with the categorized library.
+- ShadowContractSmoke: POM shader passes imported and bound successfully. Screen/view-dependent shadow inputs now omit the caster with a diagnostic.
+- EditorPolishCapture: current editor captured through Gamescope; compact 850×500 layout assertions passed.
+- ShowcaseRender: hologram, pearl and warm fur rendered; deterministic hologram frames changed over time. PNGs and the 24-frame clip are actual Unity renders. WebM decoded without errors in FFmpeg; in-app H.264 playback crashed, so browser playback is not claimed as verified.
+
+Additional pixel lights are still not accumulated (no ForwardAdd); the compiler now warns explicitly. Windows/D3D, headset/stereo, live VRChat, live AudioLink/VRCFury and representative-avatar performance are not established by these checks.

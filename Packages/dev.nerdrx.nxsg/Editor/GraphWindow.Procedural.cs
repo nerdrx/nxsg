@@ -91,16 +91,21 @@ namespace NXSG.Editor
             var number = new FloatField { value = value, isDelayed = true, style = { width = 68, flexShrink = 0 },
                 tooltip = label + ": type beyond the slider range. Mathematical limits still apply." };
             row.SetEnabled(inputPort == null || !graph.Connections.Any(e => e.To.NodeId == node.Id && e.To.PortId == inputPort));
-            slider.RegisterValueChangedCallback(evt => Edit("Change " + label, () => node.Properties[property] = Mathf.Clamp(evt.newValue, min, max)));
+            slider.RegisterValueChangedCallback(evt => {
+                var next = Mathf.Clamp(evt.newValue, min, max);
+                EditValue("Change " + label, () => node.Properties[property] = next);
+                number.SetValueWithoutNotify(next);
+            });
             number.RegisterValueChangedCallback(evt =>
             {
                 if (float.IsNaN(evt.newValue) || float.IsInfinity(evt.newValue))
                 {
-                    number.SetValueWithoutNotify(value);
+                    number.SetValueWithoutNotify((float?)node.Properties[property] ?? fallback);
                     SetStatus("Enter a finite number.");
                     return;
                 }
-                Edit("Change " + label, () => node.Properties[property] = evt.newValue);
+                EditValue("Change " + label, () => node.Properties[property] = evt.newValue);
+                slider.SetValueWithoutNotify(Mathf.Clamp(evt.newValue, min, max));
             });
             slider.labelElement.style.display = DisplayStyle.None;
             slider.tooltip = label + ": drag within " + min + "–" + max + ", or type a value on the right.";

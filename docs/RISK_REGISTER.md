@@ -1,6 +1,12 @@
 # Risk register
 
-Research baseline: **2026-09-17**. Source research identifies these risks; mitigation code and runtime checks are still pending. A risk closes only when its named evidence exists. Severity is the consequence if ignored: **P0** can invalidate the target or lose user data; **P1** can cause incorrect output, major performance problems, or expensive rework; **P2** affects quality or future scope.
+Research baseline: **2026-09-17 (historical)**. The table remains the source
+of risk ownership and closure criteria; later validation records supersede its
+initial unknowns when they name passing evidence. A risk closes only when its
+named evidence exists. Severity is the consequence if ignored: **P0** can
+invalidate the target or lose user data; **P1** can cause incorrect output,
+major performance problems, or expensive rework; **P2** affects quality or
+future scope.
 
 | ID | Severity | Failure mode and trigger | Mitigation / closing evidence | Gate and owner |
 | --- | --- | --- | --- | --- |
@@ -30,9 +36,9 @@ Research baseline: **2026-09-17**. Source research identifies these risks; mitig
 | R24 | P2 | A “Blender-compatible” graph changes Principled lighting, color management, noise, UDIMs, or unsupported semantics. | Exact/approximate/baked/unsupported conversion report and versioned fixtures; preserve original metadata; limited supported subset first. | Future adapter, core |
 | R25 | P2 | Broad portability/SDK ambitions delay the first usable material editor. | One backend, small type/node set, local search, simple official Patterns; keep deferred work outside the MVP acceptance gate. | All milestones, maintainer |
 
-## Immediate unknowns requiring a spike
+## Open unknowns requiring a spike
 
-- **Environment:** establish the pinned Linux Unity fixture and available Linux client/headset validation path. The local inspection did not find an editor in the checked locations and found no standalone .NET SDK. A Windows host is not a prerequisite.
+- **Environment:** record any Linux client/headset validation path separately from the established Unity OpenGL fixture. Native Windows is not a prerequisite for editor work, but remains required for Windows claims.
 - **Editor:** compare custom UI Toolkit canvas and GraphView; prove undo/reload recovery, keyboard interactions and responsive previews on the exact patch.
 - **Asset publication:** determine a recoverable shader/material promotion strategy that preserves Unity identities even if import fails after file writing.
 - **Shader contract:** verify actual forward/shadow/stereo/fallback behavior in Unity and VRChat, including global inputs that preview scaffolding may synthesize.

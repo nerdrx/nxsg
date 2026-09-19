@@ -136,15 +136,15 @@ public static class NodeSwitchSmoke
                 Invoke("SwitchOperation", "scroll", "core.worldUV");
                 Require(!Graph.Connections.Any(e => e.To.NodeId == "scroll") && Wire("scroll-tex", "scroll", "uv", "tex", "uv"), "World UV switch did not retain only output");
                 var inspector = (VisualElement)Field("inspector");
-                var library = inspector.Q<VisualElement>("node-library");
-                Require(library.Query<Foldout>().ToList().Count == 5, "Node categories missing");
+                var library = (VisualElement)Field("libraryPanel");
+                Require(new[] { "Inputs", "Coordinates", "Textures", "Math", "Color", "Animation", "Surface" }.All(category => library.Q<Foldout>("category-" + category) != null), "Node categories missing");
                 var math = library.Q<Foldout>("category-Math"); math.value = true;
                 Invoke("RebuildInspector");
                 inspector = (VisualElement)Field("inspector");
-                Require(inspector.Q<Foldout>("category-Math").value, "Category state lost after rebuild");
-                var search = inspector.Q<ToolbarSearchField>("node-search"); search.value = "polar";
-                library = inspector.Q<VisualElement>("node-library");
-                Require(library.Query<Foldout>().ToList().Count == 1 && library.Q<Foldout>().value && library.Q<Foldout>().Query<Button>().ToList().Count == 1, "Search did not reveal only Polar UVs");
+                Require(library.Q<Foldout>("category-Math").value, "Category state lost after rebuild");
+                var search = library.Q<ToolbarSearchField>("node-search"); search.value = "polar";
+                library = (VisualElement)Field("libraryPanel");
+                Require(library.Query<Foldout>().ToList().Count == 1 && library.Q<Foldout>().value && library.Q<Foldout>().Query<Button>().ToList().Any(b => b.text.Contains("Polar UVs")) && !library.Query<Button>().ToList().Any(b => b.text.Contains("Toon Surface")), "Search did not reveal relevant Polar UVs choices");
                 search.value = "no-such-node-xyz";
                 Require(library.Query<Foldout>().ToList().Count == 0, "Empty search left node choices");
                 foreach (var pair in new[] { new[] { "auto", "core.add" }, new[] { "num", "core.value" }, new[] { "ramp", "core.ramp" } })

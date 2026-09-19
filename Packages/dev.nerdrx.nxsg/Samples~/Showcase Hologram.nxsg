@@ -1,0 +1,324 @@
+{
+  "format": "nxsg",
+  "schemaVersion": 1,
+  "graphId": "showcase-hologram",
+  "nodes": [
+    {
+      "id": "time",
+      "operation": "core.time",
+      "version": 1,
+      "properties": {
+        "speed": 0.45,
+        "offset": 0
+      }
+    },
+    {
+      "id": "noise",
+      "operation": "core.noise",
+      "version": 1,
+      "properties": {
+        "scale": 3.5,
+        "speed": 0.8
+      }
+    },
+    {
+      "id": "violet",
+      "operation": "core.constant",
+      "version": 1,
+      "properties": {
+        "valueType": "color",
+        "value": [
+          0.18,
+          0.01,
+          0.8,
+          1
+        ]
+      }
+    },
+    {
+      "id": "cyan",
+      "operation": "core.constant",
+      "version": 1,
+      "properties": {
+        "valueType": "color",
+        "value": [
+          0.01,
+          0.65,
+          1,
+          1
+        ]
+      }
+    },
+    {
+      "id": "mix",
+      "operation": "core.mix",
+      "version": 1,
+      "properties": {
+        "factor": 0.5
+      }
+    },
+    {
+      "id": "glow",
+      "operation": "core.emission",
+      "version": 1,
+      "properties": {
+        "strength": 0.55
+      }
+    },
+    {
+      "id": "surface",
+      "operation": "core.unlitSurface",
+      "version": 1,
+      "properties": {
+        "opacity": 0.7
+      }
+    },
+    {
+      "id": "shell",
+      "operation": "core.shell",
+      "version": 1,
+      "properties": {
+        "offset": 0.035
+      }
+    },
+    {
+      "id": "scan",
+      "operation": "core.scanlines",
+      "version": 1,
+      "properties": {
+        "scale": 75,
+        "speed": 0.2,
+        "width": 0.2
+      }
+    },
+    {
+      "id": "body",
+      "operation": "core.pbrSurface",
+      "version": 1,
+      "properties": {
+        "metallic": 0.65,
+        "roughness": 0.3
+      }
+    },
+    {
+      "id": "dark",
+      "operation": "core.constant",
+      "version": 1,
+      "properties": {
+        "valueType": "color",
+        "value": [
+          0.006,
+          0.009,
+          0.025,
+          1
+        ]
+      }
+    },
+    {
+      "id": "output",
+      "operation": "core.output",
+      "version": 1,
+      "properties": {}
+    }
+  ],
+  "connections": [
+    {
+      "id": "time-noise",
+      "from": {
+        "nodeId": "time",
+        "portId": "value"
+      },
+      "to": {
+        "nodeId": "noise",
+        "portId": "time"
+      }
+    },
+    {
+      "id": "violet-mix",
+      "from": {
+        "nodeId": "violet",
+        "portId": "value"
+      },
+      "to": {
+        "nodeId": "mix",
+        "portId": "a"
+      }
+    },
+    {
+      "id": "cyan-mix",
+      "from": {
+        "nodeId": "cyan",
+        "portId": "value"
+      },
+      "to": {
+        "nodeId": "mix",
+        "portId": "b"
+      }
+    },
+    {
+      "id": "noise-mix",
+      "from": {
+        "nodeId": "noise",
+        "portId": "value"
+      },
+      "to": {
+        "nodeId": "mix",
+        "portId": "factor"
+      }
+    },
+    {
+      "id": "mix-glow",
+      "from": {
+        "nodeId": "mix",
+        "portId": "value"
+      },
+      "to": {
+        "nodeId": "glow",
+        "portId": "color"
+      }
+    },
+    {
+      "id": "mix-surface",
+      "from": {
+        "nodeId": "mix",
+        "portId": "value"
+      },
+      "to": {
+        "nodeId": "surface",
+        "portId": "albedo"
+      }
+    },
+    {
+      "id": "glow-surface",
+      "from": {
+        "nodeId": "glow",
+        "portId": "color"
+      },
+      "to": {
+        "nodeId": "surface",
+        "portId": "emission"
+      }
+    },
+    {
+      "id": "surface-shell-layer",
+      "from": {
+        "nodeId": "surface",
+        "portId": "surface"
+      },
+      "to": {
+        "nodeId": "shell",
+        "portId": "layer"
+      }
+    },
+    {
+      "id": "shell-output",
+      "from": {
+        "nodeId": "shell",
+        "portId": "surface"
+      },
+      "to": {
+        "nodeId": "output",
+        "portId": "surface"
+      }
+    },
+    {
+      "id": "dark-body-albedo",
+      "from": {
+        "nodeId": "dark",
+        "portId": "value"
+      },
+      "to": {
+        "nodeId": "body",
+        "portId": "albedo"
+      }
+    },
+    {
+      "id": "body-shell-base",
+      "from": {
+        "nodeId": "body",
+        "portId": "surface"
+      },
+      "to": {
+        "nodeId": "shell",
+        "portId": "base"
+      }
+    },
+    {
+      "id": "time-scan-time",
+      "from": {
+        "nodeId": "time",
+        "portId": "value"
+      },
+      "to": {
+        "nodeId": "scan",
+        "portId": "time"
+      }
+    },
+    {
+      "id": "scan-surface-opacity",
+      "from": {
+        "nodeId": "scan",
+        "portId": "value"
+      },
+      "to": {
+        "nodeId": "surface",
+        "portId": "opacity"
+      }
+    }
+  ],
+  "parameters": [],
+  "resources": [],
+  "patterns": [],
+  "layout": {
+    "nodes": {
+      "time": {
+        "x": 0,
+        "y": 0
+      },
+      "noise": {
+        "x": 240,
+        "y": 0
+      },
+      "violet": {
+        "x": 0,
+        "y": 220
+      },
+      "cyan": {
+        "x": 0,
+        "y": 400
+      },
+      "mix": {
+        "x": 480,
+        "y": 120
+      },
+      "glow": {
+        "x": 700,
+        "y": 120
+      },
+      "surface": {
+        "x": 920,
+        "y": 120
+      },
+      "shell": {
+        "x": 1140,
+        "y": 120
+      },
+      "output": {
+        "x": 1380,
+        "y": 120
+      },
+      "scan": {
+        "x": 400,
+        "y": 380
+      },
+      "dark": {
+        "x": 620,
+        "y": 560
+      },
+      "body": {
+        "x": 850,
+        "y": 560
+      }
+    }
+  }
+}

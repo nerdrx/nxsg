@@ -31,7 +31,11 @@ namespace NXSG.Backend
                 case "core.marble": return "(.5+.5*sin(("+U()+").x*"+prop("scale",5)+"*6.2831853+NX_Fbm("+U()+"*"+prop("scale",5)+")*"+prop("distortion",3)+"*6.2831853))";
                 case "core.clouds": return "saturate((NX_Fbm("+U()+"*"+prop("scale",4)+"+"+T()+"*"+prop("speed",.1)+")-.5)*"+prop("contrast",1)+"+.5)";
                 case "core.sparkleMask": return Pattern("NX_Sparkles",prop("scale",30),T()+"*"+prop("speed",2),prop("density",.2),prop("size",.08));
-                case "core.scanlines": return "step(frac(("+U()+").y*"+prop("scale",100)+"+"+T()+"*"+prop("speed",.2)+"),saturate("+prop("width",.3)+"))";
+                case "core.scanlines":
+                    var scanCoordinate = "((" + U() + ").y*" + prop("scale",100) + "+" + T() + "*" + prop("speed",.2) + ")";
+                    var scanWidth = "saturate(" + prop("width",.3) + ")";
+                    if (vertex) return "step(frac(" + scanCoordinate + ")," + scanWidth + ")";
+                    return "float width=max(" + scanWidth + ",.0001); float x=" + scanCoordinate + "; float footprint=max(fwidth(x),.0001); float lo=x-footprint*.5; float hi=x+footprint*.5; float loIntegral=floor(lo)*width+min(frac(lo),width); float hiIntegral=floor(hi)*width+min(frac(hi),width); return saturate((hiIntegral-loIntegral)/footprint);";
                 case "core.glitchUV": return "("+U()+"+float2((NX_Hash(float2(floor(("+U()+").y*"+prop("rows",20)+"),floor("+T()+"*"+prop("speed",5)+")))*2-1)*"+prop("strength",.05)+",0))";
                 case "core.pixelateUV": return "((floor("+U()+"*max(abs("+prop("cells",64)+"),1))+.5)/max(abs("+prop("cells",64)+"),1))";
                 case "core.kaleidoscopeUV": return Pattern("NX_Kaleidoscope",prop("segments",6),prop("rotation",0));
