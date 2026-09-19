@@ -1,6 +1,10 @@
 # Built-in node pack
 
-The canvas now offers 137 visible nodes, including authored Float/Color Parameters, plus a hidden Preview Vector helper. Socket color indicates data type: yellow color, gray scalar, blue UV coordinates, cyan normals, green surface. Drag from either end; compatible-node menus and clipboard operations use the same core catalog.
+The canvas now offers 138 visible nodes, including authored Float/Color Parameters, plus a hidden Preview Vector helper. Socket color indicates data type: yellow color, gray scalar, blue UV coordinates, cyan normals, green surface. Drag from either end; compatible-node menus and clipboard operations use the same core catalog.
+
+## Creator workflow additions
+
+**Darkness Glow** fades emission using ambient spherical harmonics and the main light. Color/strength/threshold/softness inputs feed Color → a surface Emission input. It does not measure additional pixel lights or LTCGI. **Normal Map** also has a green-channel flip for texture convention differences. The [creator tools](CREATOR_WORKFLOW.md) add texture-set review, channel previews, material presets, a preview timeline, snapshots, bookmarks and static texture baking.
 
 ## New feature nodes
 

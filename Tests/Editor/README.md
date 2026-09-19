@@ -13,3 +13,14 @@ This fixture does not open or change the interactive development project's graph
 `ColorRenderSmoke.cs` uses the same isolated setup with `-executeMethod ColorRenderSmoke.Run`. Require `NXSG COLOR RENDER CHECK PASSED` in its log. It compiles and renders a red constant multiplied by a second color; `Assets/ColorCheck.png` records the render.
 
 `NodePackRenderSmoke.cs` uses `-executeMethod NodePackRenderSmoke.Run` in the same disposable project. Require `NXSG NODE PACK RENDER CHECK PASSED`. It renders a combined node graph at two fixed times with emission and black lighting, writing `Assets/NodePack0.png` and `Assets/NodePack1.png`.
+
+## Creator tools
+
+Copy these files into the same disposable fixture and run each entry independently:
+
+- `CreatorToolsSmoke.Run`: real GPU bake color/UVs, animation rejection, linear texture import, frozen preview clock, darkness emission response, normal green flip, bookmark round-trip/hash isolation.
+- `TextureSetEditorSmoke.Run`: new-document isolation, Undo isolation, actual RGBA channel renders.
+- `CreatorMaterialSmoke.Run`: embedded group headers in both emitters, preset serialization/reload, multi-material apply and Undo, preview clock isolation.
+- `NXSG.Editor.CreatorPlaygroundSmoke.Run`: actual EditorWindow rendering, image snapshot replacement/cleanup and source isolation. Screenshot capture requires headless Gamescope.
+
+Require each explicit PASSED/passed log marker; Unity startup or a process exit alone is insufficient.

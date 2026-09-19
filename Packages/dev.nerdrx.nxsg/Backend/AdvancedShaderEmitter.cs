@@ -36,7 +36,7 @@ namespace NXSG.Backend
         public static bool IsAdvanced(ShaderGraph graph)
         {
             if (graph?.Nodes == null) return false;
-            var ops = new HashSet<string> { "core.unlitSurface", "core.pbrSurface", "core.particleSurface", "core.particleColor", "core.surfaceParticles", "core.fur", "core.tessellation", "core.fresnel", "core.colorRamp", "core.layer", "core.sticker", "core.dissolve", "core.flipbook", "core.uvDistort", "core.vertexMotion", "core.audioLink", "core.ltcgi", "core.shell", "core.normalMap", "core.previewVector", "core.musgrave", "core.voronoi", "core.checker", "core.wave", "core.gradient", "core.uvTile", "core.posterize", "core.absolute", "core.power", "core.sqrt", "core.sine", "core.cosine", "core.fraction", "core.floor", "core.ceil", "core.round", "core.step", "core.smoothstep", "core.remap", "core.pingPong", "core.splitColor", "core.combineColor", "core.luminance", "core.contrast", "core.saturation", "core.splitUV", "core.combineUV", "core.position", "core.normalDirection", "core.viewDirection", "core.vertexColor", "core.cameraDistance", "core.screenUV", "core.circleMask", "core.boxMask", "core.polygonMask", "core.starMask", "core.radialRays", "core.spiral", "core.brick", "core.hexGrid", "core.triplanarTexture", "core.matcapTexture", "core.rimGlow", "core.heightMask", "core.slopeMask", "core.distanceFade", "core.wireframe" };
+            var ops = new HashSet<string> { "core.unlitSurface", "core.pbrSurface", "core.particleSurface", "core.particleColor", "core.surfaceParticles", "core.fur", "core.tessellation", "core.fresnel", "core.colorRamp", "core.layer", "core.sticker", "core.dissolve", "core.flipbook", "core.uvDistort", "core.vertexMotion", "core.audioLink", "core.ltcgi", "core.darknessGlow", "core.shell", "core.normalMap", "core.previewVector", "core.musgrave", "core.voronoi", "core.checker", "core.wave", "core.gradient", "core.uvTile", "core.posterize", "core.absolute", "core.power", "core.sqrt", "core.sine", "core.cosine", "core.fraction", "core.floor", "core.ceil", "core.round", "core.step", "core.smoothstep", "core.remap", "core.pingPong", "core.splitColor", "core.combineColor", "core.luminance", "core.contrast", "core.saturation", "core.splitUV", "core.combineUV", "core.position", "core.normalDirection", "core.viewDirection", "core.vertexColor", "core.cameraDistance", "core.screenUV", "core.circleMask", "core.boxMask", "core.polygonMask", "core.starMask", "core.radialRays", "core.spiral", "core.brick", "core.hexGrid", "core.triplanarTexture", "core.matcapTexture", "core.rimGlow", "core.heightMask", "core.slopeMask", "core.distanceFade", "core.wireframe" };
             // Only reachable effects select the extended lowering; disconnected nodes never change shading.
             var connected = new HashSet<string>();
             var queue = new Queue<string>(graph.Nodes.Where(n => n?.Operation == "core.output").Select(n => n.Id));
@@ -145,12 +145,16 @@ namespace NXSG.Backend
             b.AppendLine("Shader \"" + name + "\" {\nProperties {");
             foreach (var prop in properties.Where(p => p.Type == GraphValueType.Texture2D)) b.AppendLine(prop.Name + " (\"" + prop.DisplayName + "\", 2D) = \"white\" {}");
             b.AppendLine("_Color (\"Tint\", Color) = (1,1,1,1)");
+            b.AppendLine(PreviewClock.Properties);
             b.AppendLine("[HideInInspector] _NXSG_AudioLinkPreview (\"Preview audio\", Float) = 0\n[HideInInspector] _NXSG_AudioLinkValue (\"Preview value\", Float) = 0");
             var symbols = new HashSet<string>(properties.Select(p => p.Name));
-            foreach (var parameter in graph.Parameters ?? new List<GraphParameter>())
+            string lastHeader = null;
+            foreach (var parameter in (graph.Parameters ?? new List<GraphParameter>()).OrderBy(p=>MaterialGroups.HeaderFor(graph,p.Id)??""))
             {
                 if (parameter.Binding == GraphBindingKind.Constant) continue;
                 if (parameter.Binding != GraphBindingKind.Material && parameter.Binding != GraphBindingKind.AnimatedMaterial) throw new InvalidOperationException("Use the AudioLink node for audio; only constant/material/animated bindings are supported here.");
+                var header = MaterialGroups.HeaderFor(graph,parameter.Id);
+                if(header!=null&&header!=lastHeader){b.AppendLine(header);lastHeader=header;}
                 var symbol = ParameterName(parameter.Id);
                 if (!symbols.Add(symbol)) throw new InvalidOperationException("Parameter symbols collide: " + parameter.Id);
                 var type = parameter.Type == GraphValueType.Float ? "Float" : parameter.Type == GraphValueType.Color ? "Color" : parameter.Type == GraphValueType.Vector4 ? "Vector" : null;
@@ -167,15 +171,15 @@ namespace NXSG.Backend
             {
                 diagnostics.Add(new Diagnostic(DiagnosticSeverity.Warning, "lighting.forwardAdd", furNode.Id, "Additional pixel lights affect the lit base surface only; fur shell and fin overlays retain their existing lighting."));
                 passCode.Append(FurShader.Pass(
-                    Input(furNode, "rootColor", "float4(.2,.1,.05,1)", "color"), Input(furNode, "tipColor", "float4(.8,.6,.3,1)", "color"), Scalar(furNode, "length", .04, true), Scalar(furNode, "density", 100), Scalar(furNode, "thickness", .35), Scalar(furNode, "mask", 1), Input(furNode, "groom", "float3(0,0,0)", "vector3", true), Input(furNode, "time", "_Time.y", "float", true), IntProp(furNode, "layers", 16, 4, 32), double.Parse(Prop(furNode, "taper", 1), CultureInfo.InvariantCulture), double.Parse(Prop(furNode, "gravity", .1), CultureInfo.InvariantCulture), double.Parse(Prop(furNode, "windStrength", .1), CultureInfo.InvariantCulture), double.Parse(Prop(furNode, "windSpeed", 1), CultureInfo.InvariantCulture), double.Parse(Prop(furNode, "windScale", 2), CultureInfo.InvariantCulture), double.Parse(Prop(furNode, "rimStrength", .25), CultureInfo.InvariantCulture), double.Parse(Prop(furNode, "lodNear", 5), CultureInfo.InvariantCulture), double.Parse(Prop(furNode, "lodFar", 15), CultureInfo.InvariantCulture), IntProp(furNode, "minLayers", 4, 1, 32)));
+                    Input(furNode, "rootColor", "float4(.2,.1,.05,1)", "color"), Input(furNode, "tipColor", "float4(.8,.6,.3,1)", "color"), Scalar(furNode, "length", .04, true), Scalar(furNode, "density", 100), Scalar(furNode, "thickness", .35), Scalar(furNode, "mask", 1), Input(furNode, "groom", "float3(0,0,0)", "vector3", true), Input(furNode, "time", "NXSG_Time()", "float", true), IntProp(furNode, "layers", 16, 4, 32), double.Parse(Prop(furNode, "taper", 1), CultureInfo.InvariantCulture), double.Parse(Prop(furNode, "gravity", .1), CultureInfo.InvariantCulture), double.Parse(Prop(furNode, "windStrength", .1), CultureInfo.InvariantCulture), double.Parse(Prop(furNode, "windSpeed", 1), CultureInfo.InvariantCulture), double.Parse(Prop(furNode, "windScale", 2), CultureInfo.InvariantCulture), double.Parse(Prop(furNode, "rimStrength", .25), CultureInfo.InvariantCulture), double.Parse(Prop(furNode, "lodNear", 5), CultureInfo.InvariantCulture), double.Parse(Prop(furNode, "lodFar", 15), CultureInfo.InvariantCulture), IntProp(furNode, "minLayers", 4, 1, 32)));
             }
             if (furNode != null && IntProp(furNode, "fins", 0, 0, 1) == 1)
             {
-                passCode.Append(FurFinShader.Pass(Input(furNode,"rootColor","float4(.2,.1,.05,1)","color"),Input(furNode,"tipColor","float4(.8,.6,.3,1)","color"),Scalar(furNode,"length",.04,true),Scalar(furNode,"density",100,true),Scalar(furNode,"thickness",.35),Scalar(furNode,"mask",1),Input(furNode,"groom","float3(0,0,0)","vector3",true),Input(furNode,"time","_Time.y","float",true),double.Parse(Prop(furNode,"taper",1),CultureInfo.InvariantCulture),double.Parse(Prop(furNode,"gravity",.1),CultureInfo.InvariantCulture),double.Parse(Prop(furNode,"windStrength",.1),CultureInfo.InvariantCulture),double.Parse(Prop(furNode,"windSpeed",1),CultureInfo.InvariantCulture),double.Parse(Prop(furNode,"windScale",2),CultureInfo.InvariantCulture),double.Parse(Prop(furNode,"rimStrength",.25),CultureInfo.InvariantCulture),double.Parse(Prop(furNode,"finOpacity",.7),CultureInfo.InvariantCulture)));
+                passCode.Append(FurFinShader.Pass(Input(furNode,"rootColor","float4(.2,.1,.05,1)","color"),Input(furNode,"tipColor","float4(.8,.6,.3,1)","color"),Scalar(furNode,"length",.04,true),Scalar(furNode,"density",100,true),Scalar(furNode,"thickness",.35),Scalar(furNode,"mask",1),Input(furNode,"groom","float3(0,0,0)","vector3",true),Input(furNode,"time","NXSG_Time()","float",true),double.Parse(Prop(furNode,"taper",1),CultureInfo.InvariantCulture),double.Parse(Prop(furNode,"gravity",.1),CultureInfo.InvariantCulture),double.Parse(Prop(furNode,"windStrength",.1),CultureInfo.InvariantCulture),double.Parse(Prop(furNode,"windSpeed",1),CultureInfo.InvariantCulture),double.Parse(Prop(furNode,"windScale",2),CultureInfo.InvariantCulture),double.Parse(Prop(furNode,"rimStrength",.25),CultureInfo.InvariantCulture),double.Parse(Prop(furNode,"finOpacity",.7),CultureInfo.InvariantCulture)));
                 diagnostics.Add(new Diagnostic(DiagnosticSeverity.Warning,"cost.furFins",furNode.Id,"Fur fins add one geometry pass with three edge strips per source triangle. Grazing opacity approximates silhouettes without mesh adjacency; bounds and transparent sorting still apply."));
             }
             if (surfaceParticles) passCode.Append(SurfaceParticleShader.Pass(
-                Scalar(root,"mask",1,true), Input(root,"albedo","float4(1,1,1,1)","color"), Input(root,"emission","float4(0,0,0,1)","color"), Scalar(root,"opacity",1), Input(root,"time","_Time.y","float",true),
+                Scalar(root,"mask",1,true), Input(root,"albedo","float4(1,1,1,1)","color"), Input(root,"emission","float4(0,0,0,1)","color"), Scalar(root,"opacity",1), Input(root,"time","NXSG_Time()","float",true),
                 Prop(root,"density",.1), root.Properties["emissionRate"] == null ? "1.0/max(" + Prop(root,"lifetime",2) + ",0.0001)" : Prop(root,"emissionRate",0), Prop(root,"size",.03), Prop(root,"lifetime",2), Prop(root,"speed",.2), Prop(root,"gravity",0), Prop(root,"spread",.05), IntProp(root,"blendMode",1,0,1), IntProp(root,"sourceUV",0,0,1) == 1));
             var screenDependentShadow = !particle && options.IncludeShadowCaster &&
                 (ContainsScreenDependentOperation(passes[0].Surface, "albedo") || ContainsScreenDependentOperation(passes[0].Surface, "opacity"));
@@ -189,6 +193,7 @@ namespace NXSG.Backend
             foreach (var prop in properties) b.AppendLine(prop.Type == GraphValueType.Texture2D ? "sampler2D " + prop.Name + "; float4 " + prop.Name + "_ST;" : (prop.Type == GraphValueType.Float ? "float " : "float4 ") + prop.Name + ";");
             if (live.Any(id => nodes[id].Operation == "core.audioLink")) b.AppendLine(AudioLinkShader.Hlsl);
             b.AppendLine("#ifndef SHADOW_COORDS\n#define SHADOW_COORDS(index)\n#endif");
+            b.AppendLine(PreviewClock.Hlsl);
             b.AppendLine(Helpers);
             if (ltcgiEnabled) b.AppendLine(LtcgiShader.Hlsl);
             if(refracts) b.AppendLine("sampler2D _NXSG_GrabTexture; float4 _NXSG_GrabTexture_TexelSize;");
@@ -196,7 +201,7 @@ namespace NXSG.Backend
             b.AppendLine(ProceduralShader.Hlsl);
             b.AppendLine(DistortionShader.Hlsl);
             b.AppendLine(code.ToString());
-            b.AppendLine("ENDCG\n" + passCode + shadowPass + "}\nFallback Off\n}");
+            b.AppendLine("ENDCG\n" + passCode + shadowPass + "}\nCustomEditor \"NXSG.Editor.NXSGMaterialShaderGUI\"\nFallback Off\n}");
             if (refracts) diagnostics.Add(new Diagnostic(DiagnosticSeverity.Warning,"cost.refraction","$","Refraction copies the framebuffer into a shared named GrabPass texture and uses the transparent queue. It cannot refract off-screen objects; overlapping transparent materials and stereo need validation."));
             if (live.Any(id => nodes[id].Operation == "core.textureBomb")) diagnostics.Add(new Diagnostic(DiagnosticSeverity.Warning,"cost.textureBomb","$","Texture Bomb blends four transformed texture samples, plus plain sampling when Blend is not constant one."));
             if (passes.Count > 1) diagnostics.Add(new Diagnostic(DiagnosticSeverity.Warning, "cost.shell", root.Id, (passes.Count - 1) + " extra transparent mesh pass" + (passes.Count == 2 ? "" : "es") + " per view; normal offset does not expand renderer bounds. Overlapping transparent objects can sort imperfectly."));
@@ -302,12 +307,12 @@ namespace NXSG.Backend
                 case "core.parameter":
                     var parameter = graph.Parameters.Single(p => p.Id == (string)n.Properties["parameterId"]);
                     body = parameter.Binding == GraphBindingKind.Constant ? Literal(parameter.DefaultValue, type) : ParameterName(parameter.Id); break;
-                case "core.time": body = "(_Time.y*" + Prop(n, "speed", 1) + "+" + Prop(n, "offset", 0) + ")"; break;
+                case "core.time": body = "(NXSG_Time()*" + Prop(n, "speed", 1) + "+" + Prop(n, "offset", 0) + ")"; break;
                 case "core.uv0": body = uv; break;
                 case "core.objectUV": body = "input.local.xz"; break;
                 case "core.worldUV": body = "input.ws.xz"; break;
                 case "core.uvTransform": body = "(" + P("uv", uv) + "*" + Vec(n, "tiling", 1, 1) + "+" + Vec(n, "offset", 0, 0) + ")"; break;
-                case "core.uvScroll": body = "(" + P("uv", uv) + "+" + Vec(n, "speed", .1, 0) + "*" + P("time", "_Time.y", "float") + ")"; break;
+                case "core.uvScroll": body = "(" + P("uv", uv) + "+" + Vec(n, "speed", .1, 0) + "*" + P("time", "NXSG_Time()", "float") + ")"; break;
                 case "core.uvRotate": body = "NX_Rotate(" + P("uv", uv) + "," + Vec(n, "center", .5, .5) + "," + S("angle", 0) + ")"; break;
                 case "core.polarUV": body = "NX_Polar(" + P("uv", uv) + "," + Vec(n, "center", .5, .5) + "," + Prop(n, "radialScale", 1) + "," + Prop(n, "angleScale", 1) + ")"; break;
                 case "core.texture2D": body = Sample(n, P("uv", uv, "vector2"), vertex); break;
@@ -388,10 +393,10 @@ namespace NXSG.Backend
                     body = "float2 u=" + stickerUV + "; float4 decal=" + Sample(n, "u", vertex) + "; float m=step(0,u.x)*step(0,u.y)*step(u.x,1)*step(u.y,1)*saturate(decal.a*" + S("mask", 1) + "); return lerp(" + P("base", "float4(0,0,0,1)") + ",decal,m);"; break;
                 case "core.dissolve":
                     body = port == "mask" ? "step(" + S("threshold", .5) + "," + S("value", 0) + ")" : "(step(" + S("threshold", .5) + "," + S("value", 0) + ")*(1-step(" + S("threshold", .5) + "+max(.00001," + Prop(n, "edgeWidth", .05) + ")," + S("value", 0) + ")))"; break;
-                case "core.flipbook": body = "NX_Flipbook(" + P("uv", uv) + "," + P("time", "_Time.y", "float") + "*" + Prop(n, "speed", 1) + "," + Prop(n, "columns", 1) + "," + Prop(n, "rows", 1) + ")"; break;
+                case "core.flipbook": body = "NX_Flipbook(" + P("uv", uv) + "," + P("time", "NXSG_Time()", "float") + "*" + Prop(n, "speed", 1) + "," + Prop(n, "columns", 1) + "," + Prop(n, "rows", 1) + ")"; break;
                 case "core.uvDistort":
                     var baseUV = P("uv", uv, "vector2");
-                    body = "NX_Warp(" + baseUV + "," + IntProp(n,"mode",0,0,6) + ",(" + S("strength",.05) + "*saturate(" + S("mask",1) + "))," + Prop(n,"scale",5) + "," + P("time","_Time.y","float") + "*" + Prop(n,"speed",1) + "," + Vec(n,"center",.5,.5) + "," + Vec(n,"direction",1,1) + "," + Vec(n,"axes",1,1) + "," + Prop(n,"radius",.5) + "," + Prop(n,"falloff",1) + "," + IntProp(n,"detail",1,1,6) + "," + "(" + P("flow","float4(.5,.5,0,1)","color") + ").rg" + ")";
+                    body = "NX_Warp(" + baseUV + "," + IntProp(n,"mode",0,0,6) + ",(" + S("strength",.05) + "*saturate(" + S("mask",1) + "))," + Prop(n,"scale",5) + "," + P("time","NXSG_Time()","float") + "*" + Prop(n,"speed",1) + "," + Vec(n,"center",.5,.5) + "," + Vec(n,"direction",1,1) + "," + Vec(n,"axes",1,1) + "," + Prop(n,"radius",.5) + "," + Prop(n,"falloff",1) + "," + IntProp(n,"detail",1,1,6) + "," + "(" + P("flow","float4(.5,.5,0,1)","color") + ").rg" + ")";
                     if (port == "offset") body = "(" + body + "-" + baseUV + ")";
                     break;
                 case "core.gradient":
@@ -400,12 +405,15 @@ namespace NXSG.Backend
                     break;
                 case "core.uvTile": body = "NX_TileUV(" + P("uv",uv,"vector2") + "," + IntProp(n,"mode",0,0,2) + "," + Vec(n,"tiling",1,1) + "," + Vec(n,"offset",0,0) + ")"; break;
                 case "core.posterize": body = "NX_Posterize(" + S("value",0) + "," + S("levels",4) + ")"; break;
-                case "core.vertexMotion": body = "(sin(" + P("time", "_Time.y", "float") + "*" + Prop(n, "speed", 1) + "+input.local.y*" + Prop(n, "frequency", 2) + ")*" + S("strength", .02) + ")"; break;
+                case "core.vertexMotion": body = "(sin(" + P("time", "NXSG_Time()", "float") + "*" + Prop(n, "speed", 1) + "+input.local.y*" + Prop(n, "frequency", 2) + ")*" + S("strength", .02) + ")"; break;
+                case "core.darknessGlow":
+                    if(vertex)throw new InvalidOperationException("Darkness Glow is a fragment lighting effect. Connect it to Emission.");
+                    body="NX_DarkGlow(input,"+P("color","float4(1,1,1,1)","color")+","+S("strength",1)+","+S("threshold",.4)+","+S("softness",.2)+")"; break;
                 case "core.ltcgi":
                     if (vertex) throw new InvalidOperationException("LTCGI Lighting is fragment-only; do not connect it to displacement, tessellation height or particle emitter inputs.");
                     body = "NX_Ltcgi(input," + P("albedo", "float4(1,1,1,1)", "color") + "," + P("normal", "float3(0,0,1)", "vector3") + "," + S("roughness", .5) + "," + S("metallic", 0) + "," + S("strength", 1) + ")"; break;
                 case "core.audioLink": body = "NXSG_Audio(" + Prop(n, "band", 0) + "," + Prop(n, "gain", 1) + "," + Prop(n, "smoothing", .5) + "," + Prop(n, "fallback", 0) + ")"; break;
-                case "core.normalMap": body = "NX_Normal(" + P("color", "float4(.5,.5,1,1)", "color") + "," + Prop(n, "strength", 1) + ")"; break;
+                case "core.normalMap": body = "NX_Normal(" + P("color", "float4(.5,.5,1,1)", "color") + "," + Prop(n, "strength", 1) + ")*float3(1," + (IntProp(n,"flipGreen",0,0,1)==1 ? "-1" : "1") + ",1)"; break;
                 default:
                     if (!FeatureNodes.IsKnown(n.Operation)) throw new InvalidOperationException("Unsupported value operation: " + n.Operation);
                     var resourceId=(string)n.Properties["resourceId"];
@@ -456,7 +464,7 @@ namespace NXSG.Backend
         string NoiseBody(GraphNode n, string selectedUV, bool vertex)
         {
             var dimensions = IntProp(n, "dimensions", 2, 1, 4);
-            var time = Input(n, "time", "_Time.y", "float", vertex);
+            var time = Input(n, "time", "NXSG_Time()", "float", vertex);
             var speed = Prop(n, "speed", 1);
             var scale = Prop(n, "scale", 5);
             selectedUV = Input(n, "uv", selectedUV, "vector2", vertex);
@@ -470,7 +478,7 @@ namespace NXSG.Backend
         string ProceduralBody(GraphNode n, string selectedUV, bool vertex, string port)
         {
             var dimensions = IntProp(n, "dimensions", 2, 2, 3);
-            var time = Input(n, "time", "_Time.y", "float", vertex);
+            var time = Input(n, "time", "NXSG_Time()", "float", vertex);
             var space = StringProp(n, "coordinateSpace", "object", "object", "world");
             var p = Input(n, "position", space == "world" ? "input.originalWs" : "input.originalLocal", "vector3", vertex);
             var source = Input(n, "uv", selectedUV, "vector2", vertex);
@@ -656,6 +664,7 @@ float2 NX_PanoUV(float3 d){return float2(atan2(d.x,d.z)/6.28318530718+.5,asin(cl
 float2 NX_MatcapUV(float3 view,float3 normal){float3 n=normalize(mul((float3x3)UNITY_MATRIX_V,normal));return n.xy*.5+.5;}
 float2 NX_Flipbook(float2 uv,float frame,float cols,float rows){float count=cols*rows;frame=floor(frame);frame=frame-floor(frame/count)*count;return (frac(uv)+float2(fmod(frame,cols),rows-1-floor(frame/cols)))/float2(cols,rows);}
 float2 NX_Distort(float2 uv,float strength,float scale,float time){return uv+(float2(NX_Noise(uv*scale+time),NX_Noise(uv*scale+time+17.2))-.5)*strength;}
+float4 NX_DarkGlow(NXInput input,float4 color,float strength,float threshold,float softness){float3 n=normalize(input.n); float3 lighting=max(0,ShadeSH9(float4(n,1))); UNITY_LIGHT_ATTENUATION(atten,input,input.ws); lighting+=_LightColor0.rgb*atten*saturate(dot(n,normalize(UnityWorldSpaceLightDir(input.ws)))); float level=dot(lighting,float3(.2126,.7152,.0722)); float mask=1-smoothstep(max(0,threshold)-max(.001,softness),max(0,threshold)+max(.001,softness),level); return float4(color.rgb*max(0,strength)*mask,color.a);}
 float3 NX_Normal(float4 encoded,float strength){float3 n=UnpackNormal(encoded);n.xy*=strength;n.z=sqrt(saturate(1-dot(n.xy,n.xy)));return normalize(n);}
 ";
     }

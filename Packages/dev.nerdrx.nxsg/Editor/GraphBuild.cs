@@ -75,6 +75,7 @@ namespace NXSG.Editor
                 else material.shader = shader;
                 foreach (var property in preserved) property.Apply(material);
                 AssignTextures(graph, result, material);
+                if (material.HasProperty("_NXSG_PreviewClock")) material.SetFloat("_NXSG_PreviewClock",0);
                 if (material.HasProperty("_NXSG_AudioLinkPreview")) material.SetFloat("_NXSG_AudioLinkPreview",0);
                 foreach (var diagnostic in result.Diagnostics.Where(d => d.Severity == DiagnosticSeverity.Warning)) Debug.LogWarning("NXSG: " + diagnostic.Message);
                 EditorUtility.SetDirty(material);

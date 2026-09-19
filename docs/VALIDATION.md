@@ -224,3 +224,18 @@ LTCGI 1.7.3 (`b2014d6c6e76c551c30084973e54687941265d68`) was installed only into
 Portable checks passed for missing dependency errors, installed include/tag emission, unused-node stripping and vertex-stage rejection. The integration bundles no upstream code/assets. Live VRChat world/avatar compatibility, Windows and stereo/headsets remain unverified.
 
 The published alpha.4 archive was downloaded again and its SHA-256 matched the listing. The same real-controller render fixture then passed with Linear project color space. Fixture-only dependency and project-setting changes were restored afterward.
+
+## Creator workflow — alpha.5 (2026-09-19)
+
+Linux Unity 2022.3.22f1, OpenGLCore, isolated headless Gamescope fixture:
+
+- Portable graph/compiler smoke suite passes, including reviewed texture builders and Flow/Toon graph emission.
+- CreatorToolsSmoke: static UV texture baking reads correct GPU color/UV data, independently clamps HDR/negative channels, preserves source, rejects animation and imports linear PNG. Frozen preview clock, bookmarks and normal green-channel flip pass.
+- Darkness Glow GPU response: dark output `(0.200, 0.400, 0.698)` falls to `(0,0,0)` under the strong main light. This tests ambient/main-light approximation only.
+- TextureSetEditorSmoke: import creates an untitled document without source/Undo crossover; GPU R/G/B/A sampling matches input channels.
+- CreatorMaterialSmoke: both backends embed group headers; saved presets reload, apply to multiple materials and undo; preview clock is excluded.
+- CreatorPlaygroundSmoke: real window render, retained image replacement/cleanup and original-material isolation pass. GPU frame timing is unavailable on this fixture; CPU preview timing is measured.
+- EditorPolishCapture passes at regular and narrow window sizes; actual compositor screenshots inspected.
+- PixelLightSmoke and FeatureNodesRenderSmoke (39 nodes) remain passing after the clock/backend changes.
+
+No additional Windows/D3D, headset or live VRChat claim is made. Static baking is UV-local, linear 8-bit PNG; unsupported scene/time/geometry branches are rejected rather than flattened silently. LTCGI playground checking locates an existing scene controller, not a simulated world.

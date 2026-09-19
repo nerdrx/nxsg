@@ -1,5 +1,7 @@
 # Surface effects and editor comforts
 
+For the complete creator-tool walkthrough, see [Creator workflow](CREATOR_WORKFLOW.md).
+
 ## Try the effects
 
 Open the examples from `Assets/NXSGExamples` in the development project, or copy them from the package's `Samples~` folder into your project's Assets folder.

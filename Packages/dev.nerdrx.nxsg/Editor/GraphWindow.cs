@@ -128,6 +128,7 @@ namespace NXSG.Editor
             toolbar.Add(liveToggle);
             AddSceneToggle(toolbar);
             AddViewMenu(toolbar);
+            AddCreatorMenu(toolbar);
             toolbar.Add(new ToolbarButton(FocusNodeSearch) { text = "+ Add node", tooltip = "Search nodes (Space on canvas)." });
             AddPatternToolbar(toolbar);
             rootVisualElement.Add(toolbar);
@@ -904,7 +905,12 @@ namespace NXSG.Editor
                     case "core.posterize": AddBoundedNumber(node,"levels","Steps",2,256,4,"levels"); break;
                     case "core.vertexMotion": AddNumber(node, "strength", "Strength", .02f, "strength"); AddNumber(node, "speed", "Speed", 1); AddNumber(node, "frequency", "Frequency", 2); break;
                     case "core.shell": AddNumber(node, "offset", "Shell offset", .02f, "offset"); break;
-                    case "core.normalMap": AddNumber(node, "strength", "Strength", 1); break;
+                    case "core.normalMap":
+                        AddNumber(node, "strength", "Strength", 1);
+                        var flipGreen=new Toggle("Flip green (DirectX/OpenGL)"){value=(int?)node.Properties["flipGreen"]==1};
+                        flipGreen.RegisterValueChangedCallback(evt=>Edit("Flip normal green",()=>node.Properties["flipGreen"]=evt.newValue?1:0));inspector.Add(flipGreen);break;
+                    case "core.darknessGlow":
+                        AddNumber(node,"strength","Glow strength",1,"strength");AddNumber(node,"threshold","Light threshold",.4f,"threshold");AddNumber(node,"softness","Soft transition",.2f,"softness");break;
                     case "core.ltcgi":
                         AddBoundedNumber(node, "roughness", "Roughness", 0, 1, .5f, "roughness");
                         AddBoundedNumber(node, "metallic", "Metallic", 0, 1, 0, "metallic");

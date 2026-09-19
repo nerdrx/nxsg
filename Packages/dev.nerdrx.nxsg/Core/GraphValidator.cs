@@ -212,7 +212,8 @@ namespace NXSG.Core
                 case "core.sticker": vectors = new[] { "position", "size" }; numeric = new[] { "rotation" }; break;
                 case "core.flipbook": numeric = new[] { "rows", "columns", "speed" }; break;
                 case "core.audioLink": numeric = new[] { "band", "gain", "smoothing", "fallback" }; break;
-                case "core.normalMap": numeric = new[] { "strength" }; break;
+                case "core.normalMap": numeric = new[] { "strength", "flipGreen" }; break;
+                case "core.darknessGlow": numeric = new[] { "strength", "threshold", "softness" }; break;
                 case "core.ltcgi": numeric = new[] { "roughness", "metallic", "strength" }; break;
                 case "core.dissolve": numeric = new[] { "threshold", "edgeWidth" }; break;
                 case "core.shell": numeric = new[] { "offset" }; break;
@@ -271,6 +272,7 @@ namespace NXSG.Core
                 CheckRange(node.Properties["metallic"], path + ".properties.metallic", 0, 1, diagnostics);
                 CheckRange(node.Properties["strength"], path + ".properties.strength", 0, double.MaxValue, diagnostics);
             }
+            if(node.Operation=="core.normalMap")CheckIntegerRange(node.Properties["flipGreen"],path+".properties.flipGreen",0,1,diagnostics);
             if (numeric != null) foreach (var name in numeric) CheckNumber(node.Properties[name], path + ".properties." + name, diagnostics);
             if (vectors != null) foreach (var name in vectors) CheckVector2(node.Properties[name], path + ".properties." + name, diagnostics);
             if (node.Operation == "core.ramp") CheckRampPoints(node.Properties["points"], path + ".properties.points", diagnostics);

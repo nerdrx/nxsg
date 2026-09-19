@@ -226,6 +226,7 @@ namespace NXSG.Backend
             builder.Line("_MainTex (\"Main Texture\", 2D) = \"white\" {}");
             }
             builder.Line("_Color (\"Tint\", Color) = (1,1,1,1)");
+            builder.Line(PreviewClock.Properties);
             if (threshold.PropertyName == null)
             {
                 builder.Line("_NXSG_ToonThreshold (\"Toon Threshold\", Range(0,1)) = " + threshold.DefaultLiteral);
@@ -238,7 +239,7 @@ namespace NXSG.Backend
             {
                 builder.Line("_NXSG_ShadowStrength (\"Shadow Strength\", Range(0,1)) = " + shadowStrength.DefaultLiteral);
             }
-            EmitParameterDeclarations(builder, graph.Parameters, parameterMap, properties);
+            EmitParameterDeclarations(builder, graph, graph.Parameters, parameterMap, properties);
             builder.Indent--;
             builder.Line("}");
             builder.Line("SubShader");
@@ -255,6 +256,7 @@ namespace NXSG.Backend
             }
             builder.Indent--;
             builder.Line("}");
+            builder.Line("CustomEditor \"NXSG.Editor.NXSGMaterialShaderGUI\"");
             builder.Line("Fallback Off");
             builder.Indent--;
             builder.Line("}");
@@ -745,7 +747,7 @@ namespace NXSG.Backend
             HashSet<string> visiting, List<Diagnostic> diagnostics)
         {
             var uv = ResolveUv(node, nodes, incoming, parameters, visiting, diagnostics);
-            var time = ScalarInput(node, "time", "_Time.y", nodes, incoming, parameters, visiting, diagnostics);
+            var time = ScalarInput(node, "time", "NXSG_Time()", nodes, incoming, parameters, visiting, diagnostics);
             var scale = FloatLiteral(PropertyFloat(node, "scale", 5f));
             var speed = FloatLiteral(PropertyFloat(node, "speed", 1f));
             return "NXSG_ValueNoise((" + uv + ") * " + scale + " + float2(1,0.731) * (" + time + ") * " + speed + ")";
@@ -850,19 +852,22 @@ namespace NXSG.Backend
 
         private static void EmitParameterDeclarations(
             ShaderBuilder builder,
+            ShaderGraph graph,
             List<GraphParameter> parameters,
             Dictionary<string, GraphParameter> parameterMap,
             List<MaterialProperty> materialProperties)
         {
-            for (var i = 0; i < materialProperties.Count; i++)
+            string lastHeader = null;
+            foreach (var property in materialProperties.OrderBy(p=>p.ParameterId==null?"":MaterialGroups.HeaderFor(graph,p.ParameterId)??""))
             {
-                var property = materialProperties[i];
                 if (property.ParameterId == null)
                 {
                     continue;
                 }
 
                 GraphParameter parameter = parameterMap[property.ParameterId];
+                var header = MaterialGroups.HeaderFor(graph, parameter.Id);
+                if (header != null && header != lastHeader) { builder.Line(header); lastHeader = header; }
                 var defaultValue = DefaultLiteral(parameter);
                 if (parameter.Type == GraphValueType.Float)
                 {
@@ -913,6 +918,7 @@ namespace NXSG.Backend
             builder.Line("#include \"UnityCG.cginc\"");
             builder.Line("#include \"Lighting.cginc\"");
             builder.Line("#include \"AutoLight.cginc\"");
+            builder.Line(PreviewClock.Hlsl);
             if (hasTexture)
             {
                 builder.Line("sampler2D _MainTex;");
@@ -922,9 +928,8 @@ namespace NXSG.Backend
             builder.Line("half _NXSG_ToonThreshold;");
             builder.Line("half _NXSG_ToonSoftness;");
             builder.Line("half _NXSG_ShadowStrength;");
-            for (var i = 0; i < materialProperties.Count; i++)
+            foreach (var property in materialProperties)
             {
-                var property = materialProperties[i];
                 if (property.Type == GraphValueType.Texture2D)
                 {
                     continue;
@@ -1035,7 +1040,7 @@ namespace NXSG.Backend
             if (node.Operation == UvTransformOperation)
                 result = "(" + source + " * " + Vector2Literal(node, "tiling", 1f, 1f) + " + " + Vector2Literal(node, "offset", 0f, 0f) + ")";
             else if (node.Operation == UvScrollOperation)
-                result = "(" + source + " + (" + ScalarInput(node, "time", "_Time.y", nodes, incoming, parameters, visiting, diagnostics) + ") * " + Vector2Literal(node, "speed", .1f, 0f) + ")";
+                result = "(" + source + " + (" + ScalarInput(node, "time", "NXSG_Time()", nodes, incoming, parameters, visiting, diagnostics) + ") * " + Vector2Literal(node, "speed", .1f, 0f) + ")";
             else if (node.Operation == UvRotateOperation)
             {
                 var center = Vector2Literal(node, "center", .5f, .5f);
@@ -1065,7 +1070,7 @@ namespace NXSG.Backend
             }
             string expression = null;
             if (node.Operation == ValueOperation) expression = FloatLiteral(PropertyFloat(node, "value", 0f));
-            else if (node.Operation == TimeOperation) expression = "(_Time.y * " + FloatLiteral(PropertyFloat(node, "speed", 1f)) + " + " + FloatLiteral(PropertyFloat(node, "offset", 0f)) + ")";
+            else if (node.Operation == TimeOperation) expression = "(NXSG_Time() * " + FloatLiteral(PropertyFloat(node, "speed", 1f)) + " + " + FloatLiteral(PropertyFloat(node, "offset", 0f)) + ")";
             else if (node.Operation == ConstantOperation)
             {
                 LiteralValue literal;

@@ -10,7 +10,7 @@ namespace NXSG.Backend
             Func<string,double,string> prop, Func<string,bool,string> sample, string sampler)
         {
             string U() => p("uv",uv,"vector2");
-            string T() => p("time","_Time.y","float");
+            string T() => p("time","NXSG_Time()","float");
             string Pos() => p("position","input.local","vector3");
             string Center() => "float3("+prop("x",0)+","+prop("y",0)+","+prop("z",0)+")";
             string Pattern(string name,params string[] args) => name+"("+U()+","+string.Join(",",args)+")";

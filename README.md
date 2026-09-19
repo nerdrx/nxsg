@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <img alt="137 visible nodes" src="https://img.shields.io/badge/nodes-137-7700FF?style=flat-square" />
+  <img alt="138 visible nodes" src="https://img.shields.io/badge/nodes-138-7700FF?style=flat-square" />
   <img alt="Unity development version 2022.3.22f1" src="https://img.shields.io/badge/Unity-2022.3.22f1-222222?style=flat-square" />
   <img alt="Tested on Linux" src="https://img.shields.io/badge/tested_on-Linux-222222?style=flat-square" />
   <img alt="Early development" src="https://img.shields.io/badge/status-early_development-7700FF?style=flat-square" />
@@ -20,6 +20,7 @@
   <a href="https://nerdrx.github.io/nxsg/"><strong>Install with VPM</strong></a> ·
   <a href="#try-nxsg">Try NXSG</a> ·
   <a href="docs/NODES.md">Explore the nodes</a> ·
+  <a href="docs/CREATOR_WORKFLOW.md">Creator workflow</a> ·
   <a href="Packages/dev.nerdrx.nxsg/Samples~/README.md">Example graphs</a> ·
   <a href="docs/GOODIES.md">Latest goodies</a> ·
   <a href="#where-were-going">Roadmap</a>
@@ -51,7 +52,9 @@ stereo, and live VRChat client behavior remain unverified; see the
 | **Alive** | Shader-driven particles from the mesh wearing the material, UV motion, flipbooks, vertex animation and AudioLink inputs. |
 | **Procedural** | 1D–4D noise, Musgrave-style fractals, Voronoi, waves, texture bombing, distortion, gradients and shape masks. |
 
-**137 visible nodes.** Compact controls for common effects; reusable Patterns when your graph grows. [Full node guide →](docs/NODES.md)
+**Create, compare, refine.** Import a reviewed texture set, inspect its channels, scrub animations in the material playground, keep A/B snapshots, bake a static branch, and save material presets. [Creator workflow →](docs/CREATOR_WORKFLOW.md)
+
+**138 visible nodes.** Compact controls for common effects; reusable Patterns when your graph grows. [Full node guide →](docs/NODES.md)
 
 <table>
   <tr>
@@ -130,7 +133,7 @@ The setup script downloads and verifies the pinned VRChat Base/Avatars **3.10.5*
 
 **Build for VRChat generates a local shader and material. It does not upload an avatar.** Auto scene is enabled by default and applies subsequent shader edits after roughly 0.65 seconds of inactivity; switch it off for manual saves/builds.
 
-[First material walkthrough](docs/QUICK_START.md) · [Compatibility table](docs/COMPATIBILITY.md) · [Linux setup and troubleshooting](docs/DEVELOPMENT.md) · [Particle quick start](docs/PARTICLES.md) · [Fur and parallax](docs/FUR_AND_PARALLAX.md) · [Tessellation](docs/TESSELLATION.md)
+[First material walkthrough](docs/QUICK_START.md) · [Creator workflow](docs/CREATOR_WORKFLOW.md) · [Compatibility table](docs/COMPATIBILITY.md) · [Linux setup and troubleshooting](docs/DEVELOPMENT.md) · [Particle quick start](docs/PARTICLES.md) · [Fur and parallax](docs/FUR_AND_PARALLAX.md) · [Tessellation](docs/TESSELLATION.md)
 
 ### Start with a ready-made idea
 

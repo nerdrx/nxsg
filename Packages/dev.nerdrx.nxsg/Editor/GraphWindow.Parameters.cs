@@ -80,6 +80,10 @@ namespace NXSG.Editor
             var exposed = new Toggle("Exposed") { value = parameter.Exposed };
             exposed.RegisterValueChangedCallback(e => Edit("Change parameter exposure", () => parameter.Exposed = e.newValue));
             editor.Add(exposed);
+            var group = new TextField("Material group") { value = MaterialGroup(parameter.Id), isDelayed = true,
+                tooltip = "Optional inspector group. Stored by stable parameter ID in graph adapter metadata." };
+            group.RegisterValueChangedCallback(e => EditMaterialGroup(parameter.Id, e.newValue));
+            editor.Add(group);
             var symbol = new TextField("Shader reference") { value = GeneratedSymbol(parameter.Id), isReadOnly = true,
                 tooltip = "Stable across display-name changes. Material/AnimatedMaterial bindings expose this shader property." };
             editor.Add(symbol);
@@ -119,6 +123,24 @@ namespace NXSG.Editor
         }
 
         static string GeneratedSymbol(string id) => string.IsNullOrEmpty(id) ? "—" : "_NXSG_P_" + id.Replace('-', '_');
+
+        string MaterialGroup(string parameterId)
+        {
+            var groups = graph?.Adapter?["materialGroups"] as JObject;
+            return groups == null ? string.Empty : (string)groups[parameterId] ?? string.Empty;
+        }
+
+        void EditMaterialGroup(string parameterId, string value)
+        {
+            var group = (value ?? string.Empty).Trim();
+            Edit("Change material group", () =>
+            {
+                if (graph.Adapter == null) graph.Adapter = new JObject();
+                var groups = graph.Adapter["materialGroups"] as JObject;
+                if (groups == null) graph.Adapter["materialGroups"] = groups = new JObject();
+                if (group.Length == 0) groups.Remove(parameterId); else groups[parameterId] = group;
+            });
+        }
 
         void AddParameter(GraphValueType type)
         {

@@ -114,11 +114,22 @@ namespace NXSG.Editor
                     var box = new VisualElement { style = { marginTop = 8, paddingBottom = 8, borderBottomWidth = 1, borderBottomColor = new Color(.25f,.25f,.25f) } };
                     box.Add(new HelpBox(diagnostic.Message, diagnostic.Severity == DiagnosticSeverity.Error ? HelpBoxMessageType.Error : HelpBoxMessageType.Warning));
                     if (node != null) box.Add(new Button(() => { SelectNode(node.Id, false); FrameNodes(true); ShowSidebarTab(0); }) { text = "Show " + Title(node.Operation) });
+                    var hint = DiagnosticHint(diagnostic);
+                    if(hint!=null)box.Add(new HelpBox(hint,HelpBoxMessageType.Info));
                     box.tooltip = diagnostic.Code + " · " + diagnostic.Path;
                     problemsPanel.Add(box);
                 }
             }
             catch (Exception exception) { problemsPanel.Add(new HelpBox("Cannot check graph: " + exception.Message, HelpBoxMessageType.Error)); }
+        }
+        static string DiagnosticHint(Diagnostic diagnostic)
+        {
+            var code=diagnostic.Code??"";
+            if(code.IndexOf("cycle",StringComparison.OrdinalIgnoreCase)>=0)return "Disconnect one wire in the loop. Graph outputs must flow forward without feeding themselves.";
+            if(code.IndexOf("symbol-collision",StringComparison.OrdinalIgnoreCase)>=0)return "Give the colliding parameters different stable IDs; punctuation becomes underscores in shader property names.";
+            if(code.IndexOf("resource",StringComparison.OrdinalIgnoreCase)>=0)return "Select the texture node and assign a texture from this Unity project, then rebuild.";
+            if(code.IndexOf("unsupported",StringComparison.OrdinalIgnoreCase)>=0)return "Check the selected output/backend and replace the unsupported node or binding. Your saved graph is preserved.";
+            return null;
         }
     }
 }
