@@ -1,14 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 440" role="img" aria-labelledby="title desc">
   <title id="title">NX Shader Graph</title>
-  <desc id="desc">NXSG, a visual material graph for VRChat, shown as a connected Texture, Toon, and Output flow.</desc>
+  <desc id="desc">NXSG, a visual material graph for VRChat, illustrated with its Unity-style Texture and Color nodes connected to Toon Surface and Output.</desc>
 
   <!-- True-black OLED ground; the violet surfaces stay quiet behind the message. -->
   <rect width="1440" height="440" fill="#000000"/>
-  <path d="M714 44H1380V396H714Z M738 68H1356V372H738Z" fill="#0A0714" fill-rule="evenodd"/>
-  <path d="M714 44H1380V396H714Z" fill="none" stroke="#24103D" stroke-width="2"/>
-  <path d="M738 68H1356V372H738Z" fill="none" stroke="#160B28" stroke-width="1"/>
-  <path d="M714 44h38M714 44v38M1380 396h-38M1380 396v-38" fill="none" stroke="#7700FF" stroke-width="2"/>
-
   <!-- Canonical NX wordmark, copied from nx-wordmark-violet.svg unchanged. -->
   <g aria-label="NX" transform="translate(88 46) scale(.085)">
     <g fill="#7700FF" transform="translate(-56 552) scale(1 -1)">
@@ -25,45 +20,67 @@
   <rect x="92" y="348" width="9" height="9" fill="#00E5FF"/>
   <text x="116" y="357" fill="#8D7AA8" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="12" font-weight="700" letter-spacing="2">VISUAL SHADERS / VRCHAT</text>
 
-  <!-- Abstract graph: an illustration of the idea, not a working-app screenshot. -->
-  <text x="776" y="91" fill="#6F5B87" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="11" letter-spacing="2">MATERIAL FLOW / 01</text>
-
-  <path d="M958 168H1018" fill="none" stroke="#7700FF" stroke-width="3"/>
-  <path d="M1224 184H1252V252H1160V320H1184" fill="none" stroke="#7700FF" stroke-width="3"/>
-  <circle cx="958" cy="168" r="4" fill="#00E5FF"/>
-  <circle cx="1018" cy="168" r="4" fill="#7700FF"/>
-  <circle cx="1224" cy="184" r="4" fill="#00E5FF"/>
-  <circle cx="1184" cy="320" r="4" fill="#7700FF"/>
-
-  <path d="M776 122H958L976 140V214L958 232H776L758 214V140Z" fill="#12091F" stroke="#5A20A8" stroke-width="2"/>
-  <path d="M776 122H958L976 140H776Z" fill="#24103D"/>
-  <text x="790" y="157" fill="#EFEAFF" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="15" font-weight="700" letter-spacing="1">TEXTURE</text>
-  <text x="790" y="186" fill="#A88DFF" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="12">UV0  /  MASK</text>
-  <path d="M790 202H858M868 202H930" stroke="#3A1A62" stroke-width="3"/>
-
-  <path d="M1036 122H1206L1224 140V214L1206 232H1036L1018 214V140Z" fill="#171028" stroke="#7700FF" stroke-width="2"/>
-  <path d="M1036 122H1206L1224 140H1036Z" fill="#2A1149"/>
-  <text x="1052" y="157" fill="#EFEAFF" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="15" font-weight="700" letter-spacing="1">TOON</text>
-  <text x="1052" y="186" fill="#BFA8FF" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="12">LIGHT  /  RIM</text>
-  <path d="M1052 202H1110M1120 202H1180" stroke="#4B2378" stroke-width="3"/>
-
-  <path d="M1202 278H1356L1374 296V346L1356 364H1202L1184 346V296Z" fill="#12091F" stroke="#5A20A8" stroke-width="2"/>
-  <path d="M1202 278H1356L1374 296H1202Z" fill="#24103D"/>
-  <text x="1218" y="316" fill="#EFEAFF" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="15" font-weight="700" letter-spacing="1">OUTPUT</text>
-  <text x="1218" y="342" fill="#A88DFF" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="12">BUILD  /  PREVIEW</text>
-
-  <!-- Faceted violet material cue: flat polygonal color, no gradient or glow. -->
-  <g transform="translate(1305 116)" aria-label="faceted violet material">
-    <polygon points="0,-36 27,-22 36,7 16,34 -16,34 -36,7 -27,-22" fill="#24103D" stroke="#7700FF" stroke-width="2"/>
-    <polygon points="0,-36 27,-22 5,-12 0,5 -17,-11" fill="#9A3CFF"/>
-    <polygon points="27,-22 36,7 15,1 5,-12" fill="#6E27D6"/>
-    <polygon points="36,7 16,34 2,17 15,1" fill="#3E177A"/>
-    <polygon points="16,34 -16,34 -2,17 2,17" fill="#5A20A8"/>
-    <polygon points="-16,34 -36,7 -15,1 -2,17" fill="#2B1257"/>
-    <polygon points="-36,7 -27,-22 -17,-11 -15,1" fill="#481B92"/>
-    <polygon points="-27,-22 0,-36 0,-18 -17,-11" fill="#7700FF"/>
-    <polygon points="-17,-11 5,-12 15,1 2,17 -2,17 -15,1" fill="#7700FF" opacity=".86"/>
+  <!-- Simplified illustration of the actual custom Unity canvas. Colors and ports
+       follow GraphWindow.cs and NodeCatalog.cs; this is not a screenshot. -->
+  <rect x="612" y="28" width="800" height="384" rx="12" fill="#0e0e0e" stroke="#252525"/>
+  <g fill="none" stroke-width="3.5" stroke-linecap="round">
+    <path d="M830 163 C880 163 875 165 925 165" stroke="#ffc740"/>
+    <path d="M830 337 C889 337 866 221 925 221" stroke="#ffc740"/>
+    <path d="M1130 305 C1175 305 1165 267 1210 267" stroke="#59d975"/>
   </g>
 
-  <text x="1296" y="190" fill="#6F5B87" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="10" letter-spacing="1.5">SURFACE</text>
+  <g font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif">
+    <!-- Texture: orange header, UV input, color output. -->
+    <rect x="650" y="80" width="180" height="136" rx="8" fill="#242424"/>
+    <path d="M658 80H822Q830 80 830 88V116H650V88Q650 80 658 80" fill="#75401a"/>
+    <text x="664" y="104" fill="#eeeeee" font-size="17" font-weight="600">Texture</text>
+    <text x="666" y="143" fill="#bdbdbd" font-size="16">uv</text>
+    <text x="814" y="169" text-anchor="end" fill="#bdbdbd" font-size="16">color</text>
+    <rect x="664" y="188" width="12" height="12" rx="2" fill="#171717" stroke="#626262"/>
+    <text x="684" y="199" fill="#a5a5a5" font-size="13">Thumbnail</text>
+
+    <!-- Color: the selected card has the editor's light outline. -->
+    <rect x="650" y="282" width="180" height="105" rx="8" fill="#242424"/>
+    <path d="M658 282H822Q830 282 830 290V318H650V290Q650 282 658 282" fill="#66571a"/>
+    <rect x="650" y="282" width="180" height="105" rx="8" fill="none" stroke="#f0f0f0" stroke-width="2"/>
+    <text x="664" y="306" fill="#eeeeee" font-size="17" font-weight="600">Color</text>
+    <text x="814" y="343" text-anchor="end" fill="#bdbdbd" font-size="16">value</text>
+    <rect x="664" y="360" width="12" height="12" rx="2" fill="#171717" stroke="#626262"/>
+    <text x="684" y="371" fill="#a5a5a5" font-size="13">Thumbnail</text>
+
+    <!-- Toon Surface: the five real inputs and one surface output. -->
+    <rect x="925" y="100" width="205" height="252" rx="8" fill="#242424"/>
+    <path d="M933 100H1122Q1130 100 1130 108V138H925V108Q925 100 933 100" fill="#215e3d"/>
+    <text x="939" y="125" fill="#eeeeee" font-size="17" font-weight="600">Toon Surface ▾</text>
+    <g fill="#bdbdbd" font-size="16">
+      <text x="941" y="171">albedo</text>
+      <text x="941" y="199">normal</text>
+      <text x="941" y="227">emission</text>
+      <text x="941" y="255">opacity</text>
+      <text x="941" y="283">displacement</text>
+      <text x="1114" y="311" text-anchor="end">surface</text>
+    </g>
+    <rect x="939" y="328" width="12" height="12" rx="2" fill="#171717" stroke="#626262"/>
+    <text x="959" y="339" fill="#a5a5a5" font-size="13">Thumbnail</text>
+
+    <!-- Output: red header and a surface input on its left edge. -->
+    <rect x="1210" y="212" width="165" height="80" rx="8" fill="#242424"/>
+    <path d="M1218 212H1367Q1375 212 1375 220V248H1210V220Q1210 212 1218 212" fill="#633033"/>
+    <text x="1224" y="236" fill="#eeeeee" font-size="17" font-weight="600">Output</text>
+    <text x="1226" y="273" fill="#bdbdbd" font-size="16">surface</text>
+  </g>
+
+  <!-- Socket colors match data types; wires meet the center of each socket. -->
+  <g stroke="#0e0e0e" stroke-width="2.5">
+    <circle cx="650" cy="137" r="6" fill="#73a6ff"/>
+    <circle cx="830" cy="163" r="6" fill="#ffc740"/>
+    <circle cx="830" cy="337" r="6" fill="#ffc740"/>
+    <circle cx="925" cy="165" r="6" fill="#ffc740"/>
+    <circle cx="925" cy="193" r="6" fill="#40d9d9"/>
+    <circle cx="925" cy="221" r="6" fill="#ffc740"/>
+    <circle cx="925" cy="249" r="6" fill="#ccd1d9"/>
+    <circle cx="925" cy="277" r="6" fill="#ccd1d9"/>
+    <circle cx="1130" cy="305" r="6" fill="#59d975"/>
+    <circle cx="1210" cy="267" r="6" fill="#59d975"/>
+  </g>
 </svg>
