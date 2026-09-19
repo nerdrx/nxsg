@@ -59,6 +59,20 @@ public static class EffectHandlesSmoke
                 Require(Mathf.Abs((float)graph.Nodes.Single(n=>n.Id=="sticker").Properties["rotation"]-90)<.1,"Rotation handle failed");
                 phase++;window.Repaint();return;
             }
+            var before=Position();var cancelStart=rect.center-new Vector2(20,0);
+            Mouse(EventType.MouseDown,cancelStart);Mouse(EventType.MouseDrag,cancelStart-new Vector2(20,0));
+            window.SendEvent(new Event {type=EventType.KeyDown,keyCode=KeyCode.Escape});
+            Require((Position()-before).sqrMagnitude<.00001,"Escape did not cancel placement drag");
+            var oldPreview=typeof(EffectHandlesWindow).GetField("preview",Private).GetValue(window);
+            var edge=graph.Connections.Single(e=>e.To.NodeId=="output");graph.Connections.Remove(edge);
+            Invoke("RebuildPreview");
+            Require(ReferenceEquals(oldPreview,typeof(EffectHandlesWindow).GetField("preview",Private).GetValue(window)),"Failed revision discarded last successful preview");
+            Require(!string.IsNullOrEmpty((string)typeof(EffectHandlesWindow).GetField("previewError",Private).GetValue(window)),"Compile failure not visible");
+            typeof(EffectHandlesWindow).GetField("previewDue",Private).SetValue(window,0d);Invoke("OnInspectorUpdate");
+            Require((double)typeof(EffectHandlesWindow).GetField("previewDue",Private).GetValue(window)==0,"Failed graph keeps scheduling compilation");
+            graph.Connections.Add(edge);Invoke("RebuildPreview");
+            var originalId=graph.GraphId;graph.GraphId="other-graph";
+            Require(Invoke("CurrentNode")==null,"Placement tool followed a different graph with reused node ID");graph.GraphId=originalId;
             var mesh=new Mesh {vertices=new[]{new Vector3(-1,-1,0),new Vector3(1,-1,0),new Vector3(-1,1,0)},triangles=new[]{0,1,2},uv=new[]{Vector2.zero,Vector2.right,Vector2.up}};
             var hit=EffectHandlesMath.RaycastUv(mesh,new Ray(new Vector3(-.25f,-.25f,-1),Vector3.forward),Matrix4x4.identity);
             Require(hit.HasValue && (hit.Value-new Vector2(.375f,.375f)).sqrMagnitude<.0001,"Barycentric UV pick incorrect");UnityEngine.Object.DestroyImmediate(mesh);

@@ -66,3 +66,9 @@ settings, mesh normals/UVs, scene lights, reflection probes, render queue, and
 color space. The material playground is a controlled preview, not proof of
 VRChat client or headset output. Windows/D3D, stereo headset, and live client
 behavior remain unverified; see [GOODIES](GOODIES.md#verification).
+
+### Preview recovery
+
+**Reset preview controls** restores time, playback, lighting, AudioLink and motion
+without discarding A/B snapshots. Changing materials invalidates the old live
+frame; snapshots wait until the new material has rendered.

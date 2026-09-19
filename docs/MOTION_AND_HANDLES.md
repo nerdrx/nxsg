@@ -4,6 +4,9 @@
 
 Select a **Sticker** node and open its placement tool in the inspector, or use
 **Create → Place selected sticker**. The tool edits the same graph, with Undo.
+Use the visible Undo/Redo, Center sticker and Reset view controls. Numeric fields
+allow precise placement; Escape cancels the current drag. A failed graph edit
+keeps the last successful preview and reports the error.
 Use the mesh preview to pick a position from the mesh's UV0, then use the UV
 plane handles to move, resize and rotate the sticker. Choose a scene object to
 preview its mesh; a skinned mesh uses a snapshot of its current pose.
@@ -38,8 +41,10 @@ provide motion data. Build a graph containing a connected Avatar Motion node,
 assign its generated material, then open **Create → Create avatar motion driver**.
 Choose the avatar root and renderer. Generate a standalone controller for an
 otherwise empty FX slot, or add motion layers to the existing FX controller.
-The generated controller remains an asset dependency after adding its layers to
-an existing FX controller; keep both assets. The tool supports Undo for the merge.
+Alpha.7 copies the generated motion layers, states, trees and clips into the
+existing FX controller. New merges are self-contained and support Undo/Redo.
+Older alpha.6 merges still need their original generated controller; keep it
+unless you replace those motion layers. Ambiguous renderer paths are rejected.
 Keep existing avatar FX layers: do not replace a populated controller.
 
 The driver uses native Unity blend trees and constant clips, with no custom

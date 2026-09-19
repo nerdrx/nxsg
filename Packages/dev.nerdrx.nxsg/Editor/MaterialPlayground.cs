@@ -94,6 +94,7 @@ namespace NXSG.Editor
         private void SetMaterial(Material material)
         {
             if(_ownedGraph!=null && material!=_ownedGraph.Material){_ownedGraph.Dispose();_ownedGraph=null;}
+            _lastImage=null; _cpuMs=0; _gpuMs="Unavailable";
             _sourceMaterial = material;
             Destroy(_previewMaterial);
             _previewMaterial = material == null ? null : new Material(material) { name = "NXSG Preview (temporary)" };
@@ -195,6 +196,7 @@ namespace NXSG.Editor
         private void DrawControls()
         {
             EditorGUILayout.LabelField("Preview", EditorStyles.boldLabel);
+            if(GUILayout.Button(new GUIContent("Reset preview controls","Reset time, playback, lighting, AudioLink and motion; keep A/B snapshots")))ResetControls();
             using (new EditorGUILayout.HorizontalScope())
             {
                 var shape = (Shape)EditorGUILayout.EnumPopup("Shape", _shape);
@@ -208,7 +210,8 @@ namespace NXSG.Editor
                 _loop = GUILayout.Toggle(_loop, "Loop", GUILayout.Width(55));
                 _speed = EditorGUILayout.Slider("Speed", _speed, 0, 4);
             }
-            _duration = EditorGUILayout.FloatField("Duration (s)", Mathf.Max(.01f, _duration));
+            _duration = EditorGUILayout.FloatField("Duration (s)", _duration);
+            if(float.IsNaN(_duration)||float.IsInfinity(_duration)||_duration<.01f)_duration=.01f;
             _time = EditorGUILayout.Slider("Time (s)", _time, 0, _duration);
             EditorGUILayout.LabelField(new GUIContent("CPU preview: " + _cpuMs.ToString("0.00") + " ms · GPU editor frame: " + _gpuMs,"CPU timing covers preview rendering on the editor thread. GPU timing is for the whole editor frame, not this material."),EditorStyles.wordWrappedMiniLabel);
             EditorGUILayout.Space(3);
@@ -245,6 +248,16 @@ namespace NXSG.Editor
             }
         }
 
+        private void ResetControls()
+        {
+            _time=0;_speed=1;_duration=10;_playing=true;_loop=true;
+            _lighting=Lighting.Studio;_shape=Shape.Sphere;_mesh=null;
+            _audioEnabled=false;_audioValue=0;_motionVelocity=Vector3.zero;
+            _lastTick=EditorApplication.timeSinceStartup;_lastImage=null;
+            if(_previewMaterial!=null)ApplyPreviewUniforms(_previewMaterial);
+            Repaint();
+        }
+
         private void ApplyPreviewUniforms(Material material)
         {
             PreviewClock.Apply(material, _time);
@@ -257,7 +270,7 @@ namespace NXSG.Editor
 
         private void Capture(string name)
         {
-            if (_previewMaterial == null || _lastImage == null) { _status = "Assign material before snapshot."; return; }
+            if (_previewMaterial == null || _lastImage == null) { _status = _previewMaterial==null ? "Assign a material before taking a snapshot." : "Waiting for the new preview frame. Try the snapshot again."; return; }
             var image = CaptureImage(_lastImage, name);
             foreach (var old in _slots) if (old.Name == name) { Destroy(old.Image); }
             _slots.RemoveAll(slot => slot.Name == name);

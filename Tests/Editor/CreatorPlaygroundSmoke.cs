@@ -49,6 +49,14 @@ namespace NXSG.Editor
                 if (_source.color != Color.red) throw new InvalidOperationException("Preview changed source material.");
                 var capture=System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("gamescopectl","screenshot /tmp/nxsg-creator-playground.png"){UseShellExecute=false});
                 capture.WaitForExit(5000);
+                var flags=BindingFlags.NonPublic|BindingFlags.Instance;
+                typeof(MaterialPlayground).GetMethod("SetMaterial",flags).Invoke(_window,new object[]{_source});
+                if(GetField("_lastImage")!=null)throw new Exception("Material switch retained stale rendered image");
+                InvokeCapture("B");if(slots.Count!=1)throw new Exception("Snapshot captured previous material before fresh repaint");
+                typeof(MaterialPlayground).GetField("_motionVelocity",flags).SetValue(_window,new Vector3(4,3,2));
+                typeof(MaterialPlayground).GetField("_time",flags).SetValue(_window,7f);
+                typeof(MaterialPlayground).GetMethod("ResetControls",flags).Invoke(_window,null);
+                if((Vector3)GetField("_motionVelocity")!=Vector3.zero || (float)GetField("_time")!=0 || slots.Count!=1)throw new Exception("Reset controls failed or discarded comparison snapshot");
                 _window.Close();
                 if (_window != null) throw new InvalidOperationException("Preview window did not close.");
                 UnityEngine.Object.DestroyImmediate(_source);

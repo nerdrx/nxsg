@@ -40,7 +40,7 @@ namespace NXSG.Editor
                 SetStatus("Select a Sticker node first.");
                 return;
             }
-            EffectHandlesWindow.Open(node.Id, () => this != null ? graph : null, (name, action) => { if(this != null) Edit(name, action); });
+            EffectHandlesWindow.Open(node.Id, () => this != null ? graph : null, (name, action) => { if(this != null) Edit(name, action); }, () => this != null ? contextMaterial : null);
         }
     }
 
@@ -49,6 +49,9 @@ namespace NXSG.Editor
     {
         const float Handle = 9f;
         string nodeId;
+        string graphId;
+        string previewError;
+        Func<Material> materialProvider;
         Func<ShaderGraph> graphProvider;
         Action<string, Action> edit;
         GraphPreview preview;
@@ -70,10 +73,11 @@ namespace NXSG.Editor
         string previewHash;
         Matrix4x4 MeshMatrix => Matrix4x4.Rotate(Quaternion.Euler(orbit.y,orbit.x,0))*Matrix4x4.Translate(-previewMesh.bounds.center);
 
-        public static EffectHandlesWindow Open(string nodeId, Func<ShaderGraph> graphProvider, Action<string, Action> edit)
+        public static EffectHandlesWindow Open(string nodeId, Func<ShaderGraph> graphProvider, Action<string, Action> edit, Func<Material> materialProvider = null)
         {
             var window = CreateInstance<EffectHandlesWindow>();
             window.nodeId = nodeId; window.graphProvider = graphProvider; window.edit = edit;
+            window.graphId = graphProvider()?.GraphId; window.materialProvider = materialProvider;
             window.titleContent = new GUIContent("NXSG Effect Handles");
             window.minSize = new Vector2(420, 440);
             window.ShowUtility();
@@ -89,10 +93,17 @@ namespace NXSG.Editor
 
         void RebuildPreview()
         {
-            if (preview != null) preview.Dispose();
-            preview = null;
-            try { var graph = Graph; if (graph != null) { preview = GraphPreview.Create(graph, null); previewHash = GraphJson.ComputeSemanticHash(graph); } }
-            catch (Exception exception) { Debug.LogWarning("NXSG effect preview unavailable: " + exception.Message); }
+            var graph=Graph;
+            if(graph==null)return;
+            // Remember failed revisions too: retry only after another edit, not every repaint.
+            previewHash=GraphJson.ComputeSemanticHash(graph);
+            try
+            {
+                var next=GraphPreview.Create(graph,materialProvider?.Invoke());
+                if(preview!=null)preview.Dispose();
+                preview=next;previewError=null;
+            }
+            catch(Exception exception) { previewError=exception.Message; }
         }
 
         void OnGUI()
@@ -100,6 +111,14 @@ namespace NXSG.Editor
             if(CurrentNode()==null) { EditorGUILayout.HelpBox("The graph or Sticker node is no longer open.",MessageType.Info); return; }
             RefreshRawUvFlag();
             EditorGUILayout.LabelField("Sticker placement", EditorStyles.boldLabel);
+            using(new EditorGUILayout.HorizontalScope())
+            {
+                if(GUILayout.Button(new GUIContent("Undo","Undo the latest graph edit")))Undo.PerformUndo();
+                if(GUILayout.Button(new GUIContent("Redo","Redo the latest graph edit")))Undo.PerformRedo();
+                if(GUILayout.Button(new GUIContent("Center sticker","Reset position and rotation; keep size")))Apply("Center sticker",Vector2.zero,ReadVector("size",Vector2.one),0);
+                if(GUILayout.Button(new GUIContent("Reset view","Reset mesh orbit")))orbit=new Vector2(25,0);
+            }
+            if(!string.IsNullOrEmpty(previewError))EditorGUILayout.HelpBox("Preview needs attention: "+previewError+(preview!=null?" Showing the last successful preview.":""),MessageType.Warning);
             using (new EditorGUILayout.HorizontalScope(EditorStyles.toolbar))
             {
                 meshMode = GUILayout.Toggle(meshMode, "Mesh", EditorStyles.toolbarButton);
@@ -107,19 +126,21 @@ namespace NXSG.Editor
                 var picked = (GameObject)EditorGUILayout.ObjectField(meshSource, typeof(GameObject), true, GUILayout.Width(220));
                 if (picked != meshSource) { meshSource = picked; RefreshMesh(); }
             }
-            EditorGUILayout.HelpBox(meshMode ? (rawUv ? "Click mesh to place from UV0. Right-drag to orbit. Use UV plane to resize and rotate." : "Rendered mesh preview: connected UV mapping is not raw UV0, so mesh picking is disabled.") : "UV preview plane: handles edit mesh UV placement. This is not a perspective mesh surface preview.", MessageType.Info);
+            EditorGUILayout.HelpBox(meshMode ? (rawUv ? "Click mesh to place from UV0. Right-drag to orbit. Use UV plane to resize and rotate." : "Rendered mesh preview: connected UV mapping is not raw UV0, so mesh picking is disabled.") : "Drag the outline to move. Corners resize; the orange handle rotates. Escape cancels.", MessageType.Info);
             var rect = GUILayoutUtility.GetRect(1, 1, GUILayout.ExpandWidth(true), GUILayout.ExpandHeight(true));
             rect = FitSquare(rect, 12);
             previewRect = rect;
             EditorGUI.DrawRect(rect, new Color(.08f, .08f, .09f));
             if (meshMode) { DrawMeshPreview(rect); if(Event.current.type==EventType.MouseDrag && Event.current.button==1 && rect.Contains(Event.current.mousePosition)) { orbit += Event.current.delta; Event.current.Use(); Repaint(); } } else { DrawPlanePreview(rect); DrawHandles(rect); HandleInput(rect); }
             if (meshMode && rawUv && Event.current.type == EventType.MouseDown && Event.current.button == 0 && rect.Contains(Event.current.mousePosition)) PickMesh(rect, Event.current.mousePosition);
-            EditorGUILayout.LabelField("Position", ReadVector("position", Vector2.zero).ToString("F3"));
-            EditorGUILayout.LabelField("Size", ReadVector("size", Vector2.one).ToString("F3"));
-            EditorGUILayout.LabelField("Rotation", ReadFloat("rotation", 0).ToString("F1") + "°");
+            EditorGUI.BeginChangeCheck();
+            var position=EditorGUILayout.Vector2Field("Position (UV offset)",ReadVector("position",Vector2.zero));
+            var size=EditorGUILayout.Vector2Field("Size (UV)",ReadVector("size",Vector2.one));
+            var rotation=EditorGUILayout.FloatField("Rotation (degrees)",ReadFloat("rotation",0));
+            if(EditorGUI.EndChangeCheck())Apply("Change sticker placement",position,EffectHandlesMath.ClampSize(size),rotation);
         }
 
-        ShaderGraph Graph { get { return graphProvider == null ? null : graphProvider(); } }
+        ShaderGraph Graph { get { var current=graphProvider?.Invoke(); return current?.GraphId==graphId ? current : null; } }
         GraphNode CurrentNode() { var graph = Graph; return graph == null ? null : graph.Nodes.FirstOrDefault(value => value.Id == nodeId && value.Operation == "core.sticker"); }
         void EnsureMeshPreview() { if (meshPreview != null) return; meshPreview = new PreviewRenderUtility(); meshPreview.cameraFieldOfView = 30; meshPreview.camera.nearClipPlane = .01f; meshPreview.camera.farClipPlane = 100; RefreshMesh(); }
         void RefreshMesh()
@@ -181,7 +202,7 @@ namespace NXSG.Editor
         static Rect FitSquare(Rect value, float inset)
         {
             value.x += inset; value.y += inset; value.width -= inset * 2; value.height -= inset * 2;
-            var side = Mathf.Min(value.width, value.height);
+            var side = Mathf.Max(1,Mathf.Min(value.width, value.height));
             return new Rect(value.center.x - side * .5f, value.center.y - side * .5f, side, side);
         }
 
@@ -215,6 +236,12 @@ namespace NXSG.Editor
                 else if (EffectHandlesMath.PointInRotatedRect(evt.mousePosition, corners)) dragMode = 1;
                 if (dragMode != 0) { dragStart = evt.mousePosition; startPosition = position; startSize = size; startRotation = rotation; Undo.IncrementCurrentGroup(); dragUndoGroup = Undo.GetCurrentGroup(); GUIUtility.hotControl = GUIUtility.GetControlID(FocusType.Passive); evt.Use(); }
             }
+            if(evt.type==EventType.KeyDown && evt.keyCode==KeyCode.Escape && dragMode!=0)
+            {
+                Apply("Cancel sticker drag",startPosition,startSize,startRotation);
+                if(dragUndoGroup>=0)Undo.CollapseUndoOperations(dragUndoGroup);
+                dragUndoGroup=-1;dragMode=0;GUIUtility.hotControl=0;evt.Use();Repaint();return;
+            }
             if (evt.type == EventType.MouseDrag && dragMode != 0)
             {
                 var delta = new Vector2((evt.mousePosition.x - dragStart.x) / canvas.width, -(evt.mousePosition.y - dragStart.y) / canvas.height);
@@ -233,11 +260,13 @@ namespace NXSG.Editor
 
         void Apply(string name, Vector2 position, Vector2 size, float rotation)
         {
-            if(CurrentNode()==null)return;
+            if(CurrentNode()==null || !Finite(position.x)||!Finite(position.y)||!Finite(size.x)||!Finite(size.y)||!Finite(rotation))return;
             var p = position; var id = nodeId;
             edit(name, () => { var graph = Graph; var node = graph == null ? null : graph.Nodes.FirstOrDefault(value => value.Id == id); if (node == null) return; node.Properties["position"] = new JArray(p.x, p.y); node.Properties["size"] = new JArray(size.x, size.y); node.Properties["rotation"] = rotation; });
             previewDue = EditorApplication.timeSinceStartup + .15;
         }
+
+        static bool Finite(float value) { return !float.IsNaN(value)&&!float.IsInfinity(value); }
 
         Vector2 ReadVector(string property, Vector2 fallback)
         {

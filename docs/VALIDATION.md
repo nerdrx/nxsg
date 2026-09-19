@@ -273,3 +273,22 @@ SHA-256 `7d8634c84193f1c08669a97697f45f08fa11fc3550c939d6faa14fc1a798e14f`.
 The extracted archive was installed in the isolated Unity fixture and
 `MotionEffectsSmoke` passed again. The fixture was restored to the source package
 afterward.
+
+## Bug hunting and interaction polish — 2026-09-19
+
+Alpha.7 extends the existing hidden Unity checks:
+
+- `EffectHandlesSmoke` exercises Escape cancellation, last-successful-preview
+  retention, suppression of unchanged failed recompiles, and graph identity
+  isolation, alongside actual mouse placement/drag/resize/rotation/Undo.
+- `MotionDriverSmoke` checks source-controller immutability, merge Undo/Redo,
+  save/reload, source deletion, and native playback from the self-contained
+  merged controller. Duplicate sibling names and slash-containing transform
+  names are rejected before building.
+- `CreatorPlaygroundSmoke` verifies material switching invalidates the previous
+  rendered frame, snapshots cannot capture that stale frame, and reset controls
+  preserve existing comparison snapshots.
+
+All passed in the pinned Linux graphics fixture. Portable checks also passed.
+
+![Placement controls in Unity](evidence/2026-09-19-placement-polish.png)
