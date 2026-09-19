@@ -1197,7 +1197,11 @@ namespace NXSG.Editor
 
         void AddNode(string operation)
         {
-            Edit("Add " + Title(operation), () => CreateNode(operation, new Vector2(82 + graph.Nodes.Count * 12, 112 + graph.Nodes.Count * 12)));
+            var viewport = canvas.contentRect.size;
+            if (!(viewport.x > 0 && viewport.y > 0)) viewport = position.size;
+            // Canvas coordinates exclude the sidebar; undo the current view transform.
+            var spawn = (viewport * .5f - pan) / zoom - new Vector2(87.5f, 40);
+            Edit("Add " + Title(operation), () => CreateNode(operation, spawn));
         }
 
         void Connect(string target, string port, bool output)
