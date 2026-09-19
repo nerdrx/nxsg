@@ -317,3 +317,8 @@ Self-shadowing off / High:
 The existing `FurFinRenderSmoke` and portable checks also passed. This tests
 local directional occlusion, not exact strand geometry or cross-body fur
 shadows. Windows, headset and live VRChat validation remain open.
+
+The downloaded alpha.8 archive matched SHA-256
+`0a1d50329e14f9c284284e90ae466ffceb65bfcfd6d6ee32f82ff9123a53aaca`.
+Installed from that archive, `FurShadowRenderSmoke` passed again. The fixture
+was then restored to the source package.
