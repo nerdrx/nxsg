@@ -15,7 +15,7 @@ public static class FeatureNodesEditorSmoke
 {
     static readonly string[] Operations =
     {
-        "fur", "parallaxUV", "parallaxOcclusion", "furMask", "flowMapUV", "ditherMask", "truchet", "weave", "scales", "dots",
+        "tessellation", "fur", "parallaxUV", "parallaxOcclusion", "furMask", "flowMapUV", "ditherMask", "truchet", "weave", "scales", "dots",
         "scratches", "cracks", "woodRings", "marble", "clouds", "sparkleMask", "scanlines", "glitchUV", "pixelateUV", "kaleidoscopeUV",
         "swapUV", "spherizeUV", "pinchUV", "barrelUV", "chromaticTexture", "normalBlend", "normalStrength", "normalFromHeight",
         "reflectionDirection", "objectScale", "objectOrigin", "objectRandom", "distanceToPoint", "sphereMask", "boxVolumeMask",
@@ -52,6 +52,7 @@ public static class FeatureNodesEditorSmoke
         Graph.Layout.Nodes["source"] = new GraphNodeLayout { X = 40, Y = 40 };
         Graph.Layout.Nodes["output"] = new GraphNodeLayout { X = 1600, Y = 900 };
         Graph.Connections.Add(new GraphConnection { Id = "source-height", From = new GraphPortRef { NodeId = "source", PortId = "value" }, To = new GraphPortRef { NodeId = "parallaxUV", PortId = "height" } });
+        Graph.Connections.Add(new GraphConnection { Id = "source-tess-height", From = new GraphPortRef { NodeId = "source", PortId = "value" }, To = new GraphPortRef { NodeId = "tessellation", PortId = "height" } });
         ((GraphSession)Field("session")).json = GraphJson.Serialize(Graph, true);
         Undo.ClearUndo((GraphSession)Field("session"));
         Invoke("Rebuild");
@@ -86,6 +87,9 @@ public static class FeatureNodesEditorSmoke
         var height = Inspector.Query<FloatField>().ToList().Single(field => field.label == "Height");
         Require(!height.enabledSelf, "Connected parallax height control stayed enabled");
 
+        Invoke("SelectNode", "tessellation", false);
+        Require(Inspector.Query<IntegerField>().ToList().Single(field => field.label == "Tessellation factor").value == 8, "Tessellation factor default missing");
+        Require(!Inspector.Query<FloatField>().ToList().Single(field => field.label == "Height").enabledSelf, "Connected tessellation height stayed enabled");
         var library = Inspector.Q<VisualElement>("node-library");
         var search = library.Q<ToolbarSearchField>("node-search");
         search.value = "parallax";
@@ -140,7 +144,7 @@ public static class FeatureNodesEditorSmoke
             else if (phase == 2) { CheckSelectedFramingAndSearchFocus(); phase = 3; }
             else
             {
-                Debug.Log("NXSG FEATURE NODES EDITOR SMOKE PASSED: 40 node inspectors, descriptions, texture controls, defaults, connected disable, and search metadata");
+                Debug.Log("NXSG FEATURE NODES EDITOR SMOKE PASSED: 41 node inspectors, descriptions, texture controls, defaults, connected disable, and search metadata");
                 EditorApplication.update -= Tick; window.DiscardChanges(); window.Close(); EditorApplication.Exit(0);
             }
         }

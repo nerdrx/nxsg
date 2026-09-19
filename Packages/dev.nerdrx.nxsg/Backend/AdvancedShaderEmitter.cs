@@ -35,7 +35,7 @@ namespace NXSG.Backend
         public static bool IsAdvanced(ShaderGraph graph)
         {
             if (graph?.Nodes == null) return false;
-            var ops = new HashSet<string> { "core.unlitSurface", "core.pbrSurface", "core.particleSurface", "core.particleColor", "core.surfaceParticles", "core.fur", "core.fresnel", "core.colorRamp", "core.layer", "core.sticker", "core.dissolve", "core.flipbook", "core.uvDistort", "core.vertexMotion", "core.audioLink", "core.shell", "core.normalMap", "core.previewVector", "core.musgrave", "core.voronoi", "core.checker", "core.wave", "core.gradient", "core.uvTile", "core.posterize", "core.absolute", "core.power", "core.sqrt", "core.sine", "core.cosine", "core.fraction", "core.floor", "core.ceil", "core.round", "core.step", "core.smoothstep", "core.remap", "core.pingPong", "core.splitColor", "core.combineColor", "core.luminance", "core.contrast", "core.saturation", "core.splitUV", "core.combineUV", "core.position", "core.normalDirection", "core.viewDirection", "core.vertexColor", "core.cameraDistance", "core.screenUV", "core.circleMask", "core.boxMask", "core.polygonMask", "core.starMask", "core.radialRays", "core.spiral", "core.brick", "core.hexGrid", "core.triplanarTexture", "core.matcapTexture", "core.rimGlow", "core.heightMask", "core.slopeMask", "core.distanceFade", "core.wireframe" };
+            var ops = new HashSet<string> { "core.unlitSurface", "core.pbrSurface", "core.particleSurface", "core.particleColor", "core.surfaceParticles", "core.fur", "core.tessellation", "core.fresnel", "core.colorRamp", "core.layer", "core.sticker", "core.dissolve", "core.flipbook", "core.uvDistort", "core.vertexMotion", "core.audioLink", "core.shell", "core.normalMap", "core.previewVector", "core.musgrave", "core.voronoi", "core.checker", "core.wave", "core.gradient", "core.uvTile", "core.posterize", "core.absolute", "core.power", "core.sqrt", "core.sine", "core.cosine", "core.fraction", "core.floor", "core.ceil", "core.round", "core.step", "core.smoothstep", "core.remap", "core.pingPong", "core.splitColor", "core.combineColor", "core.luminance", "core.contrast", "core.saturation", "core.splitUV", "core.combineUV", "core.position", "core.normalDirection", "core.viewDirection", "core.vertexColor", "core.cameraDistance", "core.screenUV", "core.circleMask", "core.boxMask", "core.polygonMask", "core.starMask", "core.radialRays", "core.spiral", "core.brick", "core.hexGrid", "core.triplanarTexture", "core.matcapTexture", "core.rimGlow", "core.heightMask", "core.slopeMask", "core.distanceFade", "core.wireframe" };
             // Only reachable effects select the extended lowering; disconnected nodes never change shading.
             var connected = new HashSet<string>();
             var queue = new Queue<string>(graph.Nodes.Where(n => n?.Operation == "core.output").Select(n => n.Id));
@@ -95,8 +95,11 @@ namespace NXSG.Backend
             if (root == null) throw new InvalidOperationException("Connect a Surface to Output.");
             var particle = root.Operation == "core.particleSurface";
             var surfaceParticles = root.Operation == "core.surfaceParticles";
+            var tessNode = root.Operation == "core.tessellation" ? root : null;
+            if (surfaceParticles && Source(root, "base")?.Operation == "core.tessellation") throw new InvalidOperationException("Tessellation and Surface Particles cannot be combined in this version. Use a regular surface as Base.");
+            if (tessNode != null && Source(tessNode, "base")?.Operation == "core.fur") throw new InvalidOperationException("Tessellation cannot wrap Fur; connect Tessellation to Toon, Unlit or PBR.");
             GraphNode furNode = root.Operation == "core.fur" ? root : null;
-            var baseRoot = root.Operation == "core.fur" ? Source(root, "base") : surfaceParticles ? Source(root, "base") : root;
+            var baseRoot = tessNode != null ? Source(tessNode, "base") : root.Operation == "core.fur" ? Source(root, "base") : surfaceParticles ? Source(root, "base") : root;
             if (surfaceParticles && baseRoot != null && baseRoot.Operation == "core.fur") { furNode = baseRoot; baseRoot = Source(baseRoot, "base"); }
             if (surfaceParticles && baseRoot == null) throw new InvalidOperationException("Connect a surface to Surface Particles Base.");
             if (furNode != null && baseRoot == null) throw new InvalidOperationException("Connect a surface to Fur Base.");
@@ -153,7 +156,7 @@ namespace NXSG.Backend
             for (var i = 0; i < passes.Count; i++) AddToonProperties(b, passes[i].Surface, i);
             var passCode = new StringBuilder();
             if (particle) passCode.Append(ParticlePass(root));
-            else for (var i = 0; i < passes.Count; i++) passCode.Append(Pass(passes[i].Surface, i, passes[i].Offset));
+            else for (var i = 0; i < passes.Count; i++) passCode.Append(Pass(passes[i].Surface, i, passes[i].Offset, tessNode));
             if (furNode != null)
             {
                 passCode.Append(FurShader.Pass(
@@ -162,7 +165,7 @@ namespace NXSG.Backend
             if (surfaceParticles) passCode.Append(SurfaceParticleShader.Pass(
                 Scalar(root,"mask",1,true), Input(root,"albedo","float4(1,1,1,1)","color"), Input(root,"emission","float4(0,0,0,1)","color"), Scalar(root,"opacity",1), Input(root,"time","_Time.y","float",true),
                 Prop(root,"density",.1), root.Properties["emissionRate"] == null ? "1.0/max(" + Prop(root,"lifetime",2) + ",0.0001)" : Prop(root,"emissionRate",0), Prop(root,"size",.03), Prop(root,"lifetime",2), Prop(root,"speed",.2), Prop(root,"gravity",0), Prop(root,"spread",.05), IntProp(root,"blendMode",1,0,1), IntProp(root,"sourceUV",0,0,1) == 1));
-            var shadowPass = !particle && options.IncludeShadowCaster ? Shadow(passes[0].Surface, passes[0].Offset) : "";
+            var shadowPass = !particle && options.IncludeShadowCaster ? Shadow(passes[0].Surface, passes[0].Offset, tessNode) : "";
             b.AppendLine("}\nSubShader {\nTags { \"RenderType\"=\"" + (particle ? "Transparent" : "Opaque") + "\" \"Queue\"=\"" + (particle ? "Transparent" : "Geometry") + "\"" + (surfaceParticles ? " \"DisableBatching\"=\"True\"" : "") + (fallback == null ? "" : " \"VRCFallback\"=\"" + fallback + "\"") + " }");
             b.AppendLine("CGINCLUDE\n#include \"UnityCG.cginc\"\n#include \"Lighting.cginc\"\n#include \"AutoLight.cginc\"\n#include \"UnityPBSLighting.cginc\"");
             b.AppendLine("float4 _Color;");
@@ -180,6 +183,7 @@ namespace NXSG.Backend
                 diagnostics.Add(new Diagnostic(DiagnosticSeverity.Warning, "cost.procedural", "$", "Fractal, cellular and 4D patterns cost more than 2D noise; start with few detail layers, especially across shells."));
             if (live.Any(id => nodes[id].Operation == "core.vertexMotion")) diagnostics.Add(new Diagnostic(DiagnosticSeverity.Warning, "bounds.displacement", "$", "Vertex displacement requires mesh/SkinnedMeshRenderer bounds large enough for the motion."));
             if (surfaceParticles) diagnostics.Add(new Diagnostic(DiagnosticSeverity.Warning, "cost.surfaceParticles", root.Id, "An extra PC geometry pass processes every source triangle; density controls selected triangles, not geometry work. Four particles are emitted per generated subtriangle; high rates use tessellation up to level 64 and approximate the requested source-triangle rate. Particles follow the current pose; expand renderer bounds for outward motion. Stereo and VRChat client behavior need validation."));
+            if (tessNode != null) diagnostics.Add(new Diagnostic(DiagnosticSeverity.Warning, "cost.tessellation", tessNode.Id, "Adaptive fractional-odd tessellation is PC-only. Detail factor is capped at 63; triangle cost grows roughly quadratically. Expand renderer bounds for height displacement; mobile, Fur composition and Surface Particles Base are unsupported."));
             if (furNode != null) diagnostics.Add(new Diagnostic(DiagnosticSeverity.Warning, "cost.fur", furNode.Id, "Fur emits " + IntProp(furNode, "layers", 16, 4, 32) + " transparent shell passes per view. Distance LOD reduces active shell coverage but does not remove draw calls; expand renderer bounds for strand length."));
             if (particle && root.Properties["softDistance"] != null && (double)root.Properties["softDistance"] > 0)
                 diagnostics.Add(new Diagnostic(DiagnosticSeverity.Warning, "cost.particleDepth", root.Id, "Soft intersections require a camera depth texture. Set soft distance to 0 when unavailable; transparent overdraw and depth sampling add cost."));
@@ -484,9 +488,10 @@ namespace NXSG.Backend
 
         const string WireGeometry = "[maxvertexcount(3)] void geomWire(triangle NXInput tri[3], inout TriangleStream<NXInput> stream) { NXInput o=tri[0]; o.wireBary=float3(1,0,0); stream.Append(o); o=tri[1]; o.wireBary=float3(0,1,0); stream.Append(o); o=tri[2]; o.wireBary=float3(0,0,1); stream.Append(o); stream.RestartStrip(); }";
 
-        string Pass(GraphNode surface, int passIndex, string offset)
+        string Pass(GraphNode surface, int passIndex, string offset, GraphNode tessellation)
         {
             var displacement = Scalar(surface,"displacement",0,true);
+            var tessHeight = tessellation == null ? "0" : "(" + Scalar(tessellation, "height", .5, true) + "-" + Prop(tessellation, "reference", .5) + ")*" + Prop(tessellation, "strength", .1);
             var shell = passIndex > 0;
             var color = Input(surface,"albedo","float4(1,1,1,1)","color");
             var emission = Input(surface,"emission","float4(0,0,0,1)","color");
@@ -495,8 +500,10 @@ namespace NXSG.Backend
             var metallic = Scalar(surface,"metallic",0);
             var roughness = Scalar(surface,"roughness",.5);
             var threshold=ToonSetting(surface,"threshold",passIndex);var softness=ToonSetting(surface,"softness",passIndex);var shadow=ToonSetting(surface,"shadowStrength",passIndex);
-            var b=new StringBuilder("Pass {\nName \""+(shell?(passIndex == 1 ? "Shell" : "Shell" + passIndex.ToString(CultureInfo.InvariantCulture)):"ForwardBase")+"\"\nTags { \"LightMode\"=\""+(shell?"Always":"ForwardBase")+"\" }\nCull Back\n"+(shell?"ZWrite Off\nBlend SrcAlpha OneMinusSrcAlpha":"ZWrite On")+"\nCGPROGRAM\n#pragma target 3.5\n#pragma vertex vert\n#pragma fragment frag\n"+(wireframeEnabled?"#pragma geometry geomWire\n":"")+"#pragma multi_compile_fwdbase\n#pragma multi_compile_instancing\n");
-            b.AppendLine("NXInput vert(NXApp v) { UNITY_SETUP_INSTANCE_ID(v); NXInput input=NX_Make(v); v.vertex.xyz+=v.normal*("+displacement+"+"+offset+"); NXInput o=NX_Make(v); o.originalLocal=input.originalLocal; o.originalWs=input.originalWs; UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o); TRANSFER_SHADOW(o); return o; }");
+            var tess = tessellation != null;
+            var b=new StringBuilder("Pass {\nName \""+(shell?(passIndex == 1 ? "Shell" : "Shell" + passIndex.ToString(CultureInfo.InvariantCulture)):"ForwardBase")+"\"\nTags { \"LightMode\"=\""+(shell?"Always":"ForwardBase")+"\" }\nCull Back\n"+(shell?"ZWrite Off\nBlend SrcAlpha OneMinusSrcAlpha":"ZWrite On")+"\nCGPROGRAM\n#pragma target "+(tess?"4.6":wireframeEnabled?"4.0":"3.5")+"\n#pragma vertex "+(tess?"vertTess":"vert")+"\n"+(tess?"#pragma hull hullTess\n#pragma domain domainTess\n":"")+"#pragma fragment frag\n"+(wireframeEnabled?"#pragma geometry geomWire\n":"")+"#pragma multi_compile_fwdbase\n#pragma multi_compile_instancing\n");
+            b.AppendLine("NXInput vert(NXApp v) { UNITY_SETUP_INSTANCE_ID(v); NXInput input=NX_Make(v); v.vertex.xyz+=v.normal*("+displacement+"+"+offset+"+"+tessHeight+"); NXInput o=NX_Make(v); o.originalLocal=input.originalLocal; o.originalWs=input.originalWs; UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o); TRANSFER_SHADOW(o); return o; }");
+            if (tess) b.AppendLine(TessellationShader.Forward(Prop(tessellation,"factor",8), Prop(tessellation,"minFactor",1), Prop(tessellation,"nearDistance",2), Prop(tessellation,"farDistance",15), Prop(tessellation,"smoothing",0)));
             if (wireframeEnabled) b.AppendLine(WireGeometry);
             b.AppendLine("float4 frag(NXInput input):SV_Target { UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input); float4 c="+color+"*_Color; float3 emission=("+emission+").rgb; float alpha=saturate(c.a*"+opacity+");");
             if(!shell)b.AppendLine("clip(alpha-"+Prop(surface,"cutoff",.001)+");");
@@ -536,14 +543,22 @@ namespace NXSG.Backend
             b.AppendLine(" return float4(c.rgb+e,alpha); }\nENDCG\n}");
             return b.ToString();
         }
-        string Shadow(GraphNode surface, string offset)
+        string Shadow(GraphNode surface, string offset, GraphNode tessellation)
         {
             var displacement=Scalar(surface,"displacement",0,true);
+            var tessHeight = tessellation == null ? "0" : "(" + Scalar(tessellation, "height", .5, true) + "-" + Prop(tessellation, "reference", .5) + ")*" + Prop(tessellation, "strength", .1);
             var opacity=Scalar(surface,"opacity",1);
             var color=Input(surface,"albedo","float4(1,1,1,1)","color");
             var shader = "Pass {\nName \"ShadowCaster\"\nTags { \"LightMode\"=\"ShadowCaster\" }\nZWrite On\nCGPROGRAM\n#pragma target 3.5\n#pragma vertex vertShadow\n#pragma fragment fragShadow\n#pragma multi_compile_shadowcaster\n#pragma multi_compile_instancing\nstruct NXShadow { V2F_SHADOW_CASTER; float2 uv:TEXCOORD1; float3 ws:TEXCOORD2; float3 normal:TEXCOORD3; float3 local:TEXCOORD4; float2 uv1:TEXCOORD5; float2 uv2:TEXCOORD6; float2 uv3:TEXCOORD7; float3 originalWs:TEXCOORD8; float3 originalLocal:TEXCOORD9; float4 color:TEXCOORD10; UNITY_VERTEX_OUTPUT_STEREO };\nNXShadow vertShadow(NXApp v){UNITY_SETUP_INSTANCE_ID(v); NXInput input=NX_Make(v); v.vertex.xyz+=(v.normal*("+displacement+"+"+offset+")); NXShadow o; UNITY_INITIALIZE_OUTPUT(NXShadow,o); UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o); o.uv=v.uv; o.uv1=v.uv1; o.uv2=v.uv2; o.uv3=v.uv3; o.originalWs=input.originalWs; o.originalLocal=input.originalLocal; o.color=input.color; o.ws=mul(unity_ObjectToWorld,v.vertex).xyz; o.normal=UnityObjectToWorldNormal(v.normal); o.local=v.vertex.xyz; TRANSFER_SHADOW_CASTER_NORMALOFFSET(o); return o;}\nfloat4 fragShadow(NXShadow i):SV_Target{UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i); NXInput input=(NXInput)0; input.uv=i.uv; input.uv1=i.uv1; input.uv2=i.uv2; input.uv3=i.uv3; input.originalWs=i.originalWs; input.originalLocal=i.originalLocal; input.color=i.color; input.ws=i.ws; input.n=i.normal; input.local=i.local; clip(("+color+").a*_Color.a*("+opacity+")-"+Prop(surface,"cutoff",.001)+"); SHADOW_CASTER_FRAGMENT(i);}\nENDCG\n}\n";
+            if (tessellation != null)
+            {
+                shader = shader.Replace("#pragma target 3.5", "#pragma target 4.6\n#pragma hull hullTess\n#pragma domain domainTess")
+                    .Replace("#pragma vertex vertShadow", "#pragma vertex vertTess")
+                    .Replace("v.normal*(" + displacement + "+" + offset + ")", "v.normal*(" + displacement + "+" + offset + "+" + tessHeight + ")");
+                shader = shader.Insert(shader.IndexOf("float4 fragShadow", StringComparison.Ordinal), TessellationShader.Shadow(Prop(tessellation,"factor",8), Prop(tessellation,"minFactor",1), Prop(tessellation,"nearDistance",2), Prop(tessellation,"farDistance",15), Prop(tessellation,"smoothing",0)));
+            }
             if (wireframeEnabled)
-                shader = shader.Replace("#pragma target 3.5", "#pragma target 4.0\n#pragma geometry geomWireShadow")
+                shader = shader.Replace("#pragma target 3.5", "#pragma target 4.0").Replace("#pragma fragment fragShadow", "#pragma fragment fragShadow\n#pragma geometry geomWireShadow")
                     .Replace("float4 color:TEXCOORD10;", "float4 color:TEXCOORD10; float3 wireBary:TEXCOORD11;")
                     .Replace("float4 fragShadow", WireGeometry.Replace("NXInput", "NXShadow").Replace("geomWire", "geomWireShadow") + "\nfloat4 fragShadow")
                     .Replace("input.uv=i.uv;", "input.wireBary=i.wireBary; input.uv=i.uv;");

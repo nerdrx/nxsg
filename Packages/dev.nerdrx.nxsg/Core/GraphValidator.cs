@@ -103,6 +103,22 @@ namespace NXSG.Core
                 if (node.Operation == "core.parallaxOcclusion") CheckIntegerRange(node.Properties["steps"], path + ".properties.steps", 4, 64, diagnostics);
                 if (node.Operation == "core.kaleidoscopeUV") CheckIntegerRange(node.Properties["segments"], path + ".properties.segments", 1, 64, diagnostics);
                 if (node.Operation == "core.stripes3D") CheckIntegerRange(node.Properties["axis"], path + ".properties.axis", 0, 2, diagnostics);
+                if (node.Operation == "core.tessellation")
+                {
+                    CheckIntegerRange(node.Properties["factor"], path + ".properties.factor", 1, 63, diagnostics);
+                    CheckIntegerRange(node.Properties["minFactor"], path + ".properties.minFactor", 1, 63, diagnostics);
+                    CheckRange(node.Properties["nearDistance"], path + ".properties.nearDistance", 0, double.MaxValue, diagnostics);
+                    CheckRange(node.Properties["farDistance"], path + ".properties.farDistance", 0, double.MaxValue, diagnostics);
+                    CheckRange(node.Properties["smoothing"], path + ".properties.smoothing", 0, 1, diagnostics);
+                    var minFactor = node.Properties["minFactor"] ?? new JValue(1);
+                    var factor = node.Properties["factor"] ?? new JValue(8);
+                    if (IsNumber(minFactor) && IsNumber(factor) && (double)minFactor > (double)factor)
+                        Add(diagnostics, DiagnosticSeverity.Error, "value.order", path + ".properties.minFactor", "Minimum tessellation factor cannot exceed factor.");
+                    var nearDistance = node.Properties["nearDistance"] ?? new JValue(2);
+                    var farDistance = node.Properties["farDistance"] ?? new JValue(15);
+                    if (IsNumber(nearDistance) && IsNumber(farDistance) && (double)farDistance <= (double)nearDistance)
+                        Add(diagnostics, DiagnosticSeverity.Error, "value.order", path + ".properties.farDistance", "Far distance must be greater than near distance.");
+                }
             }
 
             if (node.Operation == "core.constant" && node.Properties["valueType"] != null)

@@ -14,11 +14,11 @@ public static class EffectsBackendChecks
             var node=NodeCatalog.Create(op); node.Id="effect";
             if(op=="core.texture2D"||op=="core.sticker"||op=="core.triplanarTexture"||op=="core.matcapTexture"||op=="core.parallaxOcclusion"||op=="core.chromaticTexture") {node.Properties["resourceId"]="texture";graph.Resources.Add(new GraphResource {Id="texture",Kind="texture2D",Uri="builtin://white"});}
             graph.Nodes.Add(node);
-            if (op == "core.fur") { var baseNode = NodeCatalog.Create("core.unlitSurface"); baseNode.Id = "base"; graph.Nodes.Add(baseNode); Connect(graph,"base","surface","effect","base"); }
+            if (op == "core.fur" || op == "core.tessellation") { var baseNode = NodeCatalog.Create("core.unlitSurface"); baseNode.Id = "base"; graph.Nodes.Add(baseNode); Connect(graph,"base","surface","effect","base"); }
             var surface=NodeCatalog.Create("core.unlitSurface"); surface.Id="surface";graph.Nodes.Add(surface);
             var output=NodeCatalog.Create("core.output");output.Id="output";graph.Nodes.Add(output);
             var port=NodeCatalog.Ports(op,true).First();var type=NodeCatalog.PortType(node,port);
-            if(type=="surface") { if(op=="core.fur") Connect(graph,node.Id,port,"output","surface"); else { var color=NodeCatalog.Create("core.constant");color.Id="albedo";graph.Nodes.Add(color);Connect(graph,color.Id,"value",node.Id,"albedo");Connect(graph,node.Id,port,"output","surface"); } }
+            if(type=="surface") { if(op=="core.fur" || op=="core.tessellation") Connect(graph,node.Id,port,"output","surface"); else { var color=NodeCatalog.Create("core.constant");color.Id="albedo";graph.Nodes.Add(color);Connect(graph,color.Id,"value",node.Id,"albedo");Connect(graph,node.Id,port,"output","surface"); } }
             else
             {
                 if(type=="vector2")

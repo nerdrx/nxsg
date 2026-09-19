@@ -1,6 +1,6 @@
 # Built-in node pack
 
-The canvas now offers 129 visible nodes, plus hidden Parameter and Preview Vector helpers. Socket color indicates data type: yellow color, gray scalar, blue UV coordinates, cyan normals, green surface. Drag from either end; compatible-node menus and clipboard operations use the same core catalog.
+The canvas now offers 130 visible nodes, plus hidden Parameter and Preview Vector helpers. Socket color indicates data type: yellow color, gray scalar, blue UV coordinates, cyan normals, green surface. Drag from either end; compatible-node menus and clipboard operations use the same core catalog.
 
 ## New feature nodes
 
@@ -219,3 +219,7 @@ Wireframe outputs a mask; it does not force transparency on the whole material. 
 ![Visual-node GPU output montage](evidence/2026-09-18-visual-nodes.png)
 
 Montage rows, left to right: Position, Normal Direction, View Direction, Vertex Color, Camera Distance, Screen UVs, Circle Mask; Box Mask, Polygon Mask, Star Mask, Radial Rays, Spiral, Brick Pattern, Hex Grid; Triplanar Texture, Matcap Texture, Rim Glow, Height Mask, Slope Mask, Distance Fade, Wireframe. Black rim/slope tiles are expected for the flat camera-facing test quad; texture nodes use a white fixture texture.
+
+## Tessellation
+
+**Tessellation** takes a Base surface and numeric Height, then connects to Output. Detail factors 1–63, near/far distances, displacement strength, reference height and optional Phong smoothing control real GPU geometry. Toon, Unlit, PBR and Shell stacks are supported. [Usage, limits and sample](TESSELLATION.md).

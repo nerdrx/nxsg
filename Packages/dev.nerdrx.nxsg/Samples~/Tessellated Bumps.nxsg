@@ -1,0 +1,151 @@
+{
+  "format": "nxsg",
+  "schemaVersion": 1,
+  "graphId": "tessellated-bumps-example",
+  "nodes": [
+    {
+      "id": "uv",
+      "operation": "core.uv0",
+      "version": 1,
+      "properties": {}
+    },
+    {
+      "id": "noise",
+      "operation": "core.noise",
+      "version": 1,
+      "properties": {
+        "dimensions": 2,
+        "scale": 6,
+        "speed": 0
+      }
+    },
+    {
+      "id": "color",
+      "operation": "core.constant",
+      "version": 1,
+      "properties": {
+        "valueType": "color",
+        "value": [
+          0.16,
+          0.55,
+          0.8,
+          1
+        ]
+      }
+    },
+    {
+      "id": "surface",
+      "operation": "core.toonSurface",
+      "version": 1,
+      "properties": {}
+    },
+    {
+      "id": "tessellation",
+      "operation": "core.tessellation",
+      "version": 1,
+      "properties": {
+        "factor": 12,
+        "minFactor": 1,
+        "nearDistance": 2,
+        "farDistance": 15,
+        "height": 0.5,
+        "strength": 0.08,
+        "reference": 0.5,
+        "smoothing": 0
+      }
+    },
+    {
+      "id": "output",
+      "operation": "core.output",
+      "version": 1,
+      "properties": {}
+    }
+  ],
+  "connections": [
+    {
+      "id": "uv-noise",
+      "from": {
+        "nodeId": "uv",
+        "portId": "uv"
+      },
+      "to": {
+        "nodeId": "noise",
+        "portId": "uv"
+      }
+    },
+    {
+      "id": "noise-tessellation",
+      "from": {
+        "nodeId": "noise",
+        "portId": "value"
+      },
+      "to": {
+        "nodeId": "tessellation",
+        "portId": "height"
+      }
+    },
+    {
+      "id": "color-surface",
+      "from": {
+        "nodeId": "color",
+        "portId": "value"
+      },
+      "to": {
+        "nodeId": "surface",
+        "portId": "albedo"
+      }
+    },
+    {
+      "id": "surface-tessellation",
+      "from": {
+        "nodeId": "surface",
+        "portId": "surface"
+      },
+      "to": {
+        "nodeId": "tessellation",
+        "portId": "base"
+      }
+    },
+    {
+      "id": "tessellation-output",
+      "from": {
+        "nodeId": "tessellation",
+        "portId": "surface"
+      },
+      "to": {
+        "nodeId": "output",
+        "portId": "surface"
+      }
+    }
+  ],
+  "parameters": [],
+  "resources": [],
+  "layout": {
+    "nodes": {
+      "uv": {
+        "x": 20,
+        "y": 200
+      },
+      "noise": {
+        "x": 240,
+        "y": 200
+      },
+      "color": {
+        "x": 240,
+        "y": 20
+      },
+      "surface": {
+        "x": 460,
+        "y": 20
+      },
+      "tessellation": {
+        "x": 700,
+        "y": 40
+      },
+      "output": {
+        "x": 930,
+        "y": 40
+      }
+    }
+  }
+}

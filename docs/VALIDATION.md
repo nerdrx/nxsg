@@ -165,3 +165,22 @@ Graphics-enabled Unity 2022.3.22f1 on Linux, inside hidden Gamescope, passed:
 These are actual GPU checks, not VRChat client, stereo, Windows, or performance acceptance. Fur currently uses shell passes without fins or fur self-shadowing. POM changes sampled UVs without changing silhouettes.
 
 `FeatureNodesEditorSmoke` also passed all 40 inspectors, descriptions, texture controls, defaults, connected-field disabling, search metadata, whole-graph framing, selected-node framing and search focus. This caught and fixed the canvas transform origin: scaling now anchors at the top left, matching pan and framing calculations. These invoke UI actions and inspect layout; they do not establish physical keyboard reliability.
+
+## 2026-09-19: tessellation
+
+Portable checks passed catalog defaults, numeric bounds and distance ordering (including omitted defaults), graph round-trip, sample emission, deterministic/source-preserving emission and rejection of fragment derivatives used as height.
+
+`TessellationRenderSmoke` passed in Unity 2022.3.22f1, Linux OpenGLCore, hidden Gamescope:
+
+- A four-vertex quad with a circular height signal produces a changed silhouette at factor 16 versus factor 1.
+- A runtime height texture through Split Color displaces the tessellated mesh; zero strength restores the flat baseline.
+- A farther orthographic camera on the same viewing ray reduces adaptive detail to the factor-1 baseline.
+- Phong smoothing changes the silhouette of a mesh with curved vertex normals.
+- Unlit, Toon, PBR and Shell pass compilation succeeds at factor 63, including shadow passes and the instancing keyword. Tessellation combined with Wireframe compiles and renders.
+- Readback pixels are finite.
+
+![Actual tessellation silhouette comparison: factor 1 left, factor 16 right](evidence/2026-09-19-tessellation.png)
+
+`FeatureNodesEditorSmoke` passed the 41 feature inspectors, including Tessellation defaults, connected Height disabling, search, framing and focus. The full portable suite also passed.
+
+The screenshot is a real GPU capture of a coarse quad, not a modeled example. These checks do not establish performance, displaced shadow image parity, instanced draw correctness, skinned-avatar behavior, stereo/VRChat client acceptance or Windows compatibility. Fur/Surface Particles composition is explicitly unsupported; renderer bounds and seam continuity remain author responsibilities. See [usage and source references](TESSELLATION.md).

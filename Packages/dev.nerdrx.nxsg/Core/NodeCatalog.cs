@@ -304,7 +304,11 @@ namespace NXSG.Core
         }
         public static string Aliases(string operation)
         {
-            if (FeatureNodes.IsKnown(operation)) return operation.Replace("core.", "").Replace("UV", " uv").Replace("Mask", " mask");
+            if (FeatureNodes.IsKnown(operation))
+            {
+                if (operation == "core.tessellation") return "tessellation tesselation subdivide subdivison subdivision displacement GPU geometry";
+                return operation.Replace("core.", "").Replace("UV", " uv").Replace("Mask", " mask");
+            }
             switch (operation)
             {
                 case "core.position": return "Position";

@@ -50,6 +50,17 @@ namespace NXSG.Editor
                 case "core.snowMask": AddBoundedNumber(node, "coverage", "Snow coverage", 0, 1, .5f); AddBoundedNumber(node, "breakup", "Surface breakup", 0, 1, .3f); AddNumber(node, "scale", "Breakup scale", 10); return true;
                 case "core.wetnessColor": AddBoundedNumber(node, "strength", "Wet strength", 0, 1, .5f); AddBoundedNumber(node, "mask", "Wetness mask", 0, 1, 1, "mask"); return true;
                 case "core.anisotropicHighlight": AddBoundedNumber(node, "roughness", "Highlight roughness", 0, 1, .3f, "roughness"); return true;
+                case "core.tessellation":
+                    AddIntegerField(node, "factor", "Tessellation factor", 1, 63, 8);
+                    AddIntegerField(node, "minFactor", "Minimum factor", 1, 63, 1);
+                    AddNumber(node, "nearDistance", "Near distance", 2);
+                    AddNumber(node, "farDistance", "Far distance", 15);
+                    AddNumber(node, "height", "Height", .5f, "height");
+                    AddNumber(node, "strength", "Displacement strength", .1f);
+                    AddNumber(node, "reference", "Reference height", .5f);
+                    AddBoundedNumber(node, "smoothing", "Smoothing", 0, 1, 0);
+                    FeatureNote("PC GPU tessellation. Connect a surface to Base, then this node to Output. Height texture: Texture → Split Color R → Height. Expand renderer bounds for displacement; UV seams can remain visible.");
+                    return true;
                 default: return false;
             }
         }

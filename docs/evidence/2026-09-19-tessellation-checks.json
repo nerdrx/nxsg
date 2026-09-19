@@ -1,0 +1,18 @@
+{
+  "date": "2026-09-19",
+  "unity": "2022.3.22f1",
+  "graphics": "Linux OpenGLCore",
+  "display": "hidden Gamescope",
+  "portable": "passed",
+  "editor": "41 feature inspectors passed",
+  "render": "silhouette, texture height, zero strength, distance LOD, smoothing, surface passes, instancing keyword compilation, wireframe passed",
+  "unverified": [
+    "VRChat client",
+    "stereo",
+    "Windows",
+    "performance",
+    "instanced draw correctness",
+    "skinned avatars",
+    "shadow image parity"
+  ]
+}
