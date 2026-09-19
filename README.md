@@ -17,7 +17,8 @@
 </p>
 
 <p align="center">
-  <a href="#try-nxsg"><strong>Try NXSG</strong></a> ·
+  <a href="https://nerdrx.github.io/nxsg/"><strong>Install with VPM</strong></a> ·
+  <a href="#try-nxsg">Try NXSG</a> ·
   <a href="docs/NODES.md">Explore the nodes</a> ·
   <a href="Packages/dev.nerdrx.nxsg/Samples~/README.md">Example graphs</a> ·
   <a href="docs/GOODIES.md">Latest goodies</a> ·
@@ -87,6 +88,20 @@ Recovery files live under `Library/NXSG/Recovery`; clearing Library clears those
 </details>
 
 ## Try NXSG
+
+### Install through your package manager
+
+**[Add NXSG to VCC / get the VPM listing →](https://nerdrx.github.io/nxsg/)**
+
+Enable **Show Pre-Release Packages**, then add **NX Shader Graph** to a test project. On Linux, add the same listing URL to your VPM-compatible manager:
+
+```text
+https://nerdrx.github.io/nxsg/index.json
+```
+
+[Installation help](docs/VPM.md) · [Download the alpha package](https://github.com/nerdrx/nxsg/releases)
+
+### Work from source
 
 You need **Git, Python 3, Unity Hub and Unity 2022.3.22f1**. Start with the included development project.
 

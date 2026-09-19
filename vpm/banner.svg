@@ -1,0 +1,86 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 440" role="img" aria-labelledby="title desc">
+  <title id="title">NX Shader Graph</title>
+  <desc id="desc">NXSG, a visual material graph for VRChat, illustrated with its Unity-style Texture and Color nodes connected to Toon Surface and Output.</desc>
+
+  <!-- True-black OLED ground; the violet surfaces stay quiet behind the message. -->
+  <rect width="1440" height="440" fill="#000000"/>
+  <!-- Canonical NX wordmark, copied from nx-wordmark-violet.svg unchanged. -->
+  <g aria-label="NX" transform="translate(88 46) scale(.085)">
+    <g fill="#7700FF" transform="translate(-56 552) scale(1 -1)">
+      <path d="M56 0V540H230L238 368L214 370Q220 439 244.5 478.5Q269 518 306.5 535.0Q344 552 390 552Q446 552 487.5 528.0Q529 504 552.0 458.5Q575 413 575 347V0H381V280Q381 319 376.5 346.5Q372 374 358.5 388.5Q345 403 319 403Q282 403 266.0 371.0Q250 339 250 280V0Z" />
+      <path d="M551.0 0 739.0 272 553.0 540H753.0L851.0 386L947.0 540H1151.0L965.0 272L1154.0 0H954.0L855.0 160L755.0 0Z" />
+    </g>
+  </g>
+
+  <!-- Left message: readable at a compact GitHub banner width. -->
+  <text x="88" y="180" fill="#EFEAFF" font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="84" font-weight="800" letter-spacing="1">NXSG</text>
+  <text x="92" y="222" fill="#BFA8FF" font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="25" font-weight="600" letter-spacing=".4">NX Shader Graph</text>
+  <path d="M92 246H270" stroke="#7700FF" stroke-width="3"/>
+  <text x="92" y="286" fill="#EFEAFF" font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="21" font-weight="500">Make your avatar impossible to ignore.</text>
+  <rect x="92" y="348" width="9" height="9" fill="#00E5FF"/>
+  <text x="116" y="357" fill="#8D7AA8" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="12" font-weight="700" letter-spacing="2">VISUAL SHADERS / VRCHAT</text>
+
+  <!-- Simplified illustration of the actual custom Unity canvas. Colors and ports
+       follow GraphWindow.cs and NodeCatalog.cs; this is not a screenshot. -->
+  <rect x="612" y="28" width="800" height="384" rx="12" fill="#0e0e0e" stroke="#252525"/>
+  <g fill="none" stroke-width="3.5" stroke-linecap="round">
+    <path d="M830 163 C880 163 875 165 925 165" stroke="#ffc740"/>
+    <path d="M830 337 C889 337 866 221 925 221" stroke="#ffc740"/>
+    <path d="M1130 305 C1175 305 1165 267 1210 267" stroke="#59d975"/>
+  </g>
+
+  <g font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif">
+    <!-- Texture: orange header, UV input, color output. -->
+    <rect x="650" y="80" width="180" height="136" rx="8" fill="#242424"/>
+    <path d="M658 80H822Q830 80 830 88V116H650V88Q650 80 658 80" fill="#75401a"/>
+    <text x="664" y="104" fill="#eeeeee" font-size="17" font-weight="600">Texture</text>
+    <text x="666" y="143" fill="#bdbdbd" font-size="16">uv</text>
+    <text x="814" y="169" text-anchor="end" fill="#bdbdbd" font-size="16">color</text>
+    <rect x="664" y="188" width="12" height="12" rx="2" fill="#171717" stroke="#626262"/>
+    <text x="684" y="199" fill="#a5a5a5" font-size="13">Thumbnail</text>
+
+    <!-- Color: the selected card has the editor's light outline. -->
+    <rect x="650" y="282" width="180" height="105" rx="8" fill="#242424"/>
+    <path d="M658 282H822Q830 282 830 290V318H650V290Q650 282 658 282" fill="#66571a"/>
+    <rect x="650" y="282" width="180" height="105" rx="8" fill="none" stroke="#f0f0f0" stroke-width="2"/>
+    <text x="664" y="306" fill="#eeeeee" font-size="17" font-weight="600">Color</text>
+    <text x="814" y="343" text-anchor="end" fill="#bdbdbd" font-size="16">value</text>
+    <rect x="664" y="360" width="12" height="12" rx="2" fill="#171717" stroke="#626262"/>
+    <text x="684" y="371" fill="#a5a5a5" font-size="13">Thumbnail</text>
+
+    <!-- Toon Surface: the five real inputs and one surface output. -->
+    <rect x="925" y="100" width="205" height="252" rx="8" fill="#242424"/>
+    <path d="M933 100H1122Q1130 100 1130 108V138H925V108Q925 100 933 100" fill="#215e3d"/>
+    <text x="939" y="125" fill="#eeeeee" font-size="17" font-weight="600">Toon Surface ▾</text>
+    <g fill="#bdbdbd" font-size="16">
+      <text x="941" y="171">albedo</text>
+      <text x="941" y="199">normal</text>
+      <text x="941" y="227">emission</text>
+      <text x="941" y="255">opacity</text>
+      <text x="941" y="283">displacement</text>
+      <text x="1114" y="311" text-anchor="end">surface</text>
+    </g>
+    <rect x="939" y="328" width="12" height="12" rx="2" fill="#171717" stroke="#626262"/>
+    <text x="959" y="339" fill="#a5a5a5" font-size="13">Thumbnail</text>
+
+    <!-- Output: red header and a surface input on its left edge. -->
+    <rect x="1210" y="212" width="165" height="80" rx="8" fill="#242424"/>
+    <path d="M1218 212H1367Q1375 212 1375 220V248H1210V220Q1210 212 1218 212" fill="#633033"/>
+    <text x="1224" y="236" fill="#eeeeee" font-size="17" font-weight="600">Output</text>
+    <text x="1226" y="273" fill="#bdbdbd" font-size="16">surface</text>
+  </g>
+
+  <!-- Socket colors match data types; wires meet the center of each socket. -->
+  <g stroke="#0e0e0e" stroke-width="2.5">
+    <circle cx="650" cy="137" r="6" fill="#73a6ff"/>
+    <circle cx="830" cy="163" r="6" fill="#ffc740"/>
+    <circle cx="830" cy="337" r="6" fill="#ffc740"/>
+    <circle cx="925" cy="165" r="6" fill="#ffc740"/>
+    <circle cx="925" cy="193" r="6" fill="#40d9d9"/>
+    <circle cx="925" cy="221" r="6" fill="#ffc740"/>
+    <circle cx="925" cy="249" r="6" fill="#ccd1d9"/>
+    <circle cx="925" cy="277" r="6" fill="#ccd1d9"/>
+    <circle cx="1130" cy="305" r="6" fill="#59d975"/>
+    <circle cx="1210" cy="267" r="6" fill="#59d975"/>
+  </g>
+</svg>
