@@ -239,3 +239,5 @@ Linux Unity 2022.3.22f1, OpenGLCore, isolated headless Gamescope fixture:
 - PixelLightSmoke and FeatureNodesRenderSmoke (39 nodes) remain passing after the clock/backend changes.
 
 No additional Windows/D3D, headset or live VRChat claim is made. Static baking is UV-local, linear 8-bit PNG; unsupported scene/time/geometry branches are rejected rather than flattened silently. LTCGI playground checking locates an existing scene controller, not a simulated world.
+
+The published alpha.5 ZIP was downloaded again, SHA-256 verified against the generated listing, and installed into the isolated fixture. Creator tools, texture-channel/import isolation, and the actual playground window passed against that downloaded package. The playground test disposes its source graph preview before rendering to verify independent shader ownership. Fixture dependency changes were restored afterward.

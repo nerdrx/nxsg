@@ -21,7 +21,9 @@ namespace NXSG.Editor
                 var shader = Shader.Find("Unlit/Color");
                 if (shader == null) throw new InvalidOperationException("Unlit/Color unavailable.");
                 _source = new Material(shader) { name = "NXSG creator smoke source", color = Color.red };
-                MaterialPlayground.Show(_source);
+                var graph=NXSG.Core.GraphSamples.CreateDefault();
+                using(var original=GraphPreview.Create(graph,_source)){MaterialPlayground.ShowGraph(graph,original.Material);}
+                // Closing the graph preview above must not invalidate the playground shader.
                 _window = Resources.FindObjectsOfTypeAll<MaterialPlayground>()[0];
                 _window.position=new Rect(50,50,850,800);
                 _window.Repaint();
