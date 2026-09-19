@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <img alt="136 visible nodes" src="https://img.shields.io/badge/nodes-136-7700FF?style=flat-square" />
+  <img alt="137 visible nodes" src="https://img.shields.io/badge/nodes-137-7700FF?style=flat-square" />
   <img alt="Unity development version 2022.3.22f1" src="https://img.shields.io/badge/Unity-2022.3.22f1-222222?style=flat-square" />
   <img alt="Tested on Linux" src="https://img.shields.io/badge/tested_on-Linux-222222?style=flat-square" />
   <img alt="Early development" src="https://img.shields.io/badge/status-early_development-7700FF?style=flat-square" />
@@ -51,7 +51,7 @@ stereo, and live VRChat client behavior remain unverified; see the
 | **Alive** | Shader-driven particles from the mesh wearing the material, UV motion, flipbooks, vertex animation and AudioLink inputs. |
 | **Procedural** | 1D–4D noise, Musgrave-style fractals, Voronoi, waves, texture bombing, distortion, gradients and shape masks. |
 
-**136 visible nodes.** Compact controls for common effects; reusable Patterns when your graph grows. [Full node guide →](docs/NODES.md)
+**137 visible nodes.** Compact controls for common effects; reusable Patterns when your graph grows. [Full node guide →](docs/NODES.md)
 
 <table>
   <tr>
@@ -144,6 +144,8 @@ The setup script downloads and verifies the pinned VRChat Base/Avatars **3.10.5*
 | **Noise Color Ramp** | Turn a procedural signal into your own palette. |
 
 [Browse all example graphs →](Packages/dev.nerdrx.nxsg/Samples~/README.md)
+
+**Optional area lighting:** [LTCGI Lighting](docs/LTCGI.md) receives lighting from LTCGI emitters through a graph node.
 
 ## Made to grow with your ideas
 

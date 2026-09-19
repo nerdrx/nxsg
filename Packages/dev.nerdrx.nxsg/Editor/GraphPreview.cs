@@ -23,10 +23,7 @@ namespace NXSG.Editor
 
         public static GraphPreview Create(ShaderGraph graph, Material context)
         {
-            var emitted = ShaderEmitter.Emit(graph, new EmitterOptions
-            {
-                ShaderName = "NXSG/Preview/" + Guid.NewGuid().ToString("N")
-            });
+            var emitted = ShaderEmitter.Emit(graph, OptionalIntegrations.Options("NXSG/Preview/" + Guid.NewGuid().ToString("N")));
             if (!emitted.Succeeded)
                 throw new InvalidOperationException(string.Join("\n", emitted.Diagnostics.Select(d => d.Path + ": " + d.Message)));
 

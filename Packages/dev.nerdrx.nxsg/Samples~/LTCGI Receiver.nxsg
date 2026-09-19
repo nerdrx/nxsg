@@ -1,0 +1,115 @@
+{
+  "format": "nxsg",
+  "schemaVersion": 1,
+  "graphId": "ltcgi-receiver-example",
+  "nodes": [
+    {
+      "id": "color",
+      "operation": "core.constant",
+      "version": 1,
+      "properties": {
+        "valueType": "color",
+        "value": [
+          0.65,
+          0.5,
+          0.9,
+          1
+        ]
+      }
+    },
+    {
+      "id": "lighting",
+      "operation": "core.ltcgi",
+      "version": 1,
+      "properties": {
+        "roughness": 0.5,
+        "metallic": 0,
+        "strength": 1
+      }
+    },
+    {
+      "id": "surface",
+      "operation": "core.pbrSurface",
+      "version": 1,
+      "properties": {
+        "roughness": 0.5,
+        "metallic": 0
+      }
+    },
+    {
+      "id": "output",
+      "operation": "core.output",
+      "version": 1,
+      "properties": {}
+    }
+  ],
+  "connections": [
+    {
+      "id": "color-lighting-albedo",
+      "from": {
+        "nodeId": "color",
+        "portId": "value"
+      },
+      "to": {
+        "nodeId": "lighting",
+        "portId": "albedo"
+      }
+    },
+    {
+      "id": "color-surface-albedo",
+      "from": {
+        "nodeId": "color",
+        "portId": "value"
+      },
+      "to": {
+        "nodeId": "surface",
+        "portId": "albedo"
+      }
+    },
+    {
+      "id": "lighting-surface-emission",
+      "from": {
+        "nodeId": "lighting",
+        "portId": "color"
+      },
+      "to": {
+        "nodeId": "surface",
+        "portId": "emission"
+      }
+    },
+    {
+      "id": "surface-output-surface",
+      "from": {
+        "nodeId": "surface",
+        "portId": "surface"
+      },
+      "to": {
+        "nodeId": "output",
+        "portId": "surface"
+      }
+    }
+  ],
+  "parameters": [],
+  "resources": [],
+  "patterns": [],
+  "layout": {
+    "nodes": {
+      "color": {
+        "x": 0,
+        "y": 0
+      },
+      "lighting": {
+        "x": 250,
+        "y": 150
+      },
+      "surface": {
+        "x": 500,
+        "y": 0
+      },
+      "output": {
+        "x": 750,
+        "y": 0
+      }
+    }
+  }
+}

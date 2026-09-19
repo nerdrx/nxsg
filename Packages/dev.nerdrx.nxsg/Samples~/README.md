@@ -25,3 +25,5 @@ These samples target Unity 2022.3.22f1, PC Built-In shader generation on Linux. 
 - **Showcase Warm Fur:** dense short shell fur with root/tip color and gentle movement. Uses 24 shell layers; measure its cost on your intended avatar and target.
 
 These graphs need no external textures. Render previews use simple meshes; they are not avatar/client validation.
+
+- **LTCGI Receiver** requires the optional LTCGI package and active emitters. See [setup](../../../docs/LTCGI.md).

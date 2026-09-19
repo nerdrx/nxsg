@@ -905,6 +905,12 @@ namespace NXSG.Editor
                     case "core.vertexMotion": AddNumber(node, "strength", "Strength", .02f, "strength"); AddNumber(node, "speed", "Speed", 1); AddNumber(node, "frequency", "Frequency", 2); break;
                     case "core.shell": AddNumber(node, "offset", "Shell offset", .02f, "offset"); break;
                     case "core.normalMap": AddNumber(node, "strength", "Strength", 1); break;
+                    case "core.ltcgi":
+                        AddBoundedNumber(node, "roughness", "Roughness", 0, 1, .5f, "roughness");
+                        AddBoundedNumber(node, "metallic", "Metallic", 0, 1, 0, "metallic");
+                        AddBoundedNumber(node, "strength", "Strength", 0, 4, 1, "strength");
+                        inspector.Add(new Label("Optional LTCGI. Requires installed LTCGI and an active world controller. Connect Color to Surface Emission. Use Add to combine with existing emission.") { style = { whiteSpace = WhiteSpace.Normal } });
+                        break;
                     case "core.audioLink": AddAudioLinkControls(node); break;
                 }
                 inspector.Add(new Button(() => Edit("Disconnect node", () => graph.Connections.RemoveAll(e => e.From.NodeId == selected || e.To.NodeId == selected))) { text = "Disconnect node" });

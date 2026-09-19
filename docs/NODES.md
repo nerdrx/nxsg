@@ -1,6 +1,6 @@
 # Built-in node pack
 
-The canvas now offers 136 visible nodes, including authored Float/Color Parameters, plus a hidden Preview Vector helper. Socket color indicates data type: yellow color, gray scalar, blue UV coordinates, cyan normals, green surface. Drag from either end; compatible-node menus and clipboard operations use the same core catalog.
+The canvas now offers 137 visible nodes, including authored Float/Color Parameters, plus a hidden Preview Vector helper. Socket color indicates data type: yellow color, gray scalar, blue UV coordinates, cyan normals, green surface. Drag from either end; compatible-node menus and clipboard operations use the same core catalog.
 
 ## New feature nodes
 
@@ -229,3 +229,7 @@ Montage rows, left to right: Position, Normal Direction, View Direction, Vertex 
 ## Tessellation
 
 **Tessellation** takes a Base surface and numeric Height, then connects to Output. Detail factors 1–63, near/far distances, displacement strength, reference height and optional Phong smoothing control real GPU geometry. Toon, Unlit, PBR and Shell stacks are supported. [Usage, limits and sample](TESSELLATION.md).
+
+## LTCGI Lighting
+
+Albedo, tangent-space Normal, Roughness, Metallic and Strength → Color. Connect Color to surface Emission, or use Add to combine existing glow. Requires the separately installed LTCGI package and an active controller; [setup and limits](LTCGI.md).

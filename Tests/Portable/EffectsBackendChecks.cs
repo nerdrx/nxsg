@@ -31,7 +31,7 @@ public static class EffectsBackendChecks
                 else Connect(graph,node.Id,port,surface.Id,"albedo");
                 Connect(graph,surface.Id,"surface",output.Id,"surface");
             }
-            var before=GraphJson.Serialize(graph);var result=ShaderEmitter.Emit(graph);
+            var before=GraphJson.Serialize(graph);var result=ShaderEmitter.Emit(graph, new EmitterOptions { LtcgiAvailable = true });
             assert(result.Succeeded,op+" emits: "+string.Join(";",result.Diagnostics.Select(d=>d.Message)));
             if (op == "core.scanlines")
             {
@@ -39,7 +39,7 @@ public static class EffectsBackendChecks
                 assert(result.ShaderSource.Contains("hiIntegral-loIntegral"), "scanlines fragment uses periodic box integral");
             }
             assert(before==GraphJson.Serialize(graph),op+" emission preserves source");
-            graph.Nodes.Reverse();graph.Connections.Reverse();assert(result.ShaderSource==ShaderEmitter.Emit(graph).ShaderSource,op+" deterministic order");
+            graph.Nodes.Reverse();graph.Connections.Reverse();assert(result.ShaderSource==ShaderEmitter.Emit(graph, new EmitterOptions { LtcgiAvailable = true }).ShaderSource,op+" deterministic order");
         }
         var nullable = new ShaderGraph { GraphId="optional-null", Parameters=null, Resources=null };
         nullable.Nodes.Add(new GraphNode { Id="unlit",Operation="core.unlitSurface",Properties=null });nullable.Nodes.Add(NodeCatalog.Create("core.output"));nullable.Nodes.Last().Id="out";

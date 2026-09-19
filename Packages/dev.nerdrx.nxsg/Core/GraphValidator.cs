@@ -213,6 +213,7 @@ namespace NXSG.Core
                 case "core.flipbook": numeric = new[] { "rows", "columns", "speed" }; break;
                 case "core.audioLink": numeric = new[] { "band", "gain", "smoothing", "fallback" }; break;
                 case "core.normalMap": numeric = new[] { "strength" }; break;
+                case "core.ltcgi": numeric = new[] { "roughness", "metallic", "strength" }; break;
                 case "core.dissolve": numeric = new[] { "threshold", "edgeWidth" }; break;
                 case "core.shell": numeric = new[] { "offset" }; break;
                 case "core.vertexMotion": numeric = new[] { "strength", "speed", "frequency" }; break;
@@ -264,6 +265,12 @@ namespace NXSG.Core
             if (node.Operation == "core.gradient" || node.Operation == "core.uvTile") CheckIntegerRange(node.Properties["mode"], path + ".properties.mode", 0, 2, diagnostics);
             if (node.Operation == "core.gradient") CheckRange(node.Properties["radius"], path + ".properties.radius", .000001, float.MaxValue, diagnostics);
             if (node.Operation == "core.posterize") CheckRange(node.Properties["levels"], path + ".properties.levels", 2, float.MaxValue, diagnostics);
+            if (node.Operation == "core.ltcgi")
+            {
+                CheckRange(node.Properties["roughness"], path + ".properties.roughness", 0, 1, diagnostics);
+                CheckRange(node.Properties["metallic"], path + ".properties.metallic", 0, 1, diagnostics);
+                CheckRange(node.Properties["strength"], path + ".properties.strength", 0, double.MaxValue, diagnostics);
+            }
             if (numeric != null) foreach (var name in numeric) CheckNumber(node.Properties[name], path + ".properties." + name, diagnostics);
             if (vectors != null) foreach (var name in vectors) CheckVector2(node.Properties[name], path + ".properties." + name, diagnostics);
             if (node.Operation == "core.ramp") CheckRampPoints(node.Properties["points"], path + ".properties.points", diagnostics);

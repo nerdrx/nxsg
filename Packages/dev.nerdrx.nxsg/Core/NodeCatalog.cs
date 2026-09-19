@@ -24,7 +24,7 @@ namespace NXSG.Core
             "core.constant", "core.parameter", "core.uv0", "core.texture2D", "core.multiply",
             "core.toonSurface", "core.unlitSurface", "core.pbrSurface", "core.fresnel", "core.colorRamp",
             "core.layer", "core.sticker", "core.dissolve", "core.flipbook", "core.uvDistort", "core.vertexMotion",
-            "core.audioLink", "core.shell", "core.normalMap", "core.previewVector", "core.particleSurface", "core.particleColor", "core.surfaceParticles", "core.output"
+            "core.audioLink", "core.shell", "core.normalMap", "core.ltcgi", "core.previewVector", "core.particleSurface", "core.particleColor", "core.surfaceParticles", "core.output"
         };
 
         private static readonly Dictionary<string, string[]> Inputs = new Dictionary<string, string[]>(StringComparer.Ordinal)
@@ -62,7 +62,7 @@ namespace NXSG.Core
             ["core.uvDistort"] = new[] { "uv", "strength", "mask", "time", "flow" },
             ["core.gradient"] = new[] { "uv" }, ["core.uvTile"] = new[] { "uv" }, ["core.posterize"] = new[] { "value", "levels" }, ["core.vertexMotion"] = new[] { "time", "strength" },
             ["core.audioLink"] = new string[0], ["core.shell"] = new[] { "base", "layer", "offset" },
-            ["core.normalMap"] = new[] { "color" },
+            ["core.normalMap"] = new[] { "color" }, ["core.ltcgi"] = new[] { "albedo", "normal", "roughness", "metallic", "strength" },
             ["core.previewVector"] = new[] { "uv", "normal" },
             ["core.output"] = new[] { "surface" }
         };
@@ -99,7 +99,7 @@ namespace NXSG.Core
             ["core.uvDistort"] = new[] { "uv", "offset" },
             ["core.gradient"] = new[] { "value", "color" }, ["core.uvTile"] = new[] { "uv" }, ["core.posterize"] = new[] { "value" }, ["core.vertexMotion"] = new[] { "value" },
             ["core.audioLink"] = new[] { "value" }, ["core.shell"] = new[] { "surface" },
-            ["core.normalMap"] = new[] { "normal" },
+            ["core.normalMap"] = new[] { "normal" }, ["core.ltcgi"] = new[] { "color" },
             ["core.previewVector"] = new[] { "color" },
             ["core.output"] = new string[0]
         };
@@ -121,7 +121,7 @@ namespace NXSG.Core
                 case "core.clamp": return "Math";
                 case "core.absolute": case "core.power": case "core.sqrt": case "core.sine": case "core.cosine": case "core.fraction": case "core.floor": case "core.ceil": case "core.round": case "core.step": case "core.smoothstep": case "core.remap": case "core.pingPong": return "Math";
                 case "core.emission": case "core.toonSurface": case "core.unlitSurface": case "core.pbrSurface":
-                case "core.shell": case "core.normalMap": case "core.output": return "Surface";
+                case "core.shell": case "core.normalMap": case "core.ltcgi": case "core.output": return "Surface";
                 case "core.posterize": case "core.fresnel": case "core.colorRamp": case "core.layer": case "core.sticker":
                 case "core.dissolve": return "Color";
                 case "core.splitColor": case "core.combineColor": case "core.luminance": case "core.contrast": case "core.saturation": return "Color";
@@ -198,7 +198,7 @@ namespace NXSG.Core
                 case "core.sticker": return "Sticker"; case "core.dissolve": return "Dissolve";
                 case "core.flipbook": return "Flipbook"; case "core.uvDistort": return "Distortion";
                 case "core.vertexMotion": return "Vertex Motion"; case "core.audioLink": return "Audio Link";
-                case "core.shell": return "Shell"; case "core.normalMap": return "Normal Map";
+                case "core.shell": return "Shell"; case "core.normalMap": return "Normal Map"; case "core.ltcgi": return "LTCGI Lighting";
                 case "core.output": return "Output";
                 default: return operation;
             }
@@ -298,6 +298,7 @@ namespace NXSG.Core
                 case "core.audioLink": return "Read a smoothed audio band value with a fallback.";
                 case "core.shell": return "Wrap a surface or another Shell with a transparent layer. Up to 8 shell passes; nesting in Layer adds offsets.";
                 case "core.normalMap": return "Decode a normal map color into a normal vector.";
+                case "core.ltcgi": return "Optional LTCGI lighting from an installed LTCGI package and active world controller. Normal input expects a tangent-space vector3. Connect Color to Surface Emission; use Add to combine with existing emission.";
                 case "core.output": return "The final surface of your shader. Connect a Surface or Shell here.";
                 default: return string.Empty;
             }
@@ -363,6 +364,7 @@ namespace NXSG.Core
                 case "core.uvDistort": return "uv distortion warp wobble swirl ripple flow pixelate lens"; case "core.vertexMotion": return "vertex animation deformation";
                 case "core.audioLink": return "audio reactive spectrum"; case "core.shell": return "outline rim extrude";
                 case "core.normalMap": return "bump tangent normal";
+                case "core.ltcgi": return "LTCGI area lighting emissive indirect illumination world controller";
                 case "core.texture2D": return "image albedo diffuse";
                 default: return string.Empty;
             }
@@ -439,6 +441,7 @@ namespace NXSG.Core
                 case "core.unlitSurface": return port == "surface" ? "surface" : (port == "albedo" || port == "emission" ? "color" : (port == "opacity" || port == "displacement" ? "float" : null));
                 case "core.shell": return port == "base" || port == "layer" || port == "surface" ? "surface" : (port == "offset" ? "float" : null);
                 case "core.normalMap": return port == "color" ? "color" : (port == "normal" ? "vector3" : null);
+                case "core.ltcgi": return port == "albedo" ? "color" : port == "normal" ? "vector3" : port == "roughness" || port == "metallic" || port == "strength" ? "float" : port == "color" ? "color" : null;
                 case "core.output": return port == "surface" ? "surface" : null;
                 default: return null;
             }
@@ -501,6 +504,7 @@ namespace NXSG.Core
                 case "core.flipbook": node.Properties["rows"] = 1; node.Properties["columns"] = 1; node.Properties["speed"] = 1.0; break;
                 case "core.audioLink": node.Properties["band"] = 0; node.Properties["gain"] = 1.0; node.Properties["smoothing"] = 0.5; node.Properties["fallback"] = 0.0; break;
                 case "core.normalMap": node.Properties["strength"] = 1.0; break;
+                case "core.ltcgi": node.Properties["roughness"] = .5; node.Properties["metallic"] = 0.0; node.Properties["strength"] = 1.0; break;
                 case "core.surfaceParticles": node.Properties["sourceUV"] = 0; node.Properties["density"] = .1; node.Properties["emissionRate"] = .5; node.Properties["size"] = .03; node.Properties["lifetime"] = 2.0; node.Properties["speed"] = .2; node.Properties["gravity"] = 0.0; node.Properties["spread"] = .05; node.Properties["blendMode"] = 1; node.Properties["opacity"] = 1.0; node.Properties["mask"] = 1.0; break;
                 case "core.particleSurface": node.Properties["opacity"] = 1.0; node.Properties["blendMode"] = 0; node.Properties["softDistance"] = 0.0; break;
                 case "core.unlitSurface": node.Properties["opacity"] = 1.0; node.Properties["displacement"] = 0.0; break;

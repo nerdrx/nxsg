@@ -34,7 +34,7 @@ namespace NXSG.Editor
             Directory.CreateDirectory("Library/NXSG");
             Recover(journalPath, shaderPath, materialPath);
 
-            var result = ShaderEmitter.Emit(graph, new EmitterOptions { ShaderName = "NXSG/Generated/" + guid });
+            var result = ShaderEmitter.Emit(graph, OptionalIntegrations.Options("NXSG/Generated/" + guid));
             if (!result.Succeeded)
                 throw new InvalidOperationException(string.Join("\n", result.Diagnostics.Select(d => d.Path + ": " + d.Message)));
             if (SystemInfo.graphicsDeviceType == GraphicsDeviceType.Null)

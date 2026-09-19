@@ -101,7 +101,7 @@ namespace NXSG.Editor
             problemsPanel.Clear();
             try
             {
-                var diagnostics = ShaderEmitter.Emit(graph).Diagnostics;
+                var diagnostics = ShaderEmitter.Emit(graph, OptionalIntegrations.Options()).Diagnostics;
                 var errors = diagnostics.Count(d => d.Severity == DiagnosticSeverity.Error);
                 problemsButton.text = diagnostics.Count == 0 ? "Problems" : "Problems · " + diagnostics.Count;
                 problemsButton.tooltip = errors + " errors; " + (diagnostics.Count-errors) + " notes/warnings. Click to inspect.";

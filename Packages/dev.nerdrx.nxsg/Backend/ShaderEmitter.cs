@@ -21,6 +21,7 @@ namespace NXSG.Backend
 
         public string ShaderName { get; set; }
         public bool IncludeShadowCaster { get; set; }
+        public bool LtcgiAvailable { get; set; }
         public bool IncludeVrcFallback { get; set; }
         public string VrcFallbackTag { get; set; }
     }

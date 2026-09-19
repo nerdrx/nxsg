@@ -216,3 +216,9 @@ Additional pixel lights are still not accumulated (no ForwardAdd); the compiler 
 - `ShadowContractSmoke` passed with POM and the new additive pass.
 
 The alpha.2 ForwardBase-only limitation is superseded for Toon/PBR **base** surfaces. Shell/fur overlays retain their existing lighting. Every extra pixel light adds a pass. Native Windows/D3D, VRChat client, stereo and representative-avatar performance remain unverified.
+
+## Alpha.4 LTCGI checks — 2026-09-19
+
+LTCGI 1.7.3 (`b2014d6c6e76c551c30084973e54687941265d68`) was installed only into the isolated Unity fixture. `LtcgiRenderSmoke` passed under hidden Gamescope/Unity 2022.3.22f1/OpenGLCore using the official controller prefab and a quad screen. The node produced visible light (sample approximately 0.549 RGB); no active controller, controller disabled and strength zero produced finite black. An additional ForcePixel point light did not repeat the LTCGI emission contribution on a black Toon surface. The first run used Gamma project space with a linear render target.
+
+Portable checks passed for missing dependency errors, installed include/tag emission, unused-node stripping and vertex-stage rejection. The integration bundles no upstream code/assets. Live VRChat world/avatar compatibility, Windows and stereo/headsets remain unverified.
