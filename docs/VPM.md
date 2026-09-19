@@ -47,3 +47,7 @@ The public listing's ZIP passed SHA-256, CRC, archive-path and packaged-manifest
 ## References
 
 Checked 2026-09-19 against [VRChat's package format](https://vcc.docs.vrchat.com/vpm/packages/), [repository format](https://vcc.docs.vrchat.com/vpm/repos/), [listing guide](https://vcc.docs.vrchat.com/guides/create-listing/), and [community repository instructions](https://vcc.docs.vrchat.com/guides/community-repositories/). [Poiyomi's listing](https://github.com/poiyomi/vpm) was a structural reference; its site and implementation were not copied.
+
+## Alpha.2 delivery check
+
+The published alpha.2 ZIP was downloaded again, matched its SHA-256, and passed `UsabilitySmoke` in isolated Unity 2022.3.22f1/OpenGLCore, including synthetic Ctrl+Z routing. This supplements the source-tree render and parameter checks recorded in VALIDATION.md.
