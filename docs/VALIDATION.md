@@ -373,3 +373,8 @@ display label, and verifies a material retains its assigned texture after a
 renamed shader replaces the original. Both basic and advanced backends pass.
 Portable checks cover serialization, clipboard copies, label sanitization,
 unchanged property symbols and semantic-hash invalidation on rename.
+
+Downloaded alpha.11 matched SHA-256
+`ceeb8a9a6895c6fcad4928f5516736617d90084812cf01dd6b53d5de06b9d893`.
+Installed from the downloaded ZIP, `TextureLabelSmoke` passed again. The fixture
+was restored to the source package. Seven packaging tests passed.
