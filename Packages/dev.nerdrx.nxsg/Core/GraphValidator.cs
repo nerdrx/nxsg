@@ -101,6 +101,7 @@ namespace NXSG.Core
                 foreach (var name in FeatureNodes.Numeric(node.Operation)) CheckNumber(node.Properties[name], path + ".properties." + name, diagnostics);
                 if (node.Operation == "core.fur")
                 {
+                    CheckIntegerRange(node.Properties["cardsOnly"], path + ".properties.cardsOnly", 0, 1, diagnostics);
                     CheckIntegerRange(node.Properties["fins"], path + ".properties.fins", 0, 1, diagnostics);
                     CheckRange(node.Properties["finOpacity"], path + ".properties.finOpacity", 0, 1, diagnostics);
                     CheckIntegerRange(node.Properties["layers"], path + ".properties.layers", 4, 32, diagnostics);

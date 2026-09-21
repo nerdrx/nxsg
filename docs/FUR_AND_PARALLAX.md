@@ -17,3 +17,15 @@ The optional local self-shadow is a straight strand-volume approximation along t
 ## Parallax limits
 
 Parallax Occlusion increases pixel cost with its step count. It needs mesh tangents and changes texture depth only; it does not change the physical silhouette or cast displaced shadows. The sample values are authored examples and are not GPU performance validation.
+
+## Cards-only fur
+
+On Fur, choose **Fur geometry → Cards only**. Three cards are generated from each
+selected source triangle's edges, with no fur shells. Coverage follows mesh
+topology, and shared edges can overlap. This is a PC geometry pass, not an exported
+card mesh. Existing color, length, mask, grooming and wind inputs apply. Card
+opacity controls transparency. Density 100 selects all triangles; larger values
+change strand pattern density but do not generate more cards.
+
+Shell LOD controls do not affect cards and are hidden. Expand renderer bounds;
+transparent sorting can remain visible. Local self-shadowing is an approximation.

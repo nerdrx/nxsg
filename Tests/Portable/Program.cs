@@ -86,6 +86,7 @@ internal static class Program
         GlitterChecks.Run(Assert);
         ColorConversionChecks.Run(Assert);
         TextureLabelChecks.Run(Assert);
+        FurCardChecks.Run(Assert);
         TraversalChecks.Run(Assert);
         var defaultGraph = Load(fixtures, "default-texture-toon-output.nxsg");
         Assert(GraphValidator.Validate(defaultGraph).IsValid, "default graph validates");

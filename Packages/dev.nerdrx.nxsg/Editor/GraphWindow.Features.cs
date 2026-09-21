@@ -92,16 +92,19 @@ namespace NXSG.Editor
 
         void AddFurControls(GraphNode node)
         {
+            var cardsOnly = (int?)node.Properties["cardsOnly"] == 1;
+            AddIndexedChoice(node, "cardsOnly", "Fur geometry", new[] { "Shells", "Cards only" });
+            if (cardsOnly) FeatureNote("Generate cards from mesh triangle edges. No shell layers. Shared edges can overlap; denser meshes produce more cards. Expand renderer bounds for fur length.");
             var fins = new Toggle("Fur fins") { value = (int?)node.Properties["fins"] == 1, tooltip = "Add grazing edge strips to fill the fur silhouette. Extra geometry pass; triangle edges are approximated." };
             fins.RegisterValueChangedCallback(e => Edit("Toggle fur fins", () => node.Properties["fins"] = e.newValue ? 1 : 0));
-            inspector.Add(fins);
-            AddBoundedNumber(node, "finOpacity", "Fin opacity", 0, 1, .7f);
+            if (!cardsOnly) inspector.Add(fins);
+            AddBoundedNumber(node, "finOpacity", cardsOnly ? "Card opacity" : "Fin opacity", 0, 1, .7f);
 
-            FurSection("Shells", () =>
+            FurSection(cardsOnly ? "Cards" : "Shells", () =>
             {
-                AddIntegerField(node, "layers", "Shell layers", 4, 32, 16);
+                if (!cardsOnly) AddIntegerField(node, "layers", "Shell layers", 4, 32, 16);
                 AddNumber(node, "length", "Fur length (m)", .04f, "length");
-                AddNumber(node, "density", "Strands / m²", 100, "density");
+                AddNumber(node, "density", cardsOnly ? "Card coverage / strands (100 = all triangles)" : "Strands / m²", 100, "density");
                 AddBoundedNumber(node, "thickness", "Strand thickness", 0, 1, .35f, "thickness");
                 AddBoundedNumber(node, "taper", "Tip taper", 0, 1, 1);
             });
@@ -109,7 +112,7 @@ namespace NXSG.Editor
             {
                 AddNumber(node, "gravity", "Gravity", .1f);
                 AddBoundedNumber(node, "rimStrength", "Rim strength", 0, 2, .25f);
-                AddIntegerField(node, "minLayers", "Minimum LOD layers", 1, 32, 4);
+                if (!cardsOnly) AddIntegerField(node, "minLayers", "Minimum LOD layers", 1, 32, 4);
             });
             FurSection("Grooming & wind", () =>
             {
@@ -127,9 +130,9 @@ namespace NXSG.Editor
                 AddIndexedChoice(node, "selfShadowQuality", "Self-shadow samples", new[] { "Off", "Low · 4", "Medium · 8", "High · 16" });
                 AddBoundedNumber(node, "selfShadowStrength", "Self-shadow strength", 0, 4, 1);
                 AddBoundedNumber(node, "selfShadowBias", "Self-shadow bias", 0, .25f, .03f);
-                FeatureNote("Samples through local fur volume using the main light only. Ambient and rim lighting stay unchanged. Cost steps multiply by shell count.");
+                FeatureNote(cardsOnly ? "Approximates local fur volume, not exact card-to-card occlusion. Main light only." : "Samples through local fur volume using the main light only. Ambient and rim lighting stay unchanged. Cost steps multiply by shell count.");
             });
-            FurSection("Distance LOD", () =>
+            if (!cardsOnly) FurSection("Distance LOD", () =>
             {
                 AddNumber(node, "lodNear", "Full detail distance (m)", 5);
                 AddNumber(node, "lodFar", "Fade out distance (m)", 15);

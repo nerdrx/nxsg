@@ -1,0 +1,167 @@
+{
+  "format": "nxsg",
+  "schemaVersion": 1,
+  "graphId": "fur-cards-example",
+  "nodes": [
+    {
+      "id": "baseColor",
+      "operation": "core.constant",
+      "version": 1,
+      "properties": {
+        "valueType": "color",
+        "value": [
+          0.22,
+          0.07,
+          0.025,
+          1
+        ]
+      }
+    },
+    {
+      "id": "base",
+      "operation": "core.toonSurface",
+      "version": 1,
+      "properties": {}
+    },
+    {
+      "id": "root",
+      "operation": "core.constant",
+      "version": 1,
+      "properties": {
+        "valueType": "color",
+        "value": [
+          0.24,
+          0.08,
+          0.03,
+          1
+        ]
+      }
+    },
+    {
+      "id": "tip",
+      "operation": "core.constant",
+      "version": 1,
+      "properties": {
+        "valueType": "color",
+        "value": [
+          1,
+          0.55,
+          0.18,
+          1
+        ]
+      }
+    },
+    {
+      "id": "groom",
+      "operation": "core.constant",
+      "version": 1,
+      "properties": {
+        "valueType": "vector3",
+        "value": [
+          0,
+          -0.1,
+          0.05
+        ]
+      }
+    },
+    {
+      "id": "fur",
+      "operation": "core.fur",
+      "version": 1,
+      "properties": {
+        "fins": 0,
+        "finOpacity": 0.8,
+        "layers": 8,
+        "length": 0.035,
+        "density": 100,
+        "thickness": 0.35,
+        "taper": 1,
+        "gravity": 0.1,
+        "windStrength": 0.15,
+        "windSpeed": 1,
+        "windScale": 2,
+        "rimStrength": 0.2,
+        "lodNear": 5,
+        "lodFar": 15,
+        "minLayers": 4,
+        "cardsOnly": 1
+      }
+    },
+    {
+      "id": "output",
+      "operation": "core.output",
+      "version": 1,
+      "properties": {}
+    }
+  ],
+  "connections": [
+    {
+      "id": "baseColor-base",
+      "from": {
+        "nodeId": "baseColor",
+        "portId": "value"
+      },
+      "to": {
+        "nodeId": "base",
+        "portId": "albedo"
+      }
+    },
+    {
+      "id": "base-fur",
+      "from": {
+        "nodeId": "base",
+        "portId": "surface"
+      },
+      "to": {
+        "nodeId": "fur",
+        "portId": "base"
+      }
+    },
+    {
+      "id": "root-fur",
+      "from": {
+        "nodeId": "root",
+        "portId": "value"
+      },
+      "to": {
+        "nodeId": "fur",
+        "portId": "rootColor"
+      }
+    },
+    {
+      "id": "tip-fur",
+      "from": {
+        "nodeId": "tip",
+        "portId": "value"
+      },
+      "to": {
+        "nodeId": "fur",
+        "portId": "tipColor"
+      }
+    },
+    {
+      "id": "groom-fur",
+      "from": {
+        "nodeId": "groom",
+        "portId": "value"
+      },
+      "to": {
+        "nodeId": "fur",
+        "portId": "groom"
+      }
+    },
+    {
+      "id": "fur-output",
+      "from": {
+        "nodeId": "fur",
+        "portId": "surface"
+      },
+      "to": {
+        "nodeId": "output",
+        "portId": "surface"
+      }
+    }
+  ],
+  "parameters": [],
+  "resources": []
+}
