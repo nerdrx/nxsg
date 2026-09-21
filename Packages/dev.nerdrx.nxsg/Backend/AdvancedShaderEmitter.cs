@@ -321,7 +321,7 @@ namespace NXSG.Backend
             string P(string p, string def, string t = null) { return Input(n, p, def, t ?? type, vertex); }
             string S(string p, double def) { return Scalar(n, p, def, vertex); }
             string M(string p, double def) { var value = Prop(n,p,def); return P(p,type == "color" ? "NX_Splat(" + value + ")" : value); }
-            string uv = DefaultUV(n);
+            string uv = DefaultUV(n, vertex);
             switch (n.Operation)
             {
                 case "core.previewVector": body = Source(n,"normal") != null ? "float4(" + P("normal","float3(0,0,1)","vector3") + "*.5+.5,1)" : "float4(" + P("uv",uv,"vector2") + ",0,1)"; break;
@@ -478,7 +478,7 @@ namespace NXSG.Backend
             if ((token.Type != JTokenType.Integer && token.Type != JTokenType.Float) || (double)token != Math.Truncate((double)token) || (double)token < min || (double)token > max) throw new InvalidOperationException("Expected integer " + key + " in range " + min + ".." + max + ".");
             return (int)token;
         }
-        string DefaultUV(GraphNode n)
+        string DefaultUV(GraphNode n, bool vertex)
         {
             var source = StringProp(n, "coordinateSource", "uv0", "uv0", "uv1", "uv2", "uv3", "object", "world", "polar", "panosphere", "matcap");
             switch (source)
@@ -489,7 +489,7 @@ namespace NXSG.Backend
                 case "object": return "input.originalLocal.xz";
                 case "world": return "input.originalWs.xz";
                 case "polar": return "NX_Polar(input.uv,float2(.5,.5),1,1)";
-                case "panosphere": return "NX_PanoUV(normalize(input.originalWs-_WorldSpaceCameraPos))";
+                case "panosphere": return (vertex ? "NX_PanoUV" : "NX_PanoFilteredUV") + "(normalize(input.originalWs-_WorldSpaceCameraPos))";
                 case "matcap": return "NX_MatcapUV(normalize(input.originalWs-_WorldSpaceCameraPos),normalize(input.n))";
                 default: return "input.uv";
             }
@@ -694,6 +694,9 @@ float2 NX_Polar(float2 uv,float2 center,float radial,float angular){float2 p=uv-
 float NX_Hash(float2 p){return frac(sin(dot(p,float2(127.1,311.7)))*43758.5453);}
 float NX_Noise(float2 p){float2 i=floor(p),f=frac(p);f=f*f*(3-2*f);return lerp(lerp(NX_Hash(i),NX_Hash(i+float2(1,0)),f.x),lerp(NX_Hash(i+float2(0,1)),NX_Hash(i+float2(1,1)),f.x),f.y);}
 float2 NX_PanoUV(float3 d){return float2(atan2(d.x,d.z)/6.28318530718+.5,asin(clamp(d.y,-1,1))/3.14159265359+.5);}
+// Choose the equivalent longitude chart with smaller derivatives to avoid a false coarse mip at the wrap.
+// Panosphere seam handling reference: Poiyomi (see docs/PANOSPHERE.md). Vertex evaluation keeps raw UVs.
+float2 NX_PanoFilteredUV(float3 d){float2 uv=NX_PanoUV(d);float alternate=frac(uv.x+.5)-.5;uv.x=fwidth(uv.x)<=fwidth(alternate)?uv.x:alternate;return uv;}
 float2 NX_MatcapUV(float3 view,float3 normal){float3 n=normalize(mul((float3x3)UNITY_MATRIX_V,normal));return n.xy*.5+.5;}
 float2 NX_Flipbook(float2 uv,float frame,float cols,float rows){float count=cols*rows;frame=floor(frame);frame=frame-floor(frame/count)*count;return (frac(uv)+float2(fmod(frame,cols),rows-1-floor(frame/cols)))/float2(cols,rows);}
 float2 NX_Distort(float2 uv,float strength,float scale,float time){return uv+(float2(NX_Noise(uv*scale+time),NX_Noise(uv*scale+time+17.2))-.5)*strength;}
