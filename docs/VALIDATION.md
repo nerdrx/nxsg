@@ -453,3 +453,29 @@ headset/stereo or live VRChat test. The small legacy fixture also compiled here;
 it does not reproduce the user's exact failing variant. Native upload/build
 confirmation remains necessary. `NXSG_D3D_LEGACY=1` removes the requirement for
 comparison; `NXSG_D3D_GRAPHS` can point to a private directory of additional graphs.
+
+
+## 2026-09-21 — opaque camera-dependent albedo depth (alpha.20)
+
+The shadow dependency check incorrectly treated Fresnel/Matcap in albedo as
+coverage dependencies even when `useAlbedoAlpha=0`. It removed ShadowCaster and
+therefore camera depth contribution on Unity's shadow-pass depth rendering path.
+The supplied body graph has Fresnel in albedo, opacity 1 and ignored albedo alpha.
+The check now follows albedo only when its alpha participates in coverage.
+
+- Portable regressions cover Toon/PBR/Unlit with ignored albedo alpha, and retain
+  rejection of camera-dependent explicit opacity.
+- `OpaqueDepthSmoke` passed in hidden Unity 2022.3.22f1/OpenGL. A command buffer
+  samples camera depth while camera globals are active. The opaque Fresnel/Mix
+  sphere with ignored alpha contributes closer depth; enabling albedo alpha
+  reproduces the omitted-caster path, where depth matches the background.
+  Log: `work/unity/opaque-depth-render2.log`.
+- D3D11 Windows64 shader bundle cross-compilation passed 12 shaders, including
+  five private local graphs (`work/unity/opaque-depth-d3d.log`).
+- Portable harness and seven packaging checks passed.
+
+The missing-depth bug is established. The user's specific VRChat world has not
+been identified or retested here, so its visual symptom still needs client
+confirmation. No authored user graphs or materials were changed.
+
+Unity depth-texture behavior: https://docs.unity3d.com/2022.3/Documentation/Manual/SL-CameraDepthTexture.html

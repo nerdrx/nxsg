@@ -211,9 +211,9 @@ namespace NXSG.Backend
                 Scalar(root,"mask",1,true), Input(root,"albedo","float4(1,1,1,1)","color"), Input(root,"emission","float4(0,0,0,1)","color"), Scalar(root,"opacity",1), Input(root,"time","NXSG_Time()","float",true),
                 Prop(root,"density",.1), root.Properties["emissionRate"] == null ? "1.0/max(" + Prop(root,"lifetime",2) + ",0.0001)" : Prop(root,"emissionRate",0), Prop(root,"size",.03), Prop(root,"lifetime",2), Prop(root,"speed",.2), Prop(root,"gravity",0), Prop(root,"spread",.05), IntProp(root,"blendMode",1,0,1), IntProp(root,"sourceUV",0,0,1) == 1));
             var screenDependentShadow = !particle && options.IncludeShadowCaster &&
-                (ContainsScreenDependentOperation(passes[0].Surface, "albedo") || ContainsScreenDependentOperation(passes[0].Surface, "opacity"));
+                ((IntProp(passes[0].Surface,"useAlbedoAlpha",1,0,1)==1 && ContainsScreenDependentOperation(passes[0].Surface, "albedo")) || ContainsScreenDependentOperation(passes[0].Surface, "opacity"));
             if (screenDependentShadow)
-                diagnostics.Add(new Diagnostic(DiagnosticSeverity.Warning, "shadow.screenDependent", passes[0].Surface.Id, "Screen-dependent albedo disables the generated shadow caster because light-space shadows cannot sample the camera framebuffer."));
+                diagnostics.Add(new Diagnostic(DiagnosticSeverity.Warning, "shadow.screenDependent", passes[0].Surface.Id, "View-dependent opacity or enabled albedo alpha disables the shadow/depth pass. Disable Use albedo alpha when only the surface color depends on the camera."));
             var shadowPass = !particle && options.IncludeShadowCaster && !screenDependentShadow ? Shadow(passes[0].Surface, passes[0].Offset, tessNode) : "";
             b.AppendLine("}\nSubShader {\nTags { \"RenderType\"=\"" + (particle || refracts ? "Transparent" : "Opaque") + "\" \"Queue\"=\"" + (particle || refracts ? "Transparent" : "Geometry") + "\"" + (surfaceParticles ? " \"DisableBatching\"=\"True\"" : "") + (ltcgiEnabled ? " \"LTCGI\"=\"ALWAYS\"" : "") + (fallback == null ? "" : " \"VRCFallback\"=\"" + fallback + "\"") + " }");
             if(refracts) b.AppendLine("GrabPass { \"_NXSG_GrabTexture\" }");
