@@ -359,3 +359,8 @@ to isolate angle response. Red/green/blue with alpha zero render as luminance
 Portable checks cover socket compatibility, texture-to-opacity wiring, dynamic
 math and JSON round trips, plus fragment-only Glitter diagnostics. Seven
 packaging tests passed. This is Linux editor evidence, not live VRChat or Windows.
+
+The downloaded alpha.10 ZIP matched SHA-256
+`9968c754bacb31ea01b289a258d534fc3a04d21c55c0cc0b87aa488be26447e9`.
+Installed from that archive, `GlitterRenderSmoke` passed again. The fixture was
+restored to the source package afterward.
