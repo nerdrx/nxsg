@@ -1,6 +1,6 @@
 # Built-in node pack
 
-The canvas now offers 142 visible nodes, including authored Float/Color Parameters, plus a hidden Preview Vector helper. Socket color indicates data type: yellow color, gray scalar, blue UV coordinates, cyan normals, green surface. Drag from either end; compatible-node menus and clipboard operations use the same core catalog.
+The canvas now offers 143 visible nodes, including authored Float/Color Parameters, plus a hidden Preview Vector helper. Socket color indicates data type: yellow color, gray scalar, blue UV coordinates, cyan normals, green surface. Drag from either end; compatible-node menus and clipboard operations use the same core catalog.
 
 ## Motion and placement
 
@@ -241,3 +241,13 @@ Montage rows, left to right: Position, Normal Direction, View Direction, Vertex 
 ## LTCGI Lighting
 
 Albedo, tangent-space Normal, Roughness, Metallic and Strength → Color. Connect Color to surface Emission, or use Add to combine existing glow. Requires the separately installed LTCGI package and an active controller; [setup and limits](LTCGI.md).
+
+## Glitter and automatic grayscale
+
+**Textures → Glitter** creates view-dependent procedural flakes. Connect Color to
+Emission or Albedo; Value is a 0–1 mask for Opacity or a Mix factor. See the
+[Glitter guide](GLITTER.md) and `Glitter Fabric.nxsg` sample.
+
+Color wires can now connect directly to numeric inputs. RGB is converted to
+luminance (0.2126 R + 0.7152 G + 0.0722 B); alpha is ignored. The original color
+output stays available to other branches. Use Split Color → A for texture alpha.

@@ -43,7 +43,14 @@ namespace NXSG.Backend
             var incoming = (graph.Connections ?? new List<GraphConnection>()).Where(e => e?.From?.NodeId != null && e.To?.NodeId != null).ToLookup(e => e.To.NodeId);
             while (queue.Count > 0) { var id = queue.Dequeue(); if (!connected.Add(id)) continue; foreach (var edge in incoming[id]) queue.Enqueue(edge.From.NodeId); }
             var live = graph.Nodes.Where(n => n != null && connected.Contains(n.Id)).ToArray();
+            var inferred = GraphTypes.Infer(graph);
+            var liveById = live.ToDictionary(n => n.Id);
+            var hasColorScalarEdge = (graph.Connections ?? new List<GraphConnection>()).Any(edge =>
+                edge?.From != null && edge.To != null && connected.Contains(edge.From.NodeId) && connected.Contains(edge.To.NodeId) &&
+                GraphTypes.PortType(graph, liveById[edge.From.NodeId], edge.From.PortId, inferred) == "color" &&
+                GraphTypes.PortType(graph, liveById[edge.To.NodeId], edge.To.PortId, inferred) == "float");
             return live.Any(n => ops.Contains(n.Operation) || FeatureNodes.IsKnown(n.Operation)) || live.Any(n => (n.Operation == "core.noise" || n.Operation == "core.uv0" || n.Operation == "core.polarUV" || n.Operation == "core.texture2D") && IsAdvancedCoordinates(n, incoming[n.Id])) || live.Count(n => n.Operation == "core.texture2D") > 1 ||
+                hasColorScalarEdge ||
                 live.Any(n => n.Operation == "core.toonSurface" && (n.Properties?["opacity"] != null || n.Properties?["displacement"] != null || incoming[n.Id].Any(e => e.To.PortId == "opacity" || e.To.PortId == "displacement" || e.To.PortId == "normal")));
         }
 
@@ -209,6 +216,7 @@ namespace NXSG.Backend
             if (ltcgiEnabled) b.AppendLine(LtcgiShader.Hlsl);
             if(refracts) b.AppendLine("sampler2D _NXSG_GrabTexture; float4 _NXSG_GrabTexture_TexelSize;");
             b.AppendLine(FeatureShader.Helpers);
+            if (live.Any(id => nodes[id].Operation == "core.glitter")) b.AppendLine(GlitterShader.Hlsl);
             b.AppendLine(ProceduralShader.Hlsl);
             b.AppendLine(DistortionShader.Hlsl);
             b.AppendLine(code.ToString());
@@ -296,6 +304,7 @@ namespace NXSG.Backend
             var value = Eval(source, edge.From.PortId, vertex);
             var actual = GraphTypes.PortType(graph, source, edge.From.PortId, types);
             if (actual == "float" && expected == "color") return "NX_Splat(" + value + ")";
+            if (actual == "color" && expected == "float") return "dot((" + value + ").rgb,float3(.2126,.7152,.0722))";
             if (actual != expected) throw new InvalidOperationException("Unsupported conversion " + actual + " → " + expected + " at " + n.Id + "." + port);
             return value;
         }
@@ -430,6 +439,13 @@ namespace NXSG.Backend
                     if (vertex) throw new InvalidOperationException("LTCGI Lighting is fragment-only; do not connect it to displacement, tessellation height or particle emitter inputs.");
                     body = "NX_Ltcgi(input," + P("albedo", "float4(1,1,1,1)", "color") + "," + P("normal", "float3(0,0,1)", "vector3") + "," + S("roughness", .5) + "," + S("metallic", 0) + "," + S("strength", 1) + ")"; break;
                 case "core.audioLink": body = "NXSG_Audio(" + Prop(n, "band", 0) + "," + Prop(n, "gain", 1) + "," + Prop(n, "smoothing", .5) + "," + Prop(n, "fallback", 0) + ")"; break;
+                case "core.glitter":
+                    if(vertex)throw new InvalidOperationException("Glitter needs fragment derivatives and view direction. Use it for color, emission or opacity, not vertex displacement.");
+                    var glitterMask = port == "color" ? Eval(n,"value",false) : null;
+                    body = port == "color"
+                        ? "float4(("+P("color",n.Properties["color"]==null?"float4(1,1,1,1)":Literal(n.Properties["color"],"color"),"color")+").rgb*"+glitterMask+"*"+Prop(n,"brightness",2)+","+glitterMask+")"
+                        : "NX_Glitter(input,"+P("uv",uv,"vector2")+","+Prop(n,"scale",60)+","+Prop(n,"density",.6)+","+Prop(n,"size",.16)+","+Prop(n,"sharpness",32)+","+Prop(n,"viewStrength",1)+","+P("time","NXSG_Time()","float")+","+Prop(n,"speed",1)+","+Prop(n,"twinkle",.3)+","+Prop(n,"seed",0)+","+S("mask",1)+")";
+                    break;
                 case "core.normalMap": body = "NX_Normal(" + P("color", "float4(.5,.5,1,1)", "color") + "," + Prop(n, "strength", 1) + ")*float3(1," + (IntProp(n,"flipGreen",0,0,1)==1 ? "-1" : "1") + ",1)"; break;
                 default:
                     if (!FeatureNodes.IsKnown(n.Operation)) throw new InvalidOperationException("Unsupported value operation: " + n.Operation);

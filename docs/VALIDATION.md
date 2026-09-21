@@ -343,3 +343,19 @@ Installed from that ZIP, the eleven negative-input graphs passed again. The
 fixture was restored to the local source package. All nine historical release
 archives passed checksum, archive and manifest verification; alpha.9 also
 passed the complete sample metadata check. Seven packaging tests passed.
+
+## Glitter and automatic grayscale — 2026-09-21
+
+`GlitterRenderSmoke` passed in hidden Unity 2022.3.22f1/OpenGLCore. It renders
+actual shader pixels and verifies zero mask/density/size, threefold HDR color
+brightness, a bounded Value mask independent of brightness, time twinkle, and
+view-dependent glints. The test pins view position separately from rasterization
+to isolate angle response. Red/green/blue with alpha zero render as luminance
+0.2126/0.7152/0.0722 when connected to a numeric input.
+
+![Glitter front view](evidence/2026-09-21-glitter-front.png)
+![Glitter angled view](evidence/2026-09-21-glitter-angle.png)
+
+Portable checks cover socket compatibility, texture-to-opacity wiring, dynamic
+math and JSON round trips, plus fragment-only Glitter diagnostics. Seven
+packaging tests passed. This is Linux editor evidence, not live VRChat or Windows.

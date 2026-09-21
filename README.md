@@ -47,7 +47,7 @@ Build for VRChat creates the shader and material locally; it doesn't upload an a
 
 ## What's in it
 
-There are **142 nodes** so far. The [node guide](docs/NODES.md) covers their inputs and settings.
+There are **143 nodes** so far. The [node guide](docs/NODES.md) covers their inputs and settings.
 
 | Area | Features |
 | :--- | :--- |

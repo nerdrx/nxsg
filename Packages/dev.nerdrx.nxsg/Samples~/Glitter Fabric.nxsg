@@ -1,0 +1,157 @@
+{
+  "format": "nxsg",
+  "schemaVersion": 1,
+  "graphId": "glitter-fabric-example",
+  "nodes": [
+    {
+      "id": "uv",
+      "operation": "core.uv0",
+      "version": 1,
+      "properties": {}
+    },
+    {
+      "id": "tint",
+      "operation": "core.constant",
+      "version": 1,
+      "properties": {
+        "valueType": "color",
+        "value": [
+          0.55,
+          0.2,
+          1,
+          1
+        ]
+      }
+    },
+    {
+      "id": "base",
+      "operation": "core.constant",
+      "version": 1,
+      "properties": {
+        "valueType": "color",
+        "value": [
+          0.025,
+          0.01,
+          0.055,
+          1
+        ]
+      }
+    },
+    {
+      "id": "glitter",
+      "operation": "core.glitter",
+      "version": 1,
+      "properties": {
+        "scale": 70,
+        "density": 0.8,
+        "size": 0.25,
+        "sharpness": 18,
+        "viewStrength": 0.85,
+        "speed": 1,
+        "twinkle": 0.4,
+        "brightness": 5,
+        "seed": 0,
+        "mask": 1
+      }
+    },
+    {
+      "id": "surface",
+      "operation": "core.toonSurface",
+      "version": 1,
+      "properties": {}
+    },
+    {
+      "id": "output",
+      "operation": "core.output",
+      "version": 1,
+      "properties": {}
+    }
+  ],
+  "connections": [
+    {
+      "id": "e0",
+      "from": {
+        "nodeId": "uv",
+        "portId": "uv"
+      },
+      "to": {
+        "nodeId": "glitter",
+        "portId": "uv"
+      }
+    },
+    {
+      "id": "e1",
+      "from": {
+        "nodeId": "tint",
+        "portId": "value"
+      },
+      "to": {
+        "nodeId": "glitter",
+        "portId": "color"
+      }
+    },
+    {
+      "id": "e2",
+      "from": {
+        "nodeId": "base",
+        "portId": "value"
+      },
+      "to": {
+        "nodeId": "surface",
+        "portId": "albedo"
+      }
+    },
+    {
+      "id": "e3",
+      "from": {
+        "nodeId": "glitter",
+        "portId": "color"
+      },
+      "to": {
+        "nodeId": "surface",
+        "portId": "emission"
+      }
+    },
+    {
+      "id": "e4",
+      "from": {
+        "nodeId": "surface",
+        "portId": "surface"
+      },
+      "to": {
+        "nodeId": "output",
+        "portId": "surface"
+      }
+    }
+  ],
+  "parameters": [],
+  "resources": [],
+  "layout": {
+    "nodes": {
+      "uv": {
+        "x": 20,
+        "y": 40
+      },
+      "tint": {
+        "x": 20,
+        "y": 170
+      },
+      "base": {
+        "x": 270,
+        "y": 350
+      },
+      "glitter": {
+        "x": 280,
+        "y": 80
+      },
+      "surface": {
+        "x": 560,
+        "y": 120
+      },
+      "output": {
+        "x": 800,
+        "y": 120
+      }
+    }
+  }
+}

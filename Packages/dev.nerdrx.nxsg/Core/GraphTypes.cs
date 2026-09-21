@@ -131,7 +131,9 @@ namespace NXSG.Core
         {
             return from != null && to != null && (string.Equals(from, to, StringComparison.OrdinalIgnoreCase) ||
                 (string.Equals(from, "float", StringComparison.OrdinalIgnoreCase) &&
-                 string.Equals(to, "color", StringComparison.OrdinalIgnoreCase)));
+                 string.Equals(to, "color", StringComparison.OrdinalIgnoreCase)) ||
+                (string.Equals(from, "color", StringComparison.OrdinalIgnoreCase) &&
+                 string.Equals(to, "float", StringComparison.OrdinalIgnoreCase)));
         }
 
         private static bool IsDynamicPort(string operation, string port)

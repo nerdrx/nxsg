@@ -231,6 +231,7 @@ namespace NXSG.Core
                 case "core.dissolve": numeric = new[] { "threshold", "edgeWidth" }; break;
                 case "core.shell": numeric = new[] { "offset" }; break;
                 case "core.vertexMotion": numeric = new[] { "strength", "speed", "frequency" }; break;
+                case "core.glitter": numeric = new[] { "scale", "density", "size", "sharpness", "viewStrength", "speed", "twinkle", "brightness", "seed", "mask" }; break;
                 case "core.uvDistort": numeric = new[] { "strength", "speed", "scale", "mask", "radius", "falloff" }; vectors = new[] { "center", "direction", "axes" }; break;
                 case "core.gradient": numeric = new[] { "angle", "radius" }; vectors = new[] { "center" }; break;
                 case "core.uvTile": vectors = new[] { "tiling", "offset" }; break;
@@ -313,6 +314,17 @@ namespace NXSG.Core
             }
             if (node.Operation == "core.sticker" && node.Properties["size"] is JArray size && size.Count == 2 && size.All(IsNumber) && size.Any(v => (double)v <= 0))
                 Add(diagnostics,DiagnosticSeverity.Error,"value.range",path+".properties.size","Sticker size must be positive.");
+            if (node.Operation == "core.glitter")
+            {
+                CheckRange(node.Properties["scale"], path + ".properties.scale", double.Epsilon, 100000, diagnostics);
+                CheckRange(node.Properties["density"], path + ".properties.density", 0, 1, diagnostics);
+                CheckRange(node.Properties["size"], path + ".properties.size", 0, 1, diagnostics);
+                CheckRange(node.Properties["sharpness"], path + ".properties.sharpness", 1, 512, diagnostics);
+                CheckRange(node.Properties["viewStrength"], path + ".properties.viewStrength", 0, 1, diagnostics);
+                CheckRange(node.Properties["twinkle"], path + ".properties.twinkle", 0, 1, diagnostics);
+                CheckRange(node.Properties["brightness"], path + ".properties.brightness", 0, 65504, diagnostics);
+                CheckRange(node.Properties["mask"], path + ".properties.mask", 0, 1, diagnostics);
+            }
         }
 
         private static void CheckRampPoints(JToken token, string path, List<Diagnostic> diagnostics)

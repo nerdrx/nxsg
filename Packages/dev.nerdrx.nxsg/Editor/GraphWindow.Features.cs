@@ -34,6 +34,21 @@ namespace NXSG.Editor
                 case "core.marble": AddCoordinateChoice(node); AddNumber(node, "scale", "Vein scale", 5); AddNumber(node, "distortion", "Distortion", 3); return true;
                 case "core.clouds": AddCoordinateChoice(node); AddNumber(node, "scale", "Cloud scale", 4); AddNumber(node, "speed", "Drift speed", .1f); AddNumber(node, "contrast", "Contrast", 1); return true;
                 case "core.sparkleMask": AddCoordinateChoice(node); AddNumber(node, "scale", "Sparkle scale", 30); AddNumber(node, "speed", "Blink speed", 2); AddBoundedNumber(node, "density", "Sparkle density", 0, 1, .2f); AddBoundedNumber(node, "size", "Sparkle size", 0, 1, .08f); return true;
+                case "core.glitter":
+                    AddCoordinateChoice(node);
+                    AddNumber(node, "scale", "Flake scale", 60);
+                    AddBoundedNumber(node, "density", "Flake density", 0, 1, .6f);
+                    AddBoundedNumber(node, "size", "Flake size", 0, 1, .16f);
+                    AddBoundedNumber(node, "sharpness", "Sparkle sharpness", 1, 512, 32);
+                    AddBoundedNumber(node, "viewStrength", "View angle strength", 0, 1, 1);
+                    AddNumber(node, "speed", "Sparkle speed", 1);
+                    AddBoundedNumber(node, "twinkle", "Twinkle amount", 0, 1, .3f);
+                    AddBoundedNumber(node, "brightness", "HDR brightness", 0, 10, 2);
+                    AddNumber(node, "seed", "Flake seed", 0);
+                    AddBoundedNumber(node, "mask", "Flake mask", 0, 1, 1, "mask");
+                    AddColorField(node, "color", "Flake color", Color.white, "color");
+                    FeatureNote("Stable surface UVs place flakes. View angle and time drive sparkle. Mask is 0–1. Brightness changes HDR color only.");
+                    return true;
                 case "core.scanlines": AddCoordinateChoice(node); AddNumber(node, "scale", "Line count", 100); AddNumber(node, "speed", "Scroll speed", .2f); AddBoundedNumber(node, "width", "Line width", 0, 1, .3f); return true;
                 case "core.glitchUV": AddCoordinateChoice(node); AddNumber(node, "strength", "Glitch strength", .05f); AddNumber(node, "speed", "Glitch speed", 5); AddIntegerField(node, "rows", "Rows", 1, 256, 20); return true;
                 case "core.pixelateUV": AddCoordinateChoice(node); AddIntegerField(node, "cells", "Cells", 1, 256, 64); return true;

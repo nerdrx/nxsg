@@ -14,7 +14,7 @@ public static class DynamicTypeChecks
         CheckFloatMix(assert);
         CheckFloatUvAngle(assert);
         CheckMixedMath(assert);
-        CheckRejectedColorScalar(assert);
+        CheckAutomaticColorScalar(assert);
         CheckOrderIndependentChain(assert);
         CheckCycleBound(assert);
         CheckScalarToAlbedo(assert);
@@ -57,14 +57,14 @@ public static class DynamicTypeChecks
         assert(inferred["math"] == "color", "mixed color and scalar math infers color");
     }
 
-    private static void CheckRejectedColorScalar(Action<bool, string> assert)
+    private static void CheckAutomaticColorScalar(Action<bool, string> assert)
     {
         var graph = new ShaderGraph { GraphId = "color-to-scalar" };
         graph.Nodes.Add(new GraphNode { Id = "color", Operation = "core.constant", Properties = new JObject { ["valueType"] = "color", ["value"] = new JArray(1, 1, 1, 1) } });
         graph.Nodes.Add(new GraphNode { Id = "rotate", Operation = "core.uvRotate" });
         Connect(graph, "color", "value", "rotate", "angle", "bad-color-angle");
         var result = GraphValidator.Validate(graph);
-        assert(!result.IsValid && result.Diagnostics.Any(d => d.Code == "connection.type"), "color to scalar connection rejects");
+        assert(result.IsValid, "color to scalar connection converts automatically");
     }
 
     private static void CheckOrderIndependentChain(Action<bool, string> assert)
