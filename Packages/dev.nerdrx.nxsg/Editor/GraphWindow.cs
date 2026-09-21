@@ -889,8 +889,8 @@ namespace NXSG.Editor
                     case "core.emission": AddNumber(node, "strength", "Strength", 1, "strength"); break;
                     case "core.fresnel": AddNumber(node, "power", "Power", 5, "power"); break;
                     case "core.layer": AddNumber(node, "mask", "Mask", 1, "mask"); break;
-                    case "core.pbrSurface": AddNumber(node, "opacity", "Opacity", 1, "opacity"); AddNumber(node, "cutoff", "Cutoff", .001f); AddNumber(node, "displacement", "Displacement", 0, "displacement"); AddNumber(node, "metallic", "Metallic", 0, "metallic"); AddNumber(node, "roughness", "Roughness", .5f, "roughness"); break;
-                    case "core.toonSurface": AddNumber(node, "opacity", "Opacity", 1, "opacity"); AddNumber(node, "cutoff", "Cutoff", .001f); AddNumber(node, "displacement", "Displacement", 0, "displacement"); break;
+                    case "core.pbrSurface": AddAlbedoAlphaToggle(node); AddNumber(node, "opacity", "Opacity", 1, "opacity"); AddNumber(node, "cutoff", "Cutoff", .001f); AddNumber(node, "displacement", "Displacement", 0, "displacement"); AddNumber(node, "metallic", "Metallic", 0, "metallic"); AddNumber(node, "roughness", "Roughness", .5f, "roughness"); break;
+                    case "core.toonSurface": AddAlbedoAlphaToggle(node); AddNumber(node, "opacity", "Opacity", 1, "opacity"); AddNumber(node, "cutoff", "Cutoff", .001f); AddNumber(node, "displacement", "Displacement", 0, "displacement"); break;
                     case "core.surfaceParticles":
                         var sourceUvToggle = new Toggle("Color from mesh UVs") { value = (int?)node.Properties["sourceUV"] == 1,
                             tooltip = "On: particle Albedo and Emission sample the connected texture at the spawn point on mesh UV0. Off: each particle displays the texture using its own sprite UVs. Opacity keeps sprite UVs." };
@@ -914,7 +914,7 @@ namespace NXSG.Editor
                         AddBoundedNumber(node, "softDistance", "Soft intersection distance", 0, 5, 0);
                         inspector.Add(new Label("Particle color and lifetime alpha apply automatically. Use Renderer streams Position, Normal, Color, UV. Soft distance 0 disables depth fading; positive values need camera depth.") { style = { whiteSpace = WhiteSpace.Normal } });
                         break;
-                    case "core.unlitSurface": AddNumber(node, "opacity", "Opacity", 1, "opacity"); AddNumber(node, "cutoff", "Cutoff", .001f); AddNumber(node, "displacement", "Displacement", 0, "displacement"); break;
+                    case "core.unlitSurface": AddAlbedoAlphaToggle(node); AddNumber(node, "opacity", "Opacity", 1, "opacity"); AddNumber(node, "cutoff", "Cutoff", .001f); AddNumber(node, "displacement", "Displacement", 0, "displacement"); break;
                     case "core.sticker": AddTexturePicker(node, "Sticker texture"); AddVector(node, "position", "Position", Vector2.zero); AddVector(node, "size", "Size", Vector2.one); AddNumber(node, "rotation", "Rotation", 0); AddNumber(node, "mask", "Mask", 1, "mask"); break;
                     case "core.dissolve": AddNumber(node, "threshold", "Threshold", .5f, "threshold"); AddNumber(node, "edgeWidth", "Edge width", .05f); break;
                     case "core.flipbook": AddNumber(node, "columns", "Columns", 1); AddNumber(node, "rows", "Rows", 1); AddNumber(node, "speed", "Speed", 1); break;

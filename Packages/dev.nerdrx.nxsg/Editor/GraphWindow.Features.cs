@@ -90,6 +90,17 @@ namespace NXSG.Editor
             }
         }
 
+        void AddAlbedoAlphaToggle(GraphNode node)
+        {
+            var field = new Toggle("Use albedo alpha")
+            {
+                value = ((int?)node.Properties["useAlbedoAlpha"] ?? 1) == 1,
+                tooltip = "Use transparency from the Albedo color or texture. Off: only Opacity and material Tint alpha control transparency."
+            };
+            field.RegisterValueChangedCallback(evt => Edit("Toggle albedo alpha", () => node.Properties["useAlbedoAlpha"] = evt.newValue ? 1 : 0));
+            inspector.Add(field);
+        }
+
         void AddFurControls(GraphNode node)
         {
             var cardsOnly = (int?)node.Properties["cardsOnly"] == 1;

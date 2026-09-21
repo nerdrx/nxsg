@@ -271,3 +271,10 @@ node's own Coordinates selector.
 Panosphere uses a spherical view-direction projection. Connect its UV output to
 Texture, with UV Transform or UV Scroll in between for scale, offset or motion.
 It behaves like viewing a panorama through the mesh; it does not use mesh UVs.
+
+### Albedo transparency
+
+Toon, Unlit and PBR expose **Use albedo alpha**. Disable it to ignore transparency
+in an Albedo texture/color. Opacity and material Tint alpha still apply. Leave it
+enabled to multiply all three. The choice also affects shell layers, additional
+lights and shadow casting. Existing graphs retain their behavior.
