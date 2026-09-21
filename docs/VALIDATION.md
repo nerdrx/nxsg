@@ -378,3 +378,9 @@ Downloaded alpha.11 matched SHA-256
 `ceeb8a9a6895c6fcad4928f5516736617d90084812cf01dd6b53d5de06b9d893`.
 Installed from the downloaded ZIP, `TextureLabelSmoke` passed again. The fixture
 was restored to the source package. Seven packaging tests passed.
+
+Alpha.12 also checks that slot numbering is unchanged by canonical JSON resource
+sorting on save/reload. Its downloaded ZIP matched SHA-256
+`09a9fe32a192a8b01007a42cd39353bcf9e624ed1fad9033510b7c52b9ce137a`;
+`TextureLabelSmoke` passed when installed from that archive. The fixture was
+restored to source afterward.
