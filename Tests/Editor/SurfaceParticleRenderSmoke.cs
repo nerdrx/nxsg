@@ -21,7 +21,7 @@ public static class SurfaceParticleRenderSmoke
             subject = GameObject.CreatePrimitive(PrimitiveType.Cube); subject.transform.localScale = Vector3.one * 1.4f;
             camera = new GameObject("NXSG Surface Particle Camera").AddComponent<Camera>(); camera.clearFlags = CameraClearFlags.SolidColor; camera.backgroundColor = Color.black; camera.orthographic = true; camera.orthographicSize = 2.5f; camera.transform.position = new Vector3(0, 0, -4); camera.transform.LookAt(Vector3.zero);
             target = new RenderTexture(Size, Size, 24, RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.Linear); target.Create(); camera.targetTexture = target;
-            CheckRender(); CheckRate(); CheckSkinnedSource(); CheckSample(); Debug.Log("NXSG SURFACE PARTICLE RENDER SMOKE PASSED"); EditorApplication.Exit(0);
+            CheckRender(); CheckSourceVertexAlpha(); CheckRate(); CheckSkinnedSource(); CheckSample(); Debug.Log("NXSG SURFACE PARTICLE RENDER SMOKE PASSED"); EditorApplication.Exit(0);
         }
         catch (Exception exception) { Debug.LogException(exception); EditorApplication.Exit(1); }
         finally { RenderTexture.active = null; if (target != null) { target.Release(); UnityEngine.Object.DestroyImmediate(target); } if (camera != null) UnityEngine.Object.DestroyImmediate(camera.gameObject); if (subject != null) UnityEngine.Object.DestroyImmediate(subject); }
@@ -37,6 +37,42 @@ public static class SurfaceParticleRenderSmoke
         if (Changed(first, later) < 8) throw new InvalidOperationException("surfaceParticles time did not change pixels");
         graph = Graph(1, 0, .2); using (var preview = GraphPreview.Create(graph, null)) { subject.GetComponent<Renderer>().sharedMaterial = preview.Material; if (CountRed(Capture()) > CountRed(baseOnly) + 2) throw new InvalidOperationException("surfaceParticles mask 0 still rendered"); }
         graph = Graph(1, 1, .2); camera.transform.position = new Vector3(2.5f, 1.2f, -3.2f); camera.transform.LookAt(Vector3.zero); using (var preview = GraphPreview.Create(graph, null)) { subject.GetComponent<Renderer>().sharedMaterial = preview.Material; if (CountRed(Capture()) < 8) throw new InvalidOperationException("surfaceParticles disappeared after camera rotation"); }
+    }
+    static void CheckSourceVertexAlpha()
+    {
+        camera.transform.position = new Vector3(0, 0, -4); camera.transform.LookAt(Vector3.zero);
+        var filter = subject.GetComponent<MeshFilter>();
+        var original = filter.sharedMesh;
+        var mesh = UnityEngine.Object.Instantiate(original);
+        filter.sharedMesh = mesh;
+        try
+        {
+            mesh.colors = Enumerable.Repeat(Color.white, mesh.vertexCount).ToArray();
+            Color[] white;
+            using (var preview = GraphPreview.Create(Graph(1, 1, .2), null)) { subject.GetComponent<Renderer>().sharedMaterial = preview.Material; white = Capture(); }
+
+            // Hair and other authored submeshes can carry alpha-zero vertex colors. That
+            // source data must not silently disable particles when mask/opacity are 1.
+            mesh.colors = Enumerable.Repeat(new Color(0, 0, 0, 0), mesh.vertexCount).ToArray();
+            Color[] alphaZero;
+            using (var preview = GraphPreview.Create(Graph(1, 1, .2), null)) { subject.GetComponent<Renderer>().sharedMaterial = preview.Material; alphaZero = Capture(); }
+            if (CountRed(white) < 3 || !Same(alphaZero, white, .001f))
+                throw new InvalidOperationException("surfaceParticles inherited source vertex RGB or alpha");
+
+            // Explicit graph wiring remains authoritative: Vertex Color RGB can still
+            // drive the emitter mask when the creator asks for it.
+            mesh.colors = Enumerable.Repeat(new Color(0, 0, 0, 1), mesh.vertexCount).ToArray();
+            using (var preview = GraphPreview.Create(GraphWithVertexMask(), null))
+            {
+                subject.GetComponent<Renderer>().sharedMaterial = preview.Material;
+                if (CountRed(Capture()) > 2) throw new InvalidOperationException("Vertex Color mask did not hide surface particles");
+            }
+        }
+        finally
+        {
+            filter.sharedMesh = original;
+            UnityEngine.Object.DestroyImmediate(mesh);
+        }
     }
     static void CheckRate()
     {
@@ -119,6 +155,14 @@ public static class SurfaceParticleRenderSmoke
     static ShaderGraph Graph(double density, double mask, double time)
     {
         var graph = new ShaderGraph { GraphId = "surface-particle-render" }; graph.Nodes.Add(ColorNode("black", new JArray(0, 0, 0, 1))); graph.Nodes.Add(new GraphNode { Id = "base", Operation = "core.unlitSurface" }); graph.Nodes.Add(ColorNode("red", new JArray(1, 0, 0, 1))); graph.Nodes.Add(Float("time", time)); graph.Nodes.Add(Float("mask", mask)); graph.Nodes.Add(new GraphNode { Id = "particles", Operation = "core.surfaceParticles", Properties = new JObject { ["density"] = density, ["size"] = .15 } }); graph.Nodes.Add(new GraphNode { Id = "output", Operation = "core.output" }); Edge(graph, "black", "value", "base", "albedo"); Edge(graph, "base", "surface", "particles", "base"); Edge(graph, "red", "value", "particles", "albedo"); Edge(graph, "time", "value", "particles", "time"); Edge(graph, "mask", "value", "particles", "mask"); Edge(graph, "particles", "surface", "output", "surface"); return graph;
+    }
+    static ShaderGraph GraphWithVertexMask()
+    {
+        var graph = Graph(1, 1, .2);
+        graph.Nodes.Add(new GraphNode { Id = "vertexColor", Operation = "core.vertexColor" });
+        graph.Connections.RemoveAll(c => c.To.NodeId == "particles" && c.To.PortId == "mask");
+        Edge(graph, "vertexColor", "color", "particles", "mask");
+        return graph;
     }
     static GraphNode ColorNode(string id, JArray value) { return new GraphNode { Id = id, Operation = "core.constant", Properties = new JObject { ["valueType"] = "color", ["value"] = value } }; }
     static GraphNode Float(string id, double value) { return new GraphNode { Id = id, Operation = "core.value", Properties = new JObject { ["value"] = value } }; }

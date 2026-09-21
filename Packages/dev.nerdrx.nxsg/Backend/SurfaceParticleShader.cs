@@ -105,7 +105,7 @@ void geomEmit(triangle NXInput tri[3], inout TriangleStream<NXInput> stream, uin
             corner.local = mul(unity_WorldToObject, float4(worldPosition, 1.0)).xyz;
             corner.sourceUV = input.uv;
             corner.uv = spriteUV[i];
-            corner.color.a = input.color.a * fade * particleMask * active;
+            corner.particleAlpha = fade * particleMask * active;
             corner.n = normalize(_WorldSpaceCameraPos - worldPosition);
             UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(corner);
             stream.Append(corner);
@@ -123,9 +123,9 @@ float4 fragEmit(NXInput input) : SV_Target
     clip(circle - 0.001);
     float particleOpacity = " + opacity + @";
     " + (sourceUV ? "input.uv = input.sourceUV;" : "") + @"
-    float4 c = (" + color + @") * _Color * input.color;
-    float3 e = (" + emission + @").rgb * input.color.rgb;
-    float alpha = saturate(c.a * particleOpacity * circle);
+    float4 c = (" + color + @") * _Color;
+    float3 e = (" + emission + @").rgb;
+    float alpha = saturate(c.a * input.particleAlpha * particleOpacity * circle);
     return float4(c.rgb + e, alpha);
 }
 ENDCG

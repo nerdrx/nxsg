@@ -20,6 +20,7 @@ public static class SurfaceParticleChecks
         assert(emitted.Succeeded && emitted.ShaderSource != null, "surfaceParticles graph emits");
         assert(emitted.ShaderSource.Contains("maxvertexcount(16)") && emitted.ShaderSource.Contains("SV_PrimitiveID") && emitted.ShaderSource.Contains("TriangleStream"), "surfaceParticles emits bounded geometry pass");
         assert(emitted.ShaderSource.Contains("ForwardBase") && emitted.ShaderSource.Contains("originalLocal"), "surfaceParticles preserves base pass and source position");
+        assert(emitted.ShaderSource.Contains("corner.particleAlpha = fade * particleMask * active;") && !emitted.ShaderSource.Contains("* _Color * input.color;"), "surface particles keep fade separate from source vertex colors");
         Reject(assert, graph, "lifetime", .0009, "lifetime lower bound"); Reject(assert, graph, "blendMode", 2, "blend mode choice"); Reject(assert, graph, "speed", new JValue(double.NaN), "speed finite");
         var outsideSliders = Graph();
         var outsideNode = outsideSliders.Nodes.Single(n => n.Id == "particles");

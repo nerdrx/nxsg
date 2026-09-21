@@ -23,7 +23,7 @@ public static class D3DCompileSmoke
             Directory.CreateDirectory(Path.Combine(Application.dataPath, "SmokeResults/D3DCompileSmoke"));
             AssetDatabase.Refresh();
 
-            var sampleNames = new[] { "Shiny Surface", "Neon Wireframe", "Tessellated Bumps", "Fur Cards" };
+            var sampleNames = new[] { "Shiny Surface", "Neon Wireframe", "Tessellated Bumps", "Fur Cards", "Surface Sparkles" };
             var sampleRoot = Path.Combine(UnityEditor.PackageManager.PackageInfo.FindForAssembly(typeof(ShaderEmitter).Assembly).resolvedPath, "Samples~");
             var shaders = sampleNames.Select((name, index) => Emit(File.ReadAllText(Path.Combine(sampleRoot, name + ".nxsg")), "sample_" + index)).ToList();
             shaders.Add(Emit(GraphJson.Serialize(Minimal("core.toonSurface")), "minimal_toon"));

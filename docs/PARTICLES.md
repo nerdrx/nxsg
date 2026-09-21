@@ -71,3 +71,11 @@ were checked 2026-09-18. VRChat client and stereo behavior remain unverified. Ke
 ### Slider ranges
 
 Slider tracks provide convenient working ranges. Their adjacent number fields accept finite values beyond those ranges and preserve them through save/reload. Mathematical limits (such as positive lifetime) still apply. Shader semantics also remain: density and opacity saturate, negative particle size hides the particle, and rates above the tessellation capacity plateau.
+
+### Source mesh vertex colors
+
+Surface Particles do not automatically multiply color or opacity by the source
+mesh's vertex colors. Some avatars store black or zero-alpha vertex colors on
+hair and other material regions. Connect a Vertex Color node to Albedo, Emission
+or Mask when that data should explicitly control particles. Particle lifetime
+fading is stored separately, so Vertex Color still reads the original mesh data.

@@ -479,3 +479,28 @@ been identified or retested here, so its visual symptom still needs client
 confirmation. No authored user graphs or materials were changed.
 
 Unity depth-texture behavior: https://docs.unity3d.com/2022.3/Documentation/Manual/SL-CameraDepthTexture.html
+
+
+## 2026-09-21 — Surface Particles source vertex colors (alpha.21)
+
+A private copy of the supplied FBX was imported into the isolated fixture. The
+Hair submesh contained 4,118 vertices, all with RGB 0 and alpha 0. The particle
+pass implicitly multiplied albedo/emission by vertex RGB and opacity by vertex
+alpha. This explained why disconnecting the explicit texture mask had no effect.
+No original model, graph or material was modified or committed.
+
+The pass now preserves source vertex colors for explicit graph reads and stores
+particle lifetime/mask opacity separately in `particleAlpha` (TEXCOORD20, after
+the fur-fin reserved slots). Automatic source vertex tinting is removed.
+
+- `SurfaceParticleRenderSmoke` passed in hidden Unity/OpenGL. Black RGBA-zero
+  source vertices produce the same pixels as white vertices (0.001 tolerance).
+  An explicit Vertex Color mask still suppresses particles. Rate/tessellation,
+  motion and skinned-source checks in the same harness also passed.
+  Log: `work/unity/particle-color-render.log`.
+- D3D11 Windows64 bundle cross-compilation passed 13 shaders, now including
+  Surface Sparkles plus five private local graphs (`particle-color-d3d.log`).
+- Portable harness and seven packaging checks passed.
+
+This is not a live VRChat retest. Existing graphs intentionally relying on implicit
+vertex tinting should connect Vertex Color explicitly after updating.
