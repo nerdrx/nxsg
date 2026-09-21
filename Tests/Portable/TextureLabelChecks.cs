@@ -6,6 +6,10 @@ public static class TextureLabelChecks
 {
     public static void Run(Action<bool,string> assert)
     {
+        var ordered=GraphSamples.CreateDefault();var id=ordered.Resources[0].Id;
+        ordered.Resources.Add(new GraphResource{Id="aaa",Kind="texture2D",Uri="builtin://white"});
+        var label=TextureSlotLabels.DisplayName(ordered,id);
+        assert(label==TextureSlotLabels.DisplayName(GraphJson.Parse(GraphJson.Serialize(ordered)),id),"Slot numbering survives canonical resource reordering");
         foreach(bool advanced in new[]{false,true})
         {
             var g=GraphSamples.CreateDefault();if(advanced)g.Nodes.Single(n=>n.Id=="toon").Properties["opacity"]=1;

@@ -13,7 +13,7 @@ https://nerdrx.github.io/nxsg/index.json
 ## Creator Companion
 
 1. Open **Settings → Packages → Add Repository**, paste the URL and confirm the listed repository.
-2. Enable **Show Pre-Release Packages**. The current package is `0.1.0-alpha.11`.
+2. Enable **Show Pre-Release Packages**. The current package is `0.1.0-alpha.12`.
 3. Manage your Unity project, locate **NX Shader Graph**, and add it.
 4. Open Unity and choose **Tools → NXSG → Open Graph Editor**.
 
