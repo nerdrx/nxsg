@@ -1,6 +1,8 @@
 using System;
+using System.IO;
 using System.Linq;
 using Newtonsoft.Json.Linq;
+using NXSG.Backend;
 using NXSG.Core;
 using NXSG.Editor;
 using UnityEditor;
@@ -21,7 +23,7 @@ public static class SurfaceParticleRenderSmoke
             subject = GameObject.CreatePrimitive(PrimitiveType.Cube); subject.transform.localScale = Vector3.one * 1.4f;
             camera = new GameObject("NXSG Surface Particle Camera").AddComponent<Camera>(); camera.clearFlags = CameraClearFlags.SolidColor; camera.backgroundColor = Color.black; camera.orthographic = true; camera.orthographicSize = 2.5f; camera.transform.position = new Vector3(0, 0, -4); camera.transform.LookAt(Vector3.zero);
             target = new RenderTexture(Size, Size, 24, RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.Linear); target.Create(); camera.targetTexture = target;
-            CheckRender(); CheckSourceVertexAlpha(); CheckRate(); CheckSkinnedSource(); CheckSample(); Debug.Log("NXSG SURFACE PARTICLE RENDER SMOKE PASSED"); EditorApplication.Exit(0);
+            CheckRender(); CheckSourceVertexAlpha(); CheckRate(); CheckParticleInputs(); CheckSkinnedSource(); CheckSample(); Debug.Log("NXSG SURFACE PARTICLE RENDER SMOKE PASSED"); EditorApplication.Exit(0);
         }
         catch (Exception exception) { Debug.LogException(exception); EditorApplication.Exit(1); }
         finally { RenderTexture.active = null; if (target != null) { target.Release(); UnityEngine.Object.DestroyImmediate(target); } if (camera != null) UnityEngine.Object.DestroyImmediate(camera.gameObject); if (subject != null) UnityEngine.Object.DestroyImmediate(subject); }
@@ -118,6 +120,33 @@ public static class SurfaceParticleRenderSmoke
         if(weight<.1)throw new InvalidOperationException("No source particles for position test");
         return sum/weight;
     }
+    static void CheckParticleInputs()
+    {
+        camera.transform.position = new Vector3(0, 0, -4); camera.transform.LookAt(Vector3.zero);
+        var unconnected = Graph(1, 1, .2);
+        unconnected.Nodes.Single(n => n.Id == "particles").Properties["emissionRate"] = 8;
+        Color[] defaults;
+        using (var preview = GraphPreview.Create(unconnected, null)) { subject.GetComponent<Renderer>().sharedMaterial = preview.Material; defaults = Capture(); }
+
+        // Value nodes must override stored properties on every numeric particle socket.
+        var wiredDefaults = GraphWithParticleInputs(.2, 1, 8, .15, 2, .2, 0, .05);
+        Color[] wired;
+        using (var preview = GraphPreview.Create(wiredDefaults, null)) { subject.GetComponent<Renderer>().sharedMaterial = preview.Material; wired = Capture(); }
+        if (!Same(defaults, wired, .001f)) throw new InvalidOperationException("Connected particle defaults changed rendering");
+
+        var sizeZero = GraphWithParticleInputs(.2, 1, .5, 0, 2, .2, 0, .05);
+        using (var preview = GraphPreview.Create(sizeZero, null)) { subject.GetComponent<Renderer>().sharedMaterial = preview.Material; if (CountRed(Capture()) > 2) throw new InvalidOperationException("Connected particle size 0 did not hide particles"); }
+        var densityZero = GraphWithParticleInputs(.2, 0, .5, .15, 2, .2, 0, .05);
+        using (var preview = GraphPreview.Create(densityZero, null)) { subject.GetComponent<Renderer>().sharedMaterial = preview.Material; if (CountRed(Capture()) > 2) throw new InvalidOperationException("Connected particle density 0 did not hide particles"); }
+
+        Color[] rateZero, rateHigh;
+        var zero = GraphWithParticleInputs(.6, 1, 0, .15, 2, .2, 0, .05);
+        using (var preview = GraphPreview.Create(zero, null)) { subject.GetComponent<Renderer>().sharedMaterial = preview.Material; rateZero = Capture(); }
+        var high = GraphWithParticleInputs(.6, 1, 8, .15, 2, .2, 0, .05);
+        PublishParticleInputShader(high);
+        using (var preview = GraphPreview.Create(high, null)) { subject.GetComponent<Renderer>().sharedMaterial = preview.Material; rateHigh = Capture(); }
+        if (CountRed(rateHigh) < CountRed(rateZero) + 4) throw new InvalidOperationException("Connected emission rate did not increase visible particles");
+    }
     static void CheckSkinnedSource()
     {
         camera.transform.position=new Vector3(0,0,-4);camera.transform.LookAt(Vector3.zero);
@@ -154,7 +183,25 @@ public static class SurfaceParticleRenderSmoke
     }
     static ShaderGraph Graph(double density, double mask, double time)
     {
-        var graph = new ShaderGraph { GraphId = "surface-particle-render" }; graph.Nodes.Add(ColorNode("black", new JArray(0, 0, 0, 1))); graph.Nodes.Add(new GraphNode { Id = "base", Operation = "core.unlitSurface" }); graph.Nodes.Add(ColorNode("red", new JArray(1, 0, 0, 1))); graph.Nodes.Add(Float("time", time)); graph.Nodes.Add(Float("mask", mask)); graph.Nodes.Add(new GraphNode { Id = "particles", Operation = "core.surfaceParticles", Properties = new JObject { ["density"] = density, ["size"] = .15 } }); graph.Nodes.Add(new GraphNode { Id = "output", Operation = "core.output" }); Edge(graph, "black", "value", "base", "albedo"); Edge(graph, "base", "surface", "particles", "base"); Edge(graph, "red", "value", "particles", "albedo"); Edge(graph, "time", "value", "particles", "time"); Edge(graph, "mask", "value", "particles", "mask"); Edge(graph, "particles", "surface", "output", "surface"); return graph;
+        var graph = new ShaderGraph { GraphId = "surface-particle-render" }; graph.Nodes.Add(ColorNode("black", new JArray(0, 0, 0, 1))); graph.Nodes.Add(new GraphNode { Id = "base", Operation = "core.unlitSurface" }); graph.Nodes.Add(ColorNode("red", new JArray(1, 0, 0, 1))); graph.Nodes.Add(Float("time", time)); graph.Nodes.Add(Float("mask", mask)); graph.Nodes.Add(new GraphNode { Id = "particles", Operation = "core.surfaceParticles", Properties = new JObject { ["density"] = density, ["emissionRate"] = .5, ["size"] = .15, ["lifetime"] = 2, ["speed"] = .2, ["gravity"] = 0, ["spread"] = .05 } }); graph.Nodes.Add(new GraphNode { Id = "output", Operation = "core.output" }); Edge(graph, "black", "value", "base", "albedo"); Edge(graph, "base", "surface", "particles", "base"); Edge(graph, "red", "value", "particles", "albedo"); Edge(graph, "time", "value", "particles", "time"); Edge(graph, "mask", "value", "particles", "mask"); Edge(graph, "particles", "surface", "output", "surface"); return graph;
+    }
+
+    static ShaderGraph GraphWithParticleInputs(double time, double density, double emissionRate, double size, double lifetime, double speed, double gravity, double spread)
+    {
+        var graph = Graph(1, 1, time);
+        foreach (var input in new[] { "density", "emissionRate", "size", "lifetime", "speed", "gravity", "spread" }) graph.Nodes.Add(Float("input_" + input, input == "density" ? density : input == "emissionRate" ? emissionRate : input == "size" ? size : input == "lifetime" ? lifetime : input == "speed" ? speed : input == "gravity" ? gravity : spread));
+        foreach (var input in new[] { "density", "emissionRate", "size", "lifetime", "speed", "gravity", "spread" }) Edge(graph, "input_" + input, "value", "particles", input);
+        return graph;
+    }
+
+    static void PublishParticleInputShader(ShaderGraph graph)
+    {
+        var emitted = ShaderEmitter.Emit(graph, new EmitterOptions { ShaderName = "NXSG/Smoke/ParticleInputs" });
+        if (!emitted.Succeeded) throw new InvalidOperationException("Particle input graph did not emit: " + string.Join("\n", emitted.Diagnostics.Select(d => d.Message)));
+        var path = "Assets/SmokeResults/ParticleInputs.shader";
+        Directory.CreateDirectory(Path.Combine(Application.dataPath, "SmokeResults"));
+        File.WriteAllText(path, emitted.ShaderSource);
+        AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate);
     }
     static ShaderGraph GraphWithVertexMask()
     {

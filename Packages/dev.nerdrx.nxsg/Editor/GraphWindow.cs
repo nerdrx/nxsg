@@ -645,7 +645,7 @@ namespace NXSG.Editor
                 case "uv": return "UV"; case "rootColor": return "Root color"; case "tipColor": return "Tip color";
                 case "inMin": return "Input min"; case "inMax": return "Input max";
                 case "outMin": return "Output min"; case "outMax": return "Output max";
-                case "groom": return "Groom direction"; default: return port;
+                case "emissionRate": return "Emission rate"; case "groom": return "Groom direction"; default: return port;
             }
         }
 
@@ -897,16 +897,16 @@ namespace NXSG.Editor
                         sourceUvToggle.RegisterValueChangedCallback(evt => Edit("Change particle color UVs", () => node.Properties["sourceUV"] = evt.newValue ? 1 : 0));
                         inspector.Add(sourceUvToggle);
                         AddIndexedChoice(node,"blendMode","Blending",new[]{"Alpha","Additive"},1);
-                        AddBoundedNumber(node,"density","Triangle density",0,1,.1f);
-                        AddBoundedNumber(node,"emissionRate","Rate / triangle / sec",0,4,1 / Mathf.Max(.001f, (float?)node.Properties["lifetime"] ?? 2));
-                        AddBoundedNumber(node,"size","Particle size",.0001f,1,.03f);
-                        AddBoundedNumber(node,"lifetime","Lifetime (seconds)",.05f,30,2);
-                        AddNumber(node,"speed","Outward speed",.2f);
-                        AddNumber(node,"gravity","Gravity (local Y)",0);
-                        AddBoundedNumber(node,"spread","Velocity randomness",0,5,.05f);
+                        AddBoundedNumber(node,"density","Triangle density",0,1,.1f,"density");
+                        AddBoundedNumber(node,"emissionRate","Emission rate / triangle / sec",0,4,1 / Mathf.Max(.001f, (float?)node.Properties["lifetime"] ?? 2),"emissionRate");
+                        AddBoundedNumber(node,"size","Particle size",.0001f,1,.03f,"size");
+                        AddBoundedNumber(node,"lifetime","Lifetime (seconds)",.05f,30,2,"lifetime");
+                        AddNumber(node,"speed","Outward speed",.2f,"speed");
+                        AddNumber(node,"gravity","Gravity (local Y)",0,"gravity");
+                        AddBoundedNumber(node,"spread","Velocity randomness",0,5,.05f,"spread");
                         AddBoundedNumber(node,"opacity","Opacity",0,1,1,"opacity");
                         AddBoundedNumber(node,"mask","Emitter mask",0,1,1,"mask");
-                        inspector.Add(new Label("Connect your surface to Base, then this node to Output. Emits from the same mesh: Density selects source triangles (1 = all). Rate requests births per source triangle per second. High rates automatically tessellate the mesh in this pass; the resulting rate is approximate. Tessellation stops at level 64. Mask uses mesh UVs. Color from mesh UVs samples particle color at its spawn point; otherwise it uses sprite UVs. Particles follow the current pose. Expand renderer bounds if particles disappear near screen edges.") { style = { whiteSpace = WhiteSpace.Normal } });
+                        inspector.Add(new Label("Connect your surface to Base, then this node to Output. Emits from the same mesh: Density selects source triangles (1 = all). Rate requests births per source triangle per second. Connected Rate and Lifetime drive adaptive tessellation up to level 64; high values cost more. Change Rate or Lifetime to retime procedural particles; there is no persistent simulation. Mask uses mesh UVs. Color from mesh UVs samples particle color at its spawn point; otherwise it uses sprite UVs. Particles follow the current pose. Expand renderer bounds if particles disappear near screen edges.") { style = { whiteSpace = WhiteSpace.Normal } });
                         break;
                     case "core.particleSurface":
                         AddIndexedChoice(node, "blendMode", "Blending", new[] { "Alpha · smoke / fluff", "Additive · sparks / glow" });

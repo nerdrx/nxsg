@@ -6,7 +6,7 @@ namespace NXSG.Backend
     // Geometry emission keeps particles attached to the mesh that owns the material.
     internal static class SurfaceParticleShader
     {
-        public static string Pass(string mask, string color, string emission, string opacity, string time, string density, string emissionRate, string size, string lifetime, string speed, string gravity, string spread, int blendMode, bool sourceUV)
+        public static string Pass(string mask, string color, string emission, string opacity, string time, string density, string emissionRate, string size, string lifetime, string speed, string gravity, string spread, int blendMode, bool sourceUV, bool dynamicBudget = false)
         {
             var blend = blendMode == 1 ? "One" : "OneMinusSrcAlpha";
             double.TryParse(emissionRate, NumberStyles.Float, CultureInfo.InvariantCulture, out var requestedRate);
@@ -15,7 +15,7 @@ namespace NXSG.Backend
             // Triangle tessellators use concentric rings. Count is an estimate across APIs;
             // the requested rate is distributed across those microtriangles.
             var subdivisions = level == 1 ? 1 : (3 * level * level - level % 2) / 2;
-            var tessellated = level > 1;
+            var tessellated = dynamicBudget || level > 1;
             return @"
 Pass {
 Name ""SurfaceParticles""
@@ -44,16 +44,18 @@ NXInput vertEmit(NXApp v)
     return input;
 }
 
-" + (tessellated ? Tessellation(level) : "") + @"
+" + (tessellated ? Tessellation(level, dynamicBudget ? emissionRate : null, lifetime) : "") + @"
 [maxvertexcount(16)]
 void geomEmit(triangle NXInput tri[3], inout TriangleStream<NXInput> stream, uint primitiveId : SV_PrimitiveID)
 {
+    NXInput input = tri[0];
+    UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
     float sourceId = " + (tessellated ? "tri[0].sourceUV.x" : "(float)primitiveId") + @";
     float seed = (float)primitiveId + dot(tri[0].uv + tri[1].uv + tri[2].uv,float2(17.3,41.7));
     float h0 = NX_SurfaceParticleHash(sourceId + 1.17);
     float densityGate = h0 < saturate(" + density + @") ? 1.0 : 0.0;
     float life = max(" + lifetime + @", 0.0001);
-    float effectiveRate = min(max(" + emissionRate + @", 0.0) / " + subdivisions + @".0, 4.0 / life);
+    float effectiveRate = min(max(" + emissionRate + @", 0.0) / " + (dynamicBudget ? "max(1.0, tri[0].sourceUV.y)" : subdivisions + ".0") + @", 4.0 / life);
     float rateVisible = step(0.000001, effectiveRate);
     for (int slot = 0; slot < 4; slot++)
     {
@@ -61,7 +63,7 @@ void geomEmit(triangle NXInput tri[3], inout TriangleStream<NXInput> stream, uin
         float h2 = NX_SurfaceParticleHash(seed + 23.71 + slot * 83.17);
         if (h1 + h2 > 1.0) { h1 = 1.0 - h1; h2 = 1.0 - h2; }
         float3 bary = float3(1.0 - h1 - h2, h1, h2);
-        NXInput input = tri[0];
+        input = tri[0];
         input.uv = tri[0].uv * bary.x + tri[1].uv * bary.y + tri[2].uv * bary.z;
         input.uv1 = tri[0].uv1 * bary.x + tri[1].uv1 * bary.y + tri[2].uv1 * bary.z;
         input.uv2 = tri[0].uv2 * bary.x + tri[1].uv2 * bary.y + tri[2].uv2 * bary.z;
@@ -133,13 +135,18 @@ ENDCG
 ";
         }
 
-        static string Tessellation(int level)
+        static string Tessellation(int level, string dynamicRate, string lifetime)
         {
             var code = @"
-struct NXParticleTess { float edge[3] : SV_TessFactor; float inside : SV_InsideTessFactor; float sourceId : TEXCOORD0; };
+struct NXParticleTess { float edge[3] : SV_TessFactor; float inside : SV_InsideTessFactor; float sourceId : TEXCOORD0; float subdivisions : TEXCOORD1; };
 NXParticleTess particleFactors(InputPatch<NXInput,3> patch, uint patchId : SV_PrimitiveID)
 {
-    NXParticleTess o; o.edge[0]=o.edge[1]=o.edge[2]=o.inside=" + level + @".0; o.sourceId=(float)patchId; return o;
+    NXInput input = patch[0];
+    UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
+    float level = " + (dynamicRate == null ? level + ".0" : "clamp(ceil(sqrt(min(max(" + dynamicRate + ",0.0),16384.0/max(" + lifetime + ",0.0001)) * max(" + lifetime + ",0.0001) / 4.0)),1.0,64.0)") + @";
+    NXParticleTess o; o.edge[0]=o.edge[1]=o.edge[2]=o.inside=level; o.sourceId=(float)patchId;
+    o.subdivisions = level <= 1.0 ? 1.0 : (3.0*level*level-fmod(level,2.0))*0.5;
+    return o;
 }
 [domain(""tri"")]
 [partitioning(""integer"")]
@@ -154,7 +161,7 @@ NXInput domainEmit(NXParticleTess factors,const OutputPatch<NXInput,3> patch,flo
 ";
             foreach(var field in new[]{"uv","uv1","uv2","uv3","ws","n","local","originalWs","originalLocal","tangent","bitangent","color"})
                 code += "o." + field + "=patch[0]." + field + "*bary.x+patch[1]." + field + "*bary.y+patch[2]." + field + "*bary.z;\n";
-            return code + "o.pos=UnityWorldToClipPos(o.ws); o.sourceUV=float2(factors.sourceId,0); return o; }\n";
+            return code + "o.pos=UnityWorldToClipPos(o.ws); o.sourceUV=float2(factors.sourceId,factors.subdivisions); return o; }\n";
         }
     }
 }

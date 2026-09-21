@@ -55,7 +55,7 @@ namespace NXSG.Core
             ["core.pbrSurface"] = new[] { "albedo", "emission", "opacity", "displacement", "normal", "metallic", "roughness" },
             ["core.particleSurface"] = new[] { "albedo", "emission", "opacity" },
             ["core.particleColor"] = new string[0],
-            ["core.surfaceParticles"] = new[] { "base", "albedo", "emission", "opacity", "mask", "time" },
+            ["core.surfaceParticles"] = new[] { "base", "albedo", "emission", "opacity", "mask", "time", "density", "emissionRate", "size", "lifetime", "speed", "gravity", "spread" },
             ["core.fresnel"] = new string[0], ["core.colorRamp"] = new[] { "value" },
             ["core.layer"] = new[] { "base", "overlay", "mask" }, ["core.sticker"] = new[] { "base", "uv", "mask" },
             ["core.dissolve"] = new[] { "value", "threshold" }, ["core.flipbook"] = new[] { "uv", "time" },
@@ -436,7 +436,7 @@ namespace NXSG.Core
                 case "core.posterize": return port == "value" || port == "levels" ? "float" : null;
                 case "core.vertexMotion": return port == "time" || port == "strength" || port == "value" ? "float" : null;
                 case "core.audioLink": return port == "value" ? "float" : null;
-                case "core.surfaceParticles": return port == "base" || port == "surface" ? "surface" : port == "albedo" || port == "emission" ? "color" : port == "opacity" || port == "mask" || port == "time" ? "float" : null;
+                case "core.surfaceParticles": return port == "base" || port == "surface" ? "surface" : port == "albedo" || port == "emission" ? "color" : port == "opacity" || port == "mask" || port == "time" || port == "density" || port == "emissionRate" || port == "size" || port == "lifetime" || port == "speed" || port == "gravity" || port == "spread" ? "float" : null;
                 case "core.particleColor": return port == "color" ? "color" : port == "alpha" ? "float" : null;
                 case "core.particleSurface": return port == "surface" ? "surface" : port == "opacity" ? "float" : port == "albedo" || port == "emission" ? "color" : null;
                 case "core.unlitSurface": return port == "surface" ? "surface" : (port == "albedo" || port == "emission" ? "color" : (port == "opacity" || port == "displacement" ? "float" : null));

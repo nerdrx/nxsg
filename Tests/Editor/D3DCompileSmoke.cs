@@ -34,6 +34,15 @@ public static class D3DCompileSmoke
             if (!string.IsNullOrEmpty(graphDirectory))
                 foreach (var path in Directory.GetFiles(graphDirectory, "*.nxsg"))
                     shaders.Add(Emit(File.ReadAllText(path), "reported_" + shaders.Count));
+            var dynamicParticles = GraphJson.Parse(File.ReadAllText(Path.Combine(sampleRoot, "Surface Sparkles.nxsg")));
+            var emitter = dynamicParticles.Nodes.First(n => n.Operation == "core.surfaceParticles");
+            foreach (var port in new[] { "density", "emissionRate", "size", "lifetime", "speed", "gravity", "spread" }) {
+                var value = NodeCatalog.Create("core.value"); value.Id = "numeric-" + port; value.Properties["value"] = .25;
+                dynamicParticles.Nodes.Add(value);
+                dynamicParticles.Connections.RemoveAll(e => e.To.NodeId == emitter.Id && e.To.PortId == port);
+                dynamicParticles.Connections.Add(new GraphConnection { Id = value.Id, From = new GraphPortRef { NodeId = value.Id, PortId = "value" }, To = new GraphPortRef { NodeId = emitter.Id, PortId = port } });
+            }
+            shaders.Add(Emit(GraphJson.Serialize(dynamicParticles), "dynamic_particles"));
             var materials = shaders.Select(CreateMaterial).ToArray();
             BuildScene(materials);
             var graphics = new SerializedObject(AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/GraphicsSettings.asset")[0]);

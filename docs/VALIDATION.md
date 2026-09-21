@@ -504,3 +504,28 @@ the fur-fin reserved slots). Automatic source vertex tinting is removed.
 
 This is not a live VRChat retest. Existing graphs intentionally relying on implicit
 vertex tinting should connect Vertex Color explicitly after updating.
+
+
+## 2026-09-21 — numeric Surface Particles sockets (alpha.22)
+
+Added float inputs for density, emission rate, size, lifetime, speed, gravity and
+spread. Existing properties remain unplugged defaults. Wired rate/lifetime select
+adaptive tessellation with a maximum factor of 64; generated microtriangles carry
+the subdivision estimate for distributing the requested rate.
+
+- Portable checks passed for catalog typing, graph serialization and adaptive
+  budget emission. Existing graph checks continue to pass.
+- `SurfaceParticleRenderSmoke` passed (`work/unity/particle-inputs-render2.log`).
+  Wired values match property values at the same tessellation level; wired zero
+  size/density hide particles; wired rate 8 emits more than zero. Existing rate,
+  zero vertex-color, motion and skinning checks also passed.
+- Connecting rate/lifetime introduces a tessellation path even at factor 1, so
+  randomized spawn positions can differ from the non-tessellated path. The test
+  compares equal subdivision paths rather than assuming identical ordering.
+- Windows/D3D11 bundle compilation passed nine shaders, including all seven
+  sockets wired (`work/unity/particle-inputs-d3d.log`).
+- Seven packaging tests passed. Unity editor scripts compiled with the new fields.
+
+Runtime modulation retimes procedural particles and can change topology; it does
+not preserve a simulation history. Spatial rate/lifetime signals are sampled
+approximately. No live VRChat/AudioLink runtime validation is claimed.

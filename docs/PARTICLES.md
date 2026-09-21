@@ -79,3 +79,19 @@ mesh's vertex colors. Some avatars store black or zero-alpha vertex colors on
 hair and other material regions. Connect a Vertex Color node to Albedo, Emission
 or Mask when that data should explicitly control particles. Particle lifetime
 fading is stored separately, so Vertex Color still reads the original mesh data.
+
+### Numeric input sockets
+
+Surface Particles exposes Density, Emission rate, Size, Lifetime, Speed, Gravity
+and Spread as float inputs, alongside Opacity, Mask and Time. Inspector values
+are the defaults when unplugged; connecting a socket disables its fallback field.
+Blending and Color from mesh UVs remain choices rather than numeric inputs.
+
+Density/rate/lifetime are evaluated on triangle input data; size and motion use
+the sampled spawn position. These run before fragment shading, so nodes requiring
+fragment derivatives cannot drive them. Explicit opacity remains a fragment input.
+
+Connecting rate or lifetime enables adaptive tessellation (level 1–64), sized
+from their product. High values still have a hardware limit and can be expensive.
+Varying values across a triangle are sampled approximately. Changing rate/lifetime
+retimes procedural particles immediately; this is not a persistent simulation.
