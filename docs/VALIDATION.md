@@ -416,3 +416,10 @@ restored to source afterward.
 - Inspected the user's saved graph read-only: Polar UVs had Panosphere as its coordinate source. This composes two projections. Inspector wording now distinguishes input source from node operation; user graph files were not changed.
 - Downloaded alpha.16 archive matches SHA256 `455f26e75da6db9d4d74d3717426d0321e138003acf94400fffbdf4f31667d8e`; the expanded GPU test passes against it.
 - Portable and 7 packaging checks passed. Actual user avatar appearance and headset behavior remain unverified.
+
+## 2026-09-21 — alpha.17 albedo alpha toggle
+
+- Hidden Unity AlbedoAlphaSmoke rendered a red, alpha-zero texture on Toon, Unlit and PBR surfaces. Missing/on toggle clips it; off renders RGB while retaining material Tint alpha .5; explicit opacity zero still clips.
+- Generated shadow paths use explicit opacity and Tint alpha without albedo alpha when disabled; Toon/PBR additional-light passes are present. This does not claim a live VR shadow capture.
+- Portable checks and all 7 packaging tests passed.
+- Downloaded alpha.17 SHA256 `ba4c1a353459347c33864360d466ad7dd909f59fc38c343cc6fff71ccdebeb85` matched VPM; GPU checks passed against that extracted package.
