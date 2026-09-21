@@ -27,6 +27,13 @@ public static class PixelLightChecks
         assert(advancedResult.Succeeded, "ForcePixel advanced Toon emits: " + Diagnostics(advancedResult));
         assert(advancedResult.ShaderSource.Contains("Name \"ForwardAdd\""), "ForcePixel advanced Toon emits ForwardAdd");
 
+        foreach (var result in new[] { pbrResult, advancedResult })
+        {
+            var programs = result.ShaderSource.Split(new[] { "CGPROGRAM\n" }, StringSplitOptions.None).Skip(1);
+            assert(programs.All(program => program.StartsWith("#pragma require interpolators32\n")),
+                "advanced passes declare enough vertex outputs for D3D light/shadow and stereo variants");
+        }
+
         var unlit = Surface("core.unlitSurface");
         var unlitResult = ShaderEmitter.Emit(unlit);
         assert(unlitResult.Succeeded, "ForcePixel Unlit emits: " + Diagnostics(unlitResult));

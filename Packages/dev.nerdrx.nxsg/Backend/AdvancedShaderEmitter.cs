@@ -251,7 +251,9 @@ namespace NXSG.Backend
             if (furNode != null && !cardsOnly) diagnostics.Add(new Diagnostic(DiagnosticSeverity.Warning, "cost.fur", furNode.Id, "Fur emits " + IntProp(furNode, "layers", 16, 4, 32) + " transparent shell passes per view. Distance LOD reduces active shell coverage but does not remove draw calls; expand renderer bounds for strand length."));
             if (particle && root.Properties["softDistance"] != null && (double)root.Properties["softDistance"] > 0)
                 diagnostics.Add(new Diagnostic(DiagnosticSeverity.Warning, "cost.particleDepth", root.Id, "Soft intersections require a camera depth texture. Set soft distance to 0 when unavailable; transparent overdraw and depth sampling add cost."));
-            return b.ToString();
+            // NXInput can exceed SM4's 16 vertex outputs once light/shadow and stereo fields are present.
+            // Declare the actual varying budget in every pass, including geometry and tessellation passes.
+            return b.ToString().Replace("CGPROGRAM\n", "CGPROGRAM\n#pragma require interpolators32\n");
         }
 
         void Visit(GraphNode node, HashSet<string> live)

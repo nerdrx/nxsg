@@ -431,3 +431,25 @@ restored to source afterward.
 - Defaults are min 0, max 0 (unlimited), saturation 1. Limits apply per contribution, not to summed additional-light passes.
 - Downloaded alpha.18 SHA256 `d8148aca97b4693b33c057bc9caea8cd48d3521a0a5b4162ae003dfc16d712ea` matched VPM; the GPU test passed against that archive.
 - Portable and all 7 packaging tests passed. These are Linux Unity checks, not headset evidence.
+
+
+## 2026-09-21 — D3D vertex output budget (alpha.19)
+
+Advanced shader passes now declare `#pragma require interpolators32`. The shared
+`NXInput` payload plus lighting/shadow/stereo outputs can exceed the SM4.0 budget
+reported by the user's D3D11 `vertAdd` X4571 error. Basic Toon keeps its compact path.
+
+- Portable checks passed, including the generated-pass requirement regression.
+- All eight hidden Unity/OpenGL `PixelLightSmoke` cases passed.
+- `D3DCompileSmoke` built a Windows64 shader asset bundle with D3D11 explicitly
+  selected: minimal advanced Toon/PBR, Shiny Surface, Neon Wireframe, Tessellated
+  Bumps, Fur Cards, unoptimized PBR, and four privately copied local user graphs.
+  All 11 shaders passed (`work/unity/d3d-budget-fixed.log`). User graphs are not
+  committed and the user's project was not modified.
+- Seven packaging checks passed.
+
+This is cross-compilation in Linux Unity 2022.3.22f1, not a native Windows render,
+headset/stereo or live VRChat test. The small legacy fixture also compiled here;
+it does not reproduce the user's exact failing variant. Native upload/build
+confirmation remains necessary. `NXSG_D3D_LEGACY=1` removes the requirement for
+comparison; `NXSG_D3D_GRAPHS` can point to a private directory of additional graphs.
