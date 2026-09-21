@@ -408,3 +408,11 @@ restored to source afterward.
 - Inspected the GPU capture: cards follow the source sphere's triangle edges, with visible topology dependence. This is an initial edge-card implementation, not groomed or baked card topology.
 - Downloaded alpha.15 archive SHA256 `cc33eaf7ad1211728872e0abbb0670694fec8cccca517dc526f53b7bca41d197` matched VPM; the same GPU test passed against that archive.
 - All 7 packaging tests passed. Headset appearance and native Windows remain unverified.
+
+## 2026-09-21 — alpha.16 Panosphere stability regression
+
+- Extended GPU test reproduces alpha.14–15 speckles away from the longitude wrap under fractional tiling (adjacent red values .091 and .648).
+- Added derivative comparison tolerance; both original mip seam and smooth-region fractional tiling tests now pass.
+- Inspected the user's saved graph read-only: Polar UVs had Panosphere as its coordinate source. This composes two projections. Inspector wording now distinguishes input source from node operation; user graph files were not changed.
+- Downloaded alpha.16 archive matches SHA256 `455f26e75da6db9d4d74d3717426d0321e138003acf94400fffbdf4f31667d8e`; the expanded GPU test passes against it.
+- Portable and 7 packaging checks passed. Actual user avatar appearance and headset behavior remain unverified.
