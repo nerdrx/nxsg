@@ -260,3 +260,14 @@ texture slot after building (or Auto scene updating). A slot number disambiguate
 duplicate names. Nodes sharing one texture resource also share its name.
 Renaming preserves resource IDs, shader property names and texture assignments;
 names survive save/load and copy/paste. Clear the name to return to Texture N.
+
+### Coordinate sources in the node header
+
+Click the header of a UV node to select Mesh UV0–3, Object XZ, World XZ,
+Polar, Panosphere or Matcap. UV transforms remain available in the same menu.
+The node title shows the active source. A connected UV wire overrides a texture
+node's own Coordinates selector.
+
+Panosphere uses a spherical view-direction projection. Connect its UV output to
+Texture, with UV Transform or UV Scroll in between for scale, offset or motion.
+It behaves like viewing a panorama through the mesh; it does not use mesh UVs.

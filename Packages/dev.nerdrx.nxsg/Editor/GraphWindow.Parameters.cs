@@ -119,6 +119,11 @@ namespace NXSG.Editor
                 var parameter = graph?.Parameters?.FirstOrDefault(p => p != null && p.Id == id);
                 return parameter == null ? "Parameter (missing)" : "Parameter · " + parameter.Name;
             }
+            if (node?.Operation == "core.uv0")
+            {
+                var index = System.Array.IndexOf(CoordinateKeys, (string)node.Properties["coordinateSource"] ?? "uv0");
+                if (index >= 0) return CoordinateLabels[index].Split('(')[0].Trim();
+            }
             var resourceId = (string)node?.Properties?["resourceId"];
             if (!string.IsNullOrEmpty(resourceId)) return TextureSlotLabels.DisplayName(graph, resourceId);
             return Title(node?.Operation);

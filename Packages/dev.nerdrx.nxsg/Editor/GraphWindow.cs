@@ -547,25 +547,58 @@ namespace NXSG.Editor
         {
             var node = graph?.Nodes.FirstOrDefault(n => n.Id == nodeId);
             if (node == null) return;
+            var menu = BuildOperationMenu(node);
+            menu.ShowAsContext();
+        }
+
+        GenericMenu BuildOperationMenu(GraphNode node)
+        {
+            var nodeId = node.Id;
             var menu = new GenericMenu();
+            if (OperationAlternatives(node.Operation).Contains("core.uv0"))
+            {
+                for (var i = 0; i < CoordinateKeys.Length; i++)
+                {
+                    var source = CoordinateKeys[i];
+                    menu.AddItem(new GUIContent(CoordinateLabels[i]),
+                        node.Operation == "core.uv0" && ((string)node.Properties["coordinateSource"] ?? "uv0") == source,
+                        () => SwitchCoordinateSource(nodeId, source));
+                }
+                menu.AddSeparator("");
+            }
             foreach (var operation in OperationAlternatives(node.Operation))
             {
+                if (operation == "core.uv0") continue;
                 var op = operation;
                 menu.AddItem(new GUIContent(Title(op), NodeCatalog.Description(op)), op == node.Operation,
                     () => SwitchOperation(nodeId, op));
             }
-            menu.ShowAsContext();
+            return menu;
+        }
+
+        void SwitchCoordinateSource(string nodeId, string source)
+        {
+            if (Array.IndexOf(CoordinateKeys, source) < 0) return;
+            SwitchOperationCore(nodeId, "core.uv0", source);
         }
 
         void SwitchOperation(string nodeId, string operation)
         {
+            SwitchOperationCore(nodeId, operation, null);
+        }
+
+        void SwitchOperationCore(string nodeId, string operation, string coordinateSource)
+        {
             var node = graph?.Nodes.FirstOrDefault(n => n.Id == nodeId);
-            if (node == null || node.Operation == operation || !OperationAlternatives(node.Operation).Contains(operation)) return;
+            if (node == null || !OperationAlternatives(node.Operation).Contains(operation)) return;
+            if (node.Operation == operation && (coordinateSource == null ||
+                ((string)node.Properties["coordinateSource"] ?? "uv0") == coordinateSource)) return;
             Undo.IncrementCurrentGroup();
             var removed = 0;
             Edit("Change node operation", () =>
             {
                 node.Operation = operation;
+                if (coordinateSource != null) node.Properties["coordinateSource"] = coordinateSource;
                 // Preserve dormant controls so switching back restores the user's settings.
                 foreach (var property in NodeCatalog.Create(operation).Properties.Properties())
                     if (node.Properties[property.Name] == null) node.Properties[property.Name] = property.Value.DeepClone();

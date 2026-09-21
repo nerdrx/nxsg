@@ -10,10 +10,13 @@ namespace NXSG.Editor
 {
     public sealed partial class GraphWindow
     {
+        static readonly string[] CoordinateKeys = { "uv0", "uv1", "uv2", "uv3", "object", "world", "polar", "panosphere", "matcap" };
+        static readonly string[] CoordinateLabels = { "Mesh UV0", "Mesh UV1", "Mesh UV2", "Mesh UV3", "Object XZ (sticks to object)", "World XZ (fixed in world)", "Polar (mesh UV0)", "Panosphere (camera-relative)", "Matcap (camera-relative)" };
+
         void AddCoordinateChoice(GraphNode node)
         {
-            var keys = new[] { "uv0", "uv1", "uv2", "uv3", "object", "world", "polar", "panosphere", "matcap" };
-            var labels = new[] { "Mesh UV0", "Mesh UV1", "Mesh UV2", "Mesh UV3", "Object XZ (sticks to object)", "World XZ (fixed in world)", "Polar (mesh UV0)", "Panosphere (camera-relative)", "Matcap (camera-relative)" };
+            var keys = CoordinateKeys;
+            var labels = CoordinateLabels;
             var field = new PopupField<string>("Coordinates", labels.ToList(), Math.Max(0, Array.IndexOf(keys, (string)node.Properties["coordinateSource"] ?? "uv0")))
             { tooltip = "A connected UV wire overrides this choice. Mesh UV and Polar do not follow the camera. UV1–UV3 require those channels on your mesh." };
             field.SetEnabled(!graph.Connections.Any(e => e.To.NodeId == node.Id && e.To.PortId == "uv"));
