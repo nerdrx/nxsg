@@ -99,3 +99,7 @@ No Graphlit, ShaderGraphVRC, or Poiyomi code is bundled. A root MIT badge does n
 ## D16 — Future adapters are capability-limited · Selected
 
 Reserve portable resource IDs and node semantics now. Defer Blender, CLI, web viewer, MaterialX/glTF adapters, and additional rendering backends. A future CLI can emit shader text independently; that does not prove Unity compilation or VRChat acceptance. A Blender bridge must distinguish exact translation, approximate substitution, baked output, and unsupported behavior. Round-tripping requires preserving original semantics and identities, not just matching node names. [Portability research](research/GRAPH_COMPILER_AND_PORTABILITY.md)
+
+## D17 — Basic inline traversal stays bounded · Selected
+
+The basic emitter keeps its existing traversal guard at 8,192 visits and reports repeated inlined subgraphs with the concrete limit. Advanced lowering handles the same repeated-input shape through shared functions; diagnostics explain the bound without directing users to an unsupported UI mode.

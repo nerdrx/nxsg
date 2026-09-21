@@ -432,7 +432,7 @@ namespace NXSG.Backend
                 work++;
                 if (work > MaxTraversalWork)
                 {
-                    AddError(diagnostics, "backend.traversal.work", "nodes", "Reachable graph evaluation work exceeds the backend limit.");
+                    AddError(diagnostics, "backend.traversal.work", "nodes", "Reachable graph evaluation work exceeds the backend limit of " + MaxTraversalWork.ToString(CultureInfo.InvariantCulture) + " visits; repeated inlined subgraphs can exceed this bound. Use shared lowering or simplify the graph.");
                     return false;
                 }
 

@@ -10,6 +10,38 @@ from urllib.request import Request, urlopen
 import zipfile
 
 LIMIT = 32 * 1024 * 1024
+IMPORTER_GUID = '31f27f7b58a03015f8c4788064374330'
+LEGACY_SAMPLE_META_VERSIONS = frozenset(
+    f'0.1.0-alpha.{number}' for number in range(1, 9)
+)
+
+
+def requires_sample_metas(version):
+    """Require sample metadata for new archives; preserve immutable alpha.1-alpha.8."""
+    return version not in LEGACY_SAMPLE_META_VERSIONS
+
+
+def verify_sample_metas(names, read):
+    """Require Unity metadata for every shipped sample asset."""
+    samples = {name for name in names if name.startswith('Samples~/')}
+    assets = {name for name in samples if not name.endswith('.meta')}
+    metas = {name for name in samples if name.endswith('.meta')}
+    expected = {f'{name}.meta' for name in assets}
+    missing = sorted(expected - metas)
+    orphaned = sorted(metas - expected)
+    if missing:
+        raise ValueError('Sample metadata missing: ' + ', '.join(missing))
+    if orphaned:
+        raise ValueError('Orphaned sample metadata: ' + ', '.join(orphaned))
+    for name in sorted(assets):
+        if name.endswith('.nxsg'):
+            meta = read(f'{name}.meta').decode('utf-8')
+            if 'ScriptedImporter:\n' not in meta or f'guid: {IMPORTER_GUID}' not in meta:
+                raise ValueError('Invalid NXSG sample metadata: ' + name)
+        elif name.endswith('.md'):
+            meta = read(f'{name}.meta').decode('utf-8')
+            if 'TextScriptImporter:\n' not in meta:
+                raise ValueError('Invalid text sample metadata: ' + name)
 
 
 def fetch(url):
@@ -53,6 +85,8 @@ def verify(listing):
                     raise ValueError('Listing differs from packaged manifest')
                 if not any(n.startswith('Editor/') and n.endswith('.cs') for n in names):
                     raise ValueError('Editor sources missing')
+                if requires_sample_metas(version):
+                    verify_sample_metas(names, archive.read)
             print(f'Verified {name}@{version}: SHA-256, ZIP structure, package manifest ({len(data)} bytes)')
 
 

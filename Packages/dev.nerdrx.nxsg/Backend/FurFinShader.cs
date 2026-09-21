@@ -8,7 +8,7 @@ namespace NXSG.Backend
     // so the view-grazing factor suppresses most internal edges while retaining bounded geometry cost.
     internal static class FurFinShader
     {
-        static string Num(double value) { return ((float)value).ToString("R", CultureInfo.InvariantCulture); }
+        static string Num(double value) { return AdvancedShaderEmitter.NumExpr(value); }
 
         public static string Pass(string rootColor, string tipColor, string length, string density, string thickness, string mask, string groom, string time, double taper, double gravity, double windStrength, double windSpeed, double windScale, double rimStrength, double finOpacity, bool receiveShadows = true)
         {

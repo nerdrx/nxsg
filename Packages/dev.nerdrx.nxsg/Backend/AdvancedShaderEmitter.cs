@@ -176,11 +176,11 @@ namespace NXSG.Backend
             {
                 diagnostics.Add(new Diagnostic(DiagnosticSeverity.Warning, "lighting.forwardAdd", furNode.Id, "Additional pixel lights affect the lit base surface only; fur shell and fin overlays retain their existing lighting."));
                 passCode.Append(FurShader.Pass(
-                    Input(furNode, "rootColor", "float4(.2,.1,.05,1)", "color"), Input(furNode, "tipColor", "float4(.8,.6,.3,1)", "color"), Scalar(furNode, "length", .04, true), Scalar(furNode, "density", 100), Scalar(furNode, "thickness", .35), Scalar(furNode, "mask", 1), Input(furNode, "groom", "float3(0,0,0)", "vector3", true), Input(furNode, "time", "NXSG_Time()", "float", true), IntProp(furNode, "layers", 16, 4, 32), double.Parse(Prop(furNode, "taper", 1), CultureInfo.InvariantCulture), double.Parse(Prop(furNode, "gravity", .1), CultureInfo.InvariantCulture), double.Parse(Prop(furNode, "windStrength", .1), CultureInfo.InvariantCulture), double.Parse(Prop(furNode, "windSpeed", 1), CultureInfo.InvariantCulture), double.Parse(Prop(furNode, "windScale", 2), CultureInfo.InvariantCulture), double.Parse(Prop(furNode, "rimStrength", .25), CultureInfo.InvariantCulture), double.Parse(Prop(furNode, "lodNear", 5), CultureInfo.InvariantCulture), double.Parse(Prop(furNode, "lodFar", 15), CultureInfo.InvariantCulture), IntProp(furNode, "minLayers", 4, 1, 32), IntProp(furNode,"receiveShadows",1,0,1)==1));
+                    Input(furNode, "rootColor", "float4(.2,.1,.05,1)", "color"), Input(furNode, "tipColor", "float4(.8,.6,.3,1)", "color"), Scalar(furNode, "length", .04, true), Scalar(furNode, "density", 100), Scalar(furNode, "thickness", .35), Scalar(furNode, "mask", 1), Input(furNode, "groom", "float3(0,0,0)", "vector3", true), Input(furNode, "time", "NXSG_Time()", "float", true), IntProp(furNode, "layers", 16, 4, 32), double.Parse(RawProp(furNode, "taper", 1), CultureInfo.InvariantCulture), double.Parse(RawProp(furNode, "gravity", .1), CultureInfo.InvariantCulture), double.Parse(RawProp(furNode, "windStrength", .1), CultureInfo.InvariantCulture), double.Parse(RawProp(furNode, "windSpeed", 1), CultureInfo.InvariantCulture), double.Parse(RawProp(furNode, "windScale", 2), CultureInfo.InvariantCulture), double.Parse(RawProp(furNode, "rimStrength", .25), CultureInfo.InvariantCulture), double.Parse(RawProp(furNode, "lodNear", 5), CultureInfo.InvariantCulture), double.Parse(RawProp(furNode, "lodFar", 15), CultureInfo.InvariantCulture), IntProp(furNode, "minLayers", 4, 1, 32), IntProp(furNode,"receiveShadows",1,0,1)==1));
             }
             if (furNode != null && IntProp(furNode, "fins", 0, 0, 1) == 1)
             {
-                passCode.Append(FurFinShader.Pass(Input(furNode,"rootColor","float4(.2,.1,.05,1)","color"),Input(furNode,"tipColor","float4(.8,.6,.3,1)","color"),Scalar(furNode,"length",.04,true),Scalar(furNode,"density",100,true),Scalar(furNode,"thickness",.35),Scalar(furNode,"mask",1),Input(furNode,"groom","float3(0,0,0)","vector3",true),Input(furNode,"time","NXSG_Time()","float",true),double.Parse(Prop(furNode,"taper",1),CultureInfo.InvariantCulture),double.Parse(Prop(furNode,"gravity",.1),CultureInfo.InvariantCulture),double.Parse(Prop(furNode,"windStrength",.1),CultureInfo.InvariantCulture),double.Parse(Prop(furNode,"windSpeed",1),CultureInfo.InvariantCulture),double.Parse(Prop(furNode,"windScale",2),CultureInfo.InvariantCulture),double.Parse(Prop(furNode,"rimStrength",.25),CultureInfo.InvariantCulture),double.Parse(Prop(furNode,"finOpacity",.7),CultureInfo.InvariantCulture), IntProp(furNode,"receiveShadows",1,0,1)==1));
+                passCode.Append(FurFinShader.Pass(Input(furNode,"rootColor","float4(.2,.1,.05,1)","color"),Input(furNode,"tipColor","float4(.8,.6,.3,1)","color"),Scalar(furNode,"length",.04,true),Scalar(furNode,"density",100,true),Scalar(furNode,"thickness",.35),Scalar(furNode,"mask",1),Input(furNode,"groom","float3(0,0,0)","vector3",true),Input(furNode,"time","NXSG_Time()","float",true),double.Parse(RawProp(furNode,"taper",1),CultureInfo.InvariantCulture),double.Parse(RawProp(furNode,"gravity",.1),CultureInfo.InvariantCulture),double.Parse(RawProp(furNode,"windStrength",.1),CultureInfo.InvariantCulture),double.Parse(RawProp(furNode,"windSpeed",1),CultureInfo.InvariantCulture),double.Parse(RawProp(furNode,"windScale",2),CultureInfo.InvariantCulture),double.Parse(RawProp(furNode,"rimStrength",.25),CultureInfo.InvariantCulture),double.Parse(RawProp(furNode,"finOpacity",.7),CultureInfo.InvariantCulture), IntProp(furNode,"receiveShadows",1,0,1)==1));
                 diagnostics.Add(new Diagnostic(DiagnosticSeverity.Warning,"cost.furFins",furNode.Id,"Fur fins add one geometry pass with three edge strips per source triangle. Grazing opacity approximates silhouettes without mesh adjacency; bounds and transparent sorting still apply."));
             }
             if (surfaceParticles) passCode.Append(SurfaceParticleShader.Pass(
@@ -203,7 +203,7 @@ namespace NXSG.Backend
             b.AppendLine(Helpers);
             if(furNode!=null) {
                 int quality=IntProp(furNode,"selfShadowQuality",0,0,3);
-                b.AppendLine(FurLighting.Helpers(quality,double.Parse(Prop(furNode,"selfShadowStrength",1),CultureInfo.InvariantCulture),double.Parse(Prop(furNode,"selfShadowBias",.03),CultureInfo.InvariantCulture)));
+                b.AppendLine(FurLighting.Helpers(quality,double.Parse(RawProp(furNode,"selfShadowStrength",1),CultureInfo.InvariantCulture),double.Parse(RawProp(furNode,"selfShadowBias",.03),CultureInfo.InvariantCulture)));
                 if(quality>0)diagnostics.Add(new Diagnostic(DiagnosticSeverity.Warning,"cost.furSelfShadow",furNode.Id,"Fur self-shadowing samples the local strand volume "+(quality==1?4:quality==2?8:16)+" times per shaded fur fragment. Cost grows with shell layers and screen coverage; it approximates local straight fur, not shadows across separate body parts."));
             }
             if (ltcgiEnabled) b.AppendLine(LtcgiShader.Hlsl);
@@ -274,7 +274,11 @@ namespace NXSG.Backend
         static string Hash(string value) { using (var sha = SHA256.Create()) return string.Concat(sha.ComputeHash(Encoding.UTF8.GetBytes(value)).Select(b => b.ToString("x2"))); }
         static string ParameterName(string id) { if (!Regex.IsMatch(id, "^[A-Za-z0-9_-]{1,96}$")) throw new InvalidOperationException("Unsupported parameter ID."); return "_NXSG_P_" + id.Replace('-', '_'); }
         static string Num(double value) { if (double.IsNaN(value) || double.IsInfinity(value) || Math.Abs(value) > float.MaxValue) throw new InvalidOperationException("Shader numbers must be finite floats."); return ((float)value).ToString("R", CultureInfo.InvariantCulture); }
-        string Prop(GraphNode n, string key, double fallback) { var t = n.Properties[key]; if (t == null) return Num(fallback); if (t.Type != JTokenType.Integer && t.Type != JTokenType.Float) throw new InvalidOperationException("Expected a number: " + n.Id + "." + key); return Num((double)t); }
+        // Keep ShaderLab defaults and numeric parsing raw; HLSL operands need token boundaries.
+        static string NumberOperand(string literal) { return literal.StartsWith("-", StringComparison.Ordinal) ? "(" + literal + ")" : literal; }
+        internal static string NumExpr(double value) { return NumberOperand(Num(value)); }
+        string Prop(GraphNode n, string key, double fallback) { return NumberOperand(RawProp(n, key, fallback)); }
+        string RawProp(GraphNode n, string key, double fallback) { var t = n.Properties[key]; if (t == null) return Num(fallback); if (t.Type != JTokenType.Integer && t.Type != JTokenType.Float) throw new InvalidOperationException("Expected a number: " + n.Id + "." + key); return Num((double)t); }
         string Vec(GraphNode n, string key, double x, double y) { var t = n.Properties[key]; return t == null ? "float2(" + Num(x) + "," + Num(y) + ")" : Literal(t, "vector2"); }
         static string HlslType(string type) { switch (type) { case "float": return "float"; case "vector2": return "float2"; case "vector3": return "float3"; case "color": case "vector4": return "float4"; default: throw new InvalidOperationException("Unsupported value type: " + type); } }
         static string Literal(JToken token, string type)
@@ -519,7 +523,7 @@ namespace NXSG.Backend
             for(var i=1;i<points.Count;i++)
             {
                 var a=points[i-1];var z=points[i];
-                b.Append("if(x<="+Num((double)z[0])+"){float t=saturate((x-"+Num((double)a[0])+")/"+Num((double)z[0]-(double)a[0])+"); ");
+                b.Append("if(x<="+Num((double)z[0])+"){float t=saturate((x-"+NumExpr((double)a[0])+")/"+Num((double)z[0]-(double)a[0])+"); ");
                 if(!color)b.Append("t=lerp(t,t*t*(3-2*t),saturate("+Prop(n,"smoothness",0)+")); ");
                 b.Append("return lerp("+At(a)+","+At(z)+",t);} ");
             }
@@ -534,7 +538,7 @@ namespace NXSG.Backend
             {
                 if (surface.Properties[setting + "ParameterId"] != null) continue;
                 var symbol = ToonSymbol(setting, passIndex);
-                b.AppendLine(symbol + " (\"" + (shell ? "Shell" + (passIndex == 1 ? "" : passIndex.ToString(CultureInfo.InvariantCulture)) + " " : "") + setting + "\", Range(0,1)) = " + Prop(surface,setting,setting == "threshold" ? .5 : setting == "softness" ? .05 : 1));
+                b.AppendLine(symbol + " (\"" + (shell ? "Shell" + (passIndex == 1 ? "" : passIndex.ToString(CultureInfo.InvariantCulture)) + " " : "") + setting + "\", Range(0,1)) = " + RawProp(surface,setting,setting == "threshold" ? .5 : setting == "softness" ? .05 : 1));
                 properties.Add(new MaterialProperty { Name=symbol, DisplayName=setting, Type=GraphValueType.Float, Binding=GraphBindingKind.Material });
             }
         }

@@ -322,3 +322,17 @@ The downloaded alpha.8 archive matched SHA-256
 `0a1d50329e14f9c284284e90ae466ffceb65bfcfd6d6ee32f82ff9123a53aaca`.
 Installed from that archive, `FurShadowRenderSmoke` passed again. The fixture
 was then restored to the source package.
+
+## Negative inputs and packaging — 2026-09-21
+
+`NegativeLiteralSmoke` compiled all passes of eleven generated graphs in hidden
+Unity 2022.3.22f1/OpenGLCore: Remap input/output minima, Smoothstep, height/slope
+masks, Distance Fade, Sphere Mask, Parallax UVs, Tessellation, negative fur gravity/
+wind/LOD settings, and a negative exposed material property. The original Remap
+fixture reproduced `l-value specifies const object` before the fix.
+
+Portable regressions cover negative-number token boundaries, raw ShaderLab
+defaults, and the repeated-input diamond in both backends. The basic backend
+retains its expansion limit with a clearer diagnostic; the advanced backend
+accepts the shared graph. Packaging checks require metadata for all new sample
+assets while retaining historical immutable releases.

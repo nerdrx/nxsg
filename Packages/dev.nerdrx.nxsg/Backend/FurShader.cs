@@ -6,7 +6,7 @@ namespace NXSG.Backend
 {
     internal static class FurShader
     {
-        static string Num(double value) { return ((float)value).ToString("R", CultureInfo.InvariantCulture); }
+        static string Num(double value) { return AdvancedShaderEmitter.NumExpr(value); }
 
         public static string Pass(string rootColor, string tipColor, string length, string density, string thickness, string mask, string groom, string time, int layers, double taper, double gravity, double windStrength, double windSpeed, double windScale, double rimStrength, double lodNear, double lodFar, int minLayers, bool receiveShadows = true)
         {

@@ -16,6 +16,11 @@ SPEC = importlib.util.spec_from_file_location("build_vpm", SCRIPT)
 assert SPEC and SPEC.loader
 builder = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(builder)
+VERIFY = Path(__file__).parents[2] / "scripts" / "verify-vpm.py"
+VERIFY_SPEC = importlib.util.spec_from_file_location("verify_vpm", VERIFY)
+assert VERIFY_SPEC and VERIFY_SPEC.loader
+verifier = importlib.util.module_from_spec(VERIFY_SPEC)
+VERIFY_SPEC.loader.exec_module(verifier)
 
 
 def repo(tmp_path: Path, version: str = "1.0.0") -> Path:
@@ -37,6 +42,30 @@ def repo(tmp_path: Path, version: str = "1.0.0") -> Path:
 
 
 class VpmBuilderTests(unittest.TestCase):
+    def test_sample_metadata_rule_grandfathers_only_existing_alphas(self) -> None:
+        for number in range(1, 9):
+            self.assertFalse(verifier.requires_sample_metas(f"0.1.0-alpha.{number}"))
+        self.assertTrue(verifier.requires_sample_metas("0.1.0-alpha.9"))
+        self.assertTrue(verifier.requires_sample_metas("0.1.0"))
+
+    def test_requires_metadata_for_every_sample_asset(self) -> None:
+        files = {
+            "Editor/Source.cs": b"source",
+            "Samples~/README.md": b"docs",
+            "Samples~/README.md.meta": b"TextScriptImporter:\n",
+            "Samples~/Example.nxsg": b"{}",
+            "Samples~/Example.nxsg.meta": (
+                b"ScriptedImporter:\n"
+                b"guid: 31f27f7b58a03015f8c4788064374330\n"
+            ),
+        }
+        with self.assertRaisesRegex(ValueError, "Sample metadata missing"):
+            verifier.verify_sample_metas(
+                ["Samples~/README.md", "Samples~/README.md.meta", "Samples~/Example.nxsg"],
+                files.__getitem__,
+            )
+        verifier.verify_sample_metas(files, files.__getitem__)
+
     def test_rejects_dirty_tracked_package(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = repo(Path(directory))
