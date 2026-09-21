@@ -423,3 +423,11 @@ restored to source afterward.
 - Generated shadow paths use explicit opacity and Tint alpha without albedo alpha when disabled; Toon/PBR additional-light passes are present. This does not claim a live VR shadow capture.
 - Portable checks and all 7 packaging tests passed.
 - Downloaded alpha.17 SHA256 `ba4c1a353459347c33864360d466ad7dd909f59fc38c343cc6fff71ccdebeb85` matched VPM; GPU checks passed against that extracted package.
+
+## 2026-09-21 — alpha.18 lighting influence
+
+- Portable checks prove missing/default controls generate identical advanced Toon/PBR source, nondefault values survive save/load and negative bounds are rejected.
+- Hidden Unity LightingInfluenceSmoke verifies saturation 0 neutralizes incident colored light, min brightness lifts dark Toon/PBR including metallic PBR, maximum dims a strong light, and emission remains unchanged.
+- Defaults are min 0, max 0 (unlimited), saturation 1. Limits apply per contribution, not to summed additional-light passes.
+- Downloaded alpha.18 SHA256 `d8148aca97b4693b33c057bc9caea8cd48d3521a0a5b4162ae003dfc16d712ea` matched VPM; the GPU test passed against that archive.
+- Portable and all 7 packaging tests passed. These are Linux Unity checks, not headset evidence.
