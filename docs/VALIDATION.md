@@ -336,3 +336,10 @@ defaults, and the repeated-input diamond in both backends. The basic backend
 retains its expansion limit with a clearer diagnostic; the advanced backend
 accepts the shared graph. Packaging checks require metadata for all new sample
 assets while retaining historical immutable releases.
+
+The downloaded alpha.9 ZIP matched SHA-256
+`83f77b3e07b5e1c81c53f4949f3e1e0d99b95a8d610ad8dc3586b4af131ef072`.
+Installed from that ZIP, the eleven negative-input graphs passed again. The
+fixture was restored to the local source package. All nine historical release
+archives passed checksum, archive and manifest verification; alpha.9 also
+passed the complete sample metadata check. Seven packaging tests passed.
