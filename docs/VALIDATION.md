@@ -384,3 +384,11 @@ sorting on save/reload. Its downloaded ZIP matched SHA-256
 `09a9fe32a192a8b01007a42cd39353bcf9e624ed1fad9033510b7c52b9ce137a`;
 `TextureLabelSmoke` passed when installed from that archive. The fixture was
 restored to source afterward.
+
+## 2026-09-21 — alpha.13 coordinate menus
+
+- Portable smoke checks and all 7 packaging tests passed.
+- Hidden Unity 2022.3.22f1: CoordinateMenuSmoke passed all nine coordinate sources, transform/source switching, retained UV output wires, node titles and serialization.
+- ProceduralRenderSmoke passed real GPU checks for coordinate channels and camera response, including Panosphere and Matcap.
+- Downloaded GitHub alpha.13 archive matched VPM SHA256 `2f0cfe8bd07da55a35368c0600023d9ff2a52ce2eb8985068ad904afe03be0d2`; CoordinateMenuSmoke passed against the extracted release.
+- VR headset appearance and Poiyomi's separate stereo panorama controls are not validated or claimed.
