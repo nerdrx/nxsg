@@ -400,3 +400,11 @@ restored to source afterward.
 - Portable checks and 7 packaging checks passed.
 - Downloaded alpha.14 SHA256 `157370a55ddf0e1872e1cb15ae119787033a62e5c13def8a2bb41263b3200e59` matched the listing; PanosphereSeamSmoke passed against that extracted archive.
 - This is Linux Unity OpenGL evidence, not VR headset validation.
+
+## 2026-09-21 — alpha.15 generated cards-only fur
+
+- Portable regression verifies cards mode emits FurCards, no Fur1 or duplicate FurFins pass, preserves default shells, serializes mode and rejects invalid mode values.
+- Hidden Unity OpenGL FurCardRenderSmoke verifies actual visible cards (including front-facing surface), mask response, finite pixels and compilation of all material passes.
+- Inspected the GPU capture: cards follow the source sphere's triangle edges, with visible topology dependence. This is an initial edge-card implementation, not groomed or baked card topology.
+- Downloaded alpha.15 archive SHA256 `cc33eaf7ad1211728872e0abbb0670694fec8cccca517dc526f53b7bca41d197` matched VPM; the same GPU test passed against that archive.
+- All 7 packaging tests passed. Headset appearance and native Windows remain unverified.
