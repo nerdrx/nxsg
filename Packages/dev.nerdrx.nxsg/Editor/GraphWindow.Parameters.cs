@@ -119,6 +119,8 @@ namespace NXSG.Editor
                 var parameter = graph?.Parameters?.FirstOrDefault(p => p != null && p.Id == id);
                 return parameter == null ? "Parameter (missing)" : "Parameter · " + parameter.Name;
             }
+            var resourceId = (string)node?.Properties?["resourceId"];
+            if (!string.IsNullOrEmpty(resourceId)) return TextureSlotLabels.DisplayName(graph, resourceId);
             return Title(node?.Operation);
         }
 

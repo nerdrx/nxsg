@@ -364,3 +364,12 @@ The downloaded alpha.10 ZIP matched SHA-256
 `9968c754bacb31ea01b289a258d534fc3a04d21c55c0cc0b87aa488be26447e9`.
 Installed from that archive, `GlitterRenderSmoke` passed again. The fixture was
 restored to the source package afterward.
+
+## Texture slot labels — 2026-09-21
+
+`TextureLabelSmoke` passed in hidden Unity 2022.3.22f1. It changes the actual
+inspector Slot name field, checks the node title against the shader property's
+display label, and verifies a material retains its assigned texture after a
+renamed shader replaces the original. Both basic and advanced backends pass.
+Portable checks cover serialization, clipboard copies, label sanitization,
+unchanged property symbols and semantic-hash invalidation on rename.

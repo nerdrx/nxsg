@@ -151,6 +151,9 @@ namespace NXSG.Core
         [JsonProperty("id", Required = Required.Always)]
         public string Id { get; set; }
 
+        [JsonProperty("name", NullValueHandling = NullValueHandling.Ignore)]
+        public string Name { get; set; }
+
         [JsonProperty("kind", Required = Required.Always)]
         public string Kind { get; set; }
 

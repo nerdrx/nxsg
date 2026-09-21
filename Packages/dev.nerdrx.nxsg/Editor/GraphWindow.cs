@@ -455,7 +455,7 @@ namespace NXSG.Editor
                 {
                     var position = Position(node.Id);
                     var box = new VisualElement { focusable = true, style = { position = UnityEngine.UIElements.Position.Absolute, left = position.x, top = position.y, width = 175, backgroundColor = new Color(.14f, .14f, .14f), borderLeftWidth = 2, borderRightWidth = 2, borderTopWidth = 2, borderBottomWidth = 2, borderTopLeftRadius = 8, borderTopRightRadius = 8, borderBottomLeftRadius = 8, borderBottomRightRadius = 8, paddingBottom = 8 } };
-                    var title = new Label(NodeTitle(node)) { style = { paddingLeft = 12, paddingTop = 10, paddingBottom = 10, unityFontStyleAndWeight = FontStyle.Bold, backgroundColor = NodeColor(node.Operation) } };
+                    var title = new Label(NodeTitle(node)) { tooltip = Title(node.Operation), style = { paddingLeft = 12, paddingTop = 10, paddingBottom = 10, unityFontStyleAndWeight = FontStyle.Bold, backgroundColor = NodeColor(node.Operation) } };
                     var alternatives = OperationAlternatives(node.Operation);
                     if (alternatives.Length > 0)
                     {
@@ -825,22 +825,7 @@ namespace NXSG.Editor
                     field.RegisterValueChangedCallback(evt => Edit("Change color", () => { node.Properties["valueType"] = "color"; node.Properties["value"] = new JArray(evt.newValue.r, evt.newValue.g, evt.newValue.b, evt.newValue.a); }));
                     inspector.Add(field);
                 }
-                if (node.Operation == "core.texture2D")
-                {
-                    var field = new ObjectField("Texture") { objectType = typeof(Texture2D), allowSceneObjects = false };
-                    var resourceId = (string)node.Properties["resourceId"];
-                    var map = graph.Adapter?["textures"] as JObject;
-                    var guid = (string)map?[resourceId ?? ""];
-                    if (!string.IsNullOrEmpty(guid)) field.value = AssetDatabase.LoadAssetAtPath<Texture2D>(AssetDatabase.GUIDToAssetPath(guid));
-                    field.SetEnabled(!string.IsNullOrEmpty(resourceId) && graph.Resources.Any(r => r.Id == resourceId));
-                    field.RegisterValueChangedCallback(evt => Edit("Assign texture", () =>
-                    {
-                        if (graph.Adapter == null) graph.Adapter = new JObject();
-                        if (!(graph.Adapter["textures"] is JObject)) graph.Adapter["textures"] = new JObject();
-                        ((JObject)graph.Adapter["textures"])[resourceId] = evt.newValue == null ? "" : AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(evt.newValue));
-                    }));
-                    inspector.Add(field);
-                }
+                if (node.Operation == "core.texture2D") AddTexturePicker(node, "Texture");
                 AddVisualControls(node);
                 AddFeatureControls(node);
                 switch (node.Operation)
@@ -1027,6 +1012,13 @@ namespace NXSG.Editor
             var field = new ObjectField(label) { objectType = typeof(Texture2D), allowSceneObjects = false,
                 tooltip = "Pick a project texture resource." };
             var resourceId = (string)node.Properties["resourceId"];
+            var resource = graph.Resources.FirstOrDefault(r => r != null && r.Id == resourceId);
+            var name = new TextField("Slot name") { value = resource?.Name ?? "", isDelayed = true,
+                tooltip = "Matching label on the node and material inspector. Shared texture resources share this name; assignments stay unchanged." };
+            name.SetEnabled(resource != null);
+            name.RegisterValueChangedCallback(evt => Edit("Rename texture slot", () => resource.Name = TextureSlotLabels.Clean(evt.newValue)));
+            inspector.Add(name);
+            inspector.Add(new Label("Material slot: " + TextureSlotLabels.DisplayName(graph, resourceId)));
             var map = graph.Adapter?["textures"] as JObject;
             var guid = (string)map?[resourceId ?? ""];
             if (!string.IsNullOrEmpty(guid)) field.value = AssetDatabase.LoadAssetAtPath<Texture2D>(AssetDatabase.GUIDToAssetPath(guid));

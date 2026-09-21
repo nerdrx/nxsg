@@ -251,3 +251,12 @@ Emission or Albedo; Value is a 0–1 mask for Opacity or a Mix factor. See the
 Color wires can now connect directly to numeric inputs. RGB is converted to
 luminance (0.2126 R + 0.7152 G + 0.0722 B); alpha is ignored. The original color
 output stays available to other branches. Use Split Color → A for texture alpha.
+
+## Texture slot names
+
+Select a texture node and edit **Slot name** in its inspector. Press Enter or
+leave the field to apply. The same name appears on the node and on the material
+texture slot after building (or Auto scene updating). A slot number disambiguates
+duplicate names. Nodes sharing one texture resource also share its name.
+Renaming preserves resource IDs, shader property names and texture assignments;
+names survive save/load and copy/paste. Clear the name to return to Texture N.

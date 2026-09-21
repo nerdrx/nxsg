@@ -197,7 +197,7 @@ namespace NXSG.Backend
                 properties.Add(new MaterialProperty
                 {
                     Name = "_MainTex",
-                    DisplayName = "Main Texture",
+                    DisplayName = TextureSlotLabels.DisplayName(graph, texture.ResourceId),
                     Type = GraphValueType.Texture2D,
                     Binding = GraphBindingKind.Material,
                     ResourceId = texture.ResourceId,
@@ -223,7 +223,7 @@ namespace NXSG.Backend
             builder.Indent++;
             if (texture != null)
             {
-            builder.Line("_MainTex (\"Main Texture\", 2D) = \"white\" {}");
+            builder.Line("_MainTex (\"" + TextureSlotLabels.DisplayName(graph, texture.ResourceId) + "\", 2D) = \"white\" {}");
             }
             builder.Line("_Color (\"Tint\", Color) = (1,1,1,1)");
             builder.Line(PreviewClock.Properties);

@@ -141,7 +141,7 @@ namespace NXSG.Backend
                 if (textureNames.ContainsKey(id)) continue;
                 var symbol = textureNames.Count == 0 ? "_MainTex" : "_NXSG_Tex_" + Hash(id);
                 textureNames.Add(id, symbol);
-                properties.Add(new MaterialProperty { Name = symbol, DisplayName = "Texture " + textureNames.Count, Type = GraphValueType.Texture2D, Binding = GraphBindingKind.Material, ResourceId = id, ResourceUri = resource.Uri });
+                properties.Add(new MaterialProperty { Name = symbol, DisplayName = TextureSlotLabels.DisplayName(graph, id), Type = GraphValueType.Texture2D, Binding = GraphBindingKind.Material, ResourceId = id, ResourceUri = resource.Uri });
             }
             if(live.Any(id=>nodes[id].Operation=="core.avatarMotion"))
                 foreach(var axis in new[]{"Speed","X","Y","Z"})
