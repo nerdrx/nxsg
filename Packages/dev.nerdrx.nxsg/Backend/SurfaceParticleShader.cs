@@ -6,7 +6,7 @@ namespace NXSG.Backend
     // Geometry emission keeps particles attached to the mesh that owns the material.
     internal static class SurfaceParticleShader
     {
-        public static string Pass(string mask, string color, string emission, string opacity, string time, string density, string emissionRate, string size, string lifetime, string speed, string gravity, string spread, int blendMode, bool sourceUV, bool dynamicBudget = false)
+        public static string Pass(string mask, string color, string emission, string opacity, string time, string density, string emissionRate, string size, string lifetime, string speed, string gravity, string spread, int blendMode, bool sourceUV, string edgeSharpness, bool dynamicBudget = false)
         {
             var blend = blendMode == 1 ? "One" : "OneMinusSrcAlpha";
             double.TryParse(emissionRate, NumberStyles.Float, CultureInfo.InvariantCulture, out var requestedRate);
@@ -121,6 +121,8 @@ float4 fragEmit(NXInput input) : SV_Target
     UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
     float2 circlePosition = input.uv * 2.0 - 1.0;
     float circle = saturate(1.0 - dot(circlePosition, circlePosition));
+    float sharpness = saturate(" + edgeSharpness + @");
+    circle = sharpness >= 1.0 ? step(0.000001, circle) : saturate(circle / max(1.0 - sharpness, 0.000001));
     circle *= circle;
     clip(circle - 0.001);
     float particleOpacity = " + opacity + @";

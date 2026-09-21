@@ -55,7 +55,7 @@ namespace NXSG.Core
             ["core.pbrSurface"] = new[] { "albedo", "emission", "opacity", "displacement", "normal", "metallic", "roughness" },
             ["core.particleSurface"] = new[] { "albedo", "emission", "opacity" },
             ["core.particleColor"] = new string[0],
-            ["core.surfaceParticles"] = new[] { "base", "albedo", "emission", "opacity", "mask", "time", "density", "emissionRate", "size", "lifetime", "speed", "gravity", "spread" },
+            ["core.surfaceParticles"] = new[] { "base", "albedo", "emission", "opacity", "mask", "time", "density", "emissionRate", "size", "lifetime", "speed", "gravity", "spread", "edgeSharpness" },
             ["core.fresnel"] = new string[0], ["core.colorRamp"] = new[] { "value" },
             ["core.layer"] = new[] { "base", "overlay", "mask" }, ["core.sticker"] = new[] { "base", "uv", "mask" },
             ["core.dissolve"] = new[] { "value", "threshold" }, ["core.flipbook"] = new[] { "uv", "time" },
@@ -436,7 +436,7 @@ namespace NXSG.Core
                 case "core.posterize": return port == "value" || port == "levels" ? "float" : null;
                 case "core.vertexMotion": return port == "time" || port == "strength" || port == "value" ? "float" : null;
                 case "core.audioLink": return port == "value" ? "float" : null;
-                case "core.surfaceParticles": return port == "base" || port == "surface" ? "surface" : port == "albedo" || port == "emission" ? "color" : port == "opacity" || port == "mask" || port == "time" || port == "density" || port == "emissionRate" || port == "size" || port == "lifetime" || port == "speed" || port == "gravity" || port == "spread" ? "float" : null;
+                case "core.surfaceParticles": return port == "base" || port == "surface" ? "surface" : port == "albedo" || port == "emission" ? "color" : port == "opacity" || port == "mask" || port == "time" || port == "density" || port == "emissionRate" || port == "size" || port == "lifetime" || port == "speed" || port == "gravity" || port == "spread" || port == "edgeSharpness" ? "float" : null;
                 case "core.particleColor": return port == "color" ? "color" : port == "alpha" ? "float" : null;
                 case "core.particleSurface": return port == "surface" ? "surface" : port == "opacity" ? "float" : port == "albedo" || port == "emission" ? "color" : null;
                 case "core.unlitSurface": return port == "surface" ? "surface" : (port == "albedo" || port == "emission" ? "color" : (port == "opacity" || port == "displacement" ? "float" : null));
@@ -508,7 +508,7 @@ namespace NXSG.Core
                 case "core.normalMap": node.Properties["strength"] = 1.0; break;
                 case "core.darknessGlow": node.Properties["strength"] = 1.0; node.Properties["threshold"] = .4; node.Properties["softness"] = .2; break;
                 case "core.ltcgi": node.Properties["roughness"] = .5; node.Properties["metallic"] = 0.0; node.Properties["strength"] = 1.0; break;
-                case "core.surfaceParticles": node.Properties["sourceUV"] = 0; node.Properties["density"] = .1; node.Properties["emissionRate"] = .5; node.Properties["size"] = .03; node.Properties["lifetime"] = 2.0; node.Properties["speed"] = .2; node.Properties["gravity"] = 0.0; node.Properties["spread"] = .05; node.Properties["blendMode"] = 1; node.Properties["opacity"] = 1.0; node.Properties["mask"] = 1.0; break;
+                case "core.surfaceParticles": node.Properties["sourceUV"] = 0; node.Properties["density"] = .1; node.Properties["emissionRate"] = .5; node.Properties["size"] = .03; node.Properties["lifetime"] = 2.0; node.Properties["speed"] = .2; node.Properties["gravity"] = 0.0; node.Properties["spread"] = .05; node.Properties["edgeSharpness"] = 0.0; node.Properties["blendMode"] = 1; node.Properties["opacity"] = 1.0; node.Properties["mask"] = 1.0; break;
                 case "core.particleSurface": node.Properties["opacity"] = 1.0; node.Properties["blendMode"] = 0; node.Properties["softDistance"] = 0.0; break;
                 case "core.unlitSurface": node.Properties["opacity"] = 1.0; node.Properties["displacement"] = 0.0; break;
                 case "core.pbrSurface": node.Properties["opacity"] = 1.0; node.Properties["displacement"] = 0.0; node.Properties["metallic"] = 0.0; node.Properties["roughness"] = 0.5; break;

@@ -209,7 +209,7 @@ namespace NXSG.Backend
             }
             if (surfaceParticles) passCode.Append(SurfaceParticleShader.Pass(
                 Scalar(root,"mask",1,true), Input(root,"albedo","float4(1,1,1,1)","color"), Input(root,"emission","float4(0,0,0,1)","color"), Scalar(root,"opacity",1), Input(root,"time","NXSG_Time()","float",true),
-                Scalar(root,"density",.1,true), Input(root,"emissionRate",root.Properties["emissionRate"] == null ? "1.0/max(" + Scalar(root,"lifetime",2,true) + ",0.0001)" : Prop(root,"emissionRate",0),"float",true), Scalar(root,"size",.03,true), Scalar(root,"lifetime",2,true), Scalar(root,"speed",.2,true), Scalar(root,"gravity",0,true), Scalar(root,"spread",.05,true), IntProp(root,"blendMode",1,0,1), IntProp(root,"sourceUV",0,0,1) == 1, Source(root,"emissionRate") != null || Source(root,"lifetime") != null));
+                Scalar(root,"density",.1,true), Input(root,"emissionRate",root.Properties["emissionRate"] == null ? "1.0/max(" + Scalar(root,"lifetime",2,true) + ",0.0001)" : Prop(root,"emissionRate",0),"float",true), Scalar(root,"size",.03,true), Scalar(root,"lifetime",2,true), Scalar(root,"speed",.2,true), Scalar(root,"gravity",0,true), Scalar(root,"spread",.05,true), IntProp(root,"blendMode",1,0,1), IntProp(root,"sourceUV",0,0,1) == 1, Scalar(root,"edgeSharpness",0), Source(root,"emissionRate") != null || Source(root,"lifetime") != null));
             var screenDependentShadow = !particle && options.IncludeShadowCaster &&
                 ((IntProp(passes[0].Surface,"useAlbedoAlpha",1,0,1)==1 && ContainsScreenDependentOperation(passes[0].Surface, "albedo")) || ContainsScreenDependentOperation(passes[0].Surface, "opacity"));
             if (screenDependentShadow)

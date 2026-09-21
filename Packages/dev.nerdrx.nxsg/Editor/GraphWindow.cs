@@ -645,7 +645,7 @@ namespace NXSG.Editor
                 case "uv": return "UV"; case "rootColor": return "Root color"; case "tipColor": return "Tip color";
                 case "inMin": return "Input min"; case "inMax": return "Input max";
                 case "outMin": return "Output min"; case "outMax": return "Output max";
-                case "emissionRate": return "Emission rate"; case "groom": return "Groom direction"; default: return port;
+                case "edgeSharpness": return "Edge sharpness"; case "emissionRate": return "Emission rate"; case "groom": return "Groom direction"; default: return port;
             }
         }
 
@@ -900,6 +900,8 @@ namespace NXSG.Editor
                         AddBoundedNumber(node,"density","Triangle density",0,1,.1f,"density");
                         AddBoundedNumber(node,"emissionRate","Emission rate / triangle / sec",0,4,1 / Mathf.Max(.001f, (float?)node.Properties["lifetime"] ?? 2),"emissionRate");
                         AddBoundedNumber(node,"size","Particle size",.0001f,1,.03f,"size");
+                        AddBoundedNumber(node,"edgeSharpness","Edge sharpness",0,1,0,"edgeSharpness");
+                        inspector.Add(new Label("Edge sharpness: 0 = soft puff, 1 = crisp circle. Opacity and lifetime fading still apply.") { style = { whiteSpace = WhiteSpace.Normal } });
                         AddBoundedNumber(node,"lifetime","Lifetime (seconds)",.05f,30,2,"lifetime");
                         AddNumber(node,"speed","Outward speed",.2f,"speed");
                         AddNumber(node,"gravity","Gravity (local Y)",0,"gravity");

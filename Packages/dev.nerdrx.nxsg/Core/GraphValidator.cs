@@ -218,7 +218,7 @@ namespace NXSG.Core
                 case "core.toonSurface": numeric = new[] { "opacity", "displacement", "cutoff", "threshold", "softness", "shadowStrength" }; break;
                 case "core.unlitSurface": numeric = new[] { "opacity", "displacement", "cutoff" }; break;
                 case "core.pbrSurface": numeric = new[] { "opacity", "displacement", "metallic", "roughness", "cutoff" }; break;
-                case "core.surfaceParticles": numeric = new[] { "density", "size", "lifetime", "speed", "gravity", "spread", "opacity", "mask", "emissionRate" }; break;
+                case "core.surfaceParticles": numeric = new[] { "density", "size", "lifetime", "speed", "gravity", "spread", "opacity", "mask", "emissionRate", "edgeSharpness" }; break;
                 case "core.particleSurface": numeric = new[] { "opacity", "softDistance" }; break;
                 case "core.fresnel": numeric = new[] { "power" }; break;
                 case "core.colorRamp": break;

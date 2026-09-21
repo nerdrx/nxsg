@@ -10,9 +10,9 @@ public static class SurfaceParticleChecks
     {
         var particles = NodeCatalog.Create("core.surfaceParticles");
         assert(particles != null, "surfaceParticles is registered");
-        assert(NodeCatalog.Ports("core.surfaceParticles", false).SequenceEqual(new[] { "base", "albedo", "emission", "opacity", "mask", "time", "density", "emissionRate", "size", "lifetime", "speed", "gravity", "spread" }), "surfaceParticles inputs");
+        assert(NodeCatalog.Ports("core.surfaceParticles", false).SequenceEqual(new[] { "base", "albedo", "emission", "opacity", "mask", "time", "density", "emissionRate", "size", "lifetime", "speed", "gravity", "spread", "edgeSharpness" }), "surfaceParticles inputs");
         assert(NodeCatalog.Ports("core.surfaceParticles", true).SequenceEqual(new[] { "surface" }), "surfaceParticles output");
-        assert(NodeCatalog.PortType(particles, "base") == "surface" && NodeCatalog.PortType(particles, "albedo") == "color" && NodeCatalog.PortType(particles, "emission") == "color" && NodeCatalog.PortType(particles, "opacity") == "float" && NodeCatalog.PortType(particles, "mask") == "float" && NodeCatalog.PortType(particles, "time") == "float" && new[] { "density", "emissionRate", "size", "lifetime", "speed", "gravity", "spread" }.All(port => NodeCatalog.PortType(particles, port) == "float"), "surfaceParticles socket types");
+        assert(NodeCatalog.PortType(particles, "base") == "surface" && NodeCatalog.PortType(particles, "albedo") == "color" && NodeCatalog.PortType(particles, "emission") == "color" && NodeCatalog.PortType(particles, "opacity") == "float" && NodeCatalog.PortType(particles, "mask") == "float" && NodeCatalog.PortType(particles, "time") == "float" && new[] { "density", "emissionRate", "size", "lifetime", "speed", "gravity", "spread", "edgeSharpness" }.All(port => NodeCatalog.PortType(particles, port) == "float"), "surfaceParticles socket types");
         assert((double)particles.Properties["density"] == .1 && (double)particles.Properties["size"] == .03 && (double)particles.Properties["lifetime"] == 2 && (double)particles.Properties["speed"] == .2 && (double)particles.Properties["gravity"] == 0 && (double)particles.Properties["spread"] == .05 && (int)particles.Properties["blendMode"] == 1 && (double)particles.Properties["opacity"] == 1 && (double)particles.Properties["mask"] == 1, "surfaceParticles defaults");
         var graph = Graph();
         assert(GraphValidator.Validate(graph).IsValid, "surfaceParticles graph validates");
@@ -21,9 +21,10 @@ public static class SurfaceParticleChecks
         assert(emitted.ShaderSource.Contains("maxvertexcount(16)") && emitted.ShaderSource.Contains("SV_PrimitiveID") && emitted.ShaderSource.Contains("TriangleStream"), "surfaceParticles emits bounded geometry pass");
         assert(emitted.ShaderSource.Contains("ForwardBase") && emitted.ShaderSource.Contains("originalLocal"), "surfaceParticles preserves base pass and source position");
         assert(emitted.ShaderSource.Contains("corner.particleAlpha = fade * particleMask * active;") && !emitted.ShaderSource.Contains("* _Color * input.color;"), "surface particles keep fade separate from source vertex colors");
+        Reject(assert, graph, "edgeSharpness", new JValue(double.NaN), "sharpness finite");
         Reject(assert, graph, "lifetime", .0009, "lifetime lower bound"); Reject(assert, graph, "blendMode", 2, "blend mode choice"); Reject(assert, graph, "speed", new JValue(double.NaN), "speed finite");
         var wired = Graph();
-        foreach (var port in new[] { "density", "emissionRate", "size", "lifetime", "speed", "gravity", "spread" })
+        foreach (var port in new[] { "density", "emissionRate", "size", "lifetime", "speed", "gravity", "spread", "edgeSharpness" })
         {
             var value = NodeCatalog.Create("core.value"); value.Id = "input-" + port; value.Properties["value"] = .25;
             wired.Nodes.Add(value);

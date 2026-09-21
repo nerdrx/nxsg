@@ -529,3 +529,7 @@ the subdivision estimate for distributing the requested rate.
 Runtime modulation retimes procedural particles and can change topology; it does
 not preserve a simulation history. Spatial rate/lifetime signals are sampled
 approximately. No live VRChat/AudioLink runtime validation is claimed.
+
+## 2026-09-21 — Particle edge sharpness (alpha.23)
+
+Portable checks and all seven packaging tests passed. Unity 2022.3.22f1 under hidden Gamescope/OpenGL passed SurfaceParticleRenderSmoke, including missing-property versus zero parity, increased hard-edge coverage, and connected-value versus property parity. Log: `work/unity/particle-sharpness.log`. These are local render checks, not a VRChat mirror verification; alpha blending is unchanged.

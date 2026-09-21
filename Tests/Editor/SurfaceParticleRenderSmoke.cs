@@ -23,7 +23,7 @@ public static class SurfaceParticleRenderSmoke
             subject = GameObject.CreatePrimitive(PrimitiveType.Cube); subject.transform.localScale = Vector3.one * 1.4f;
             camera = new GameObject("NXSG Surface Particle Camera").AddComponent<Camera>(); camera.clearFlags = CameraClearFlags.SolidColor; camera.backgroundColor = Color.black; camera.orthographic = true; camera.orthographicSize = 2.5f; camera.transform.position = new Vector3(0, 0, -4); camera.transform.LookAt(Vector3.zero);
             target = new RenderTexture(Size, Size, 24, RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.Linear); target.Create(); camera.targetTexture = target;
-            CheckRender(); CheckSourceVertexAlpha(); CheckRate(); CheckParticleInputs(); CheckSkinnedSource(); CheckSample(); Debug.Log("NXSG SURFACE PARTICLE RENDER SMOKE PASSED"); EditorApplication.Exit(0);
+            CheckRender(); CheckSourceVertexAlpha(); CheckRate(); CheckParticleInputs(); CheckEdgeSharpness(); CheckSkinnedSource(); CheckSample(); Debug.Log("NXSG SURFACE PARTICLE RENDER SMOKE PASSED"); EditorApplication.Exit(0);
         }
         catch (Exception exception) { Debug.LogException(exception); EditorApplication.Exit(1); }
         finally { RenderTexture.active = null; if (target != null) { target.Release(); UnityEngine.Object.DestroyImmediate(target); } if (camera != null) UnityEngine.Object.DestroyImmediate(camera.gameObject); if (subject != null) UnityEngine.Object.DestroyImmediate(subject); }
@@ -146,6 +146,31 @@ public static class SurfaceParticleRenderSmoke
         PublishParticleInputShader(high);
         using (var preview = GraphPreview.Create(high, null)) { subject.GetComponent<Renderer>().sharedMaterial = preview.Material; rateHigh = Capture(); }
         if (CountRed(rateHigh) < CountRed(rateZero) + 4) throw new InvalidOperationException("Connected emission rate did not increase visible particles");
+    }
+    static void CheckEdgeSharpness()
+    {
+        camera.transform.position = new Vector3(0, 0, -4); camera.transform.LookAt(Vector3.zero);
+        var legacy = Graph(1, 1, .2); var particle = legacy.Nodes.Single(n => n.Id == "particles");
+        particle.Properties["emissionRate"] = 8; particle.Properties["size"] = .2; particle.Properties.Remove("edgeSharpness");
+        Color[] fallback;
+        using (var preview = GraphPreview.Create(legacy, null)) { subject.GetComponent<Renderer>().sharedMaterial = preview.Material; fallback = Capture(); }
+
+        var soft = Graph(1, 1, .2); particle = soft.Nodes.Single(n => n.Id == "particles");
+        particle.Properties["emissionRate"] = 8; particle.Properties["size"] = .2; particle.Properties["edgeSharpness"] = 0;
+        Color[] explicitZero;
+        using (var preview = GraphPreview.Create(soft, null)) { subject.GetComponent<Renderer>().sharedMaterial = preview.Material; explicitZero = Capture(); }
+        if (!Same(fallback, explicitZero, .001f)) throw new InvalidOperationException("edgeSharpness 0 changed the legacy particle shape");
+
+        var hard = Graph(1, 1, .2); particle = hard.Nodes.Single(n => n.Id == "particles");
+        particle.Properties["emissionRate"] = 8; particle.Properties["size"] = .2; particle.Properties["edgeSharpness"] = 1;
+        Color[] propertyOne;
+        using (var preview = GraphPreview.Create(hard, null)) { subject.GetComponent<Renderer>().sharedMaterial = preview.Material; propertyOne = Capture(); }
+        if (CountRed(propertyOne) <= CountRed(explicitZero) + 4) throw new InvalidOperationException("edgeSharpness 1 did not increase particle coverage");
+
+        var wired = Graph(1, 1, .2); particle = wired.Nodes.Single(n => n.Id == "particles");
+        particle.Properties["emissionRate"] = 8; particle.Properties["size"] = .2; particle.Properties.Remove("edgeSharpness");
+        wired.Nodes.Add(Float("edgeSharpness", 1)); Edge(wired, "edgeSharpness", "value", "particles", "edgeSharpness");
+        using (var preview = GraphPreview.Create(wired, null)) { subject.GetComponent<Renderer>().sharedMaterial = preview.Material; if (!Same(propertyOne, Capture(), .001f)) throw new InvalidOperationException("Connected edgeSharpness 1 did not match property 1"); }
     }
     static void CheckSkinnedSource()
     {
