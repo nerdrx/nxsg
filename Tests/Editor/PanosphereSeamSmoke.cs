@@ -51,6 +51,20 @@ public static class PanosphereSeamSmoke
                     CheckCenterStrip(position, Capture());
                 }
             }
+            // Noninteger tiling exposes spurious chart switching away from the actual seam.
+            var fractional = Graph();
+            fractional.Nodes.Find(n => n.Id == "scale").Properties["tiling"] = new JArray(2.37, 1.73);
+            using (var preview = GraphPreview.Create(fractional, null))
+            {
+                SetTextures(preview.Material, texture);
+                quadObject.GetComponent<Renderer>().sharedMaterial = preview.Material;
+                foreach (var position in new[] {new Vector3(-3,.2f,.3f),new Vector3(-3,.4f,.7f),new Vector3(-3,-.3f,1)})
+                {
+                    camera.transform.position=position;camera.transform.LookAt(Vector3.zero);
+                    quadObject.transform.rotation=Quaternion.LookRotation(-position.normalized,Vector3.up);
+                    CheckCenterStrip(position,Capture());
+                }
+            }
             Debug.Log("NXSG PANOSPHERE SEAM SMOKE PASSED");
             EditorApplication.Exit(0);
         }

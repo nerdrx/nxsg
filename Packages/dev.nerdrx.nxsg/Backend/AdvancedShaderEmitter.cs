@@ -695,9 +695,9 @@ float2 NX_Polar(float2 uv,float2 center,float radial,float angular){float2 p=uv-
 float NX_Hash(float2 p){return frac(sin(dot(p,float2(127.1,311.7)))*43758.5453);}
 float NX_Noise(float2 p){float2 i=floor(p),f=frac(p);f=f*f*(3-2*f);return lerp(lerp(NX_Hash(i),NX_Hash(i+float2(1,0)),f.x),lerp(NX_Hash(i+float2(0,1)),NX_Hash(i+float2(1,1)),f.x),f.y);}
 float2 NX_PanoUV(float3 d){return float2(atan2(d.x,d.z)/6.28318530718+.5,asin(clamp(d.y,-1,1))/3.14159265359+.5);}
-// Choose the equivalent longitude chart with smaller derivatives to avoid a false coarse mip at the wrap.
+// Only switch longitude charts at a real wrap. Bias prevents roundoff from changing charts in smooth regions.
 // Panosphere seam handling reference: Poiyomi (see docs/PANOSPHERE.md). Vertex evaluation keeps raw UVs.
-float2 NX_PanoFilteredUV(float3 d){float2 uv=NX_PanoUV(d);float alternate=frac(uv.x+.5)-.5;uv.x=fwidth(uv.x)<=fwidth(alternate)?uv.x:alternate;return uv;}
+float2 NX_PanoFilteredUV(float3 d){float2 uv=NX_PanoUV(d);float alternate=frac(uv.x+.5)-.5;uv.x=fwidth(uv.x)-.0001<fwidth(alternate)?uv.x:alternate;return uv;}
 float2 NX_MatcapUV(float3 view,float3 normal){float3 n=normalize(mul((float3x3)UNITY_MATRIX_V,normal));return n.xy*.5+.5;}
 float2 NX_Flipbook(float2 uv,float frame,float cols,float rows){float count=cols*rows;frame=floor(frame);frame=frame-floor(frame/count)*count;return (frac(uv)+float2(fmod(frame,cols),rows-1-floor(frame/cols)))/float2(cols,rows);}
 float2 NX_Distort(float2 uv,float strength,float scale,float time){return uv+(float2(NX_Noise(uv*scale+time),NX_Noise(uv*scale+time+17.2))-.5)*strength;}

@@ -17,11 +17,13 @@ namespace NXSG.Editor
         {
             var keys = CoordinateKeys;
             var labels = CoordinateLabels;
-            var field = new PopupField<string>("Coordinates", labels.ToList(), Math.Max(0, Array.IndexOf(keys, (string)node.Properties["coordinateSource"] ?? "uv0")))
+            var field = new PopupField<string>(node.Operation == "core.polarUV" ? "Input coordinates" : "Coordinates", labels.ToList(), Math.Max(0, Array.IndexOf(keys, (string)node.Properties["coordinateSource"] ?? "uv0")))
             { tooltip = "A connected UV wire overrides this choice. Mesh UV and Polar do not follow the camera. UV1–UV3 require those channels on your mesh." };
             field.SetEnabled(!graph.Connections.Any(e => e.To.NodeId == node.Id && e.To.PortId == "uv"));
             field.RegisterValueChangedCallback(evt => Edit("Change coordinates", () => node.Properties["coordinateSource"] = keys[Array.IndexOf(labels, evt.newValue)]));
             inspector.Add(field);
+            if (node.Operation == "core.polarUV")
+                inspector.Add(new HelpBox("Polar is applied after these input coordinates. For plain Panosphere, select Panosphere from the node header menu.", HelpBoxMessageType.Info));
         }
 
         void AddIndexedChoice(GraphNode node, string property, string label, string[] choices, int fallback = 0, int first = 0)

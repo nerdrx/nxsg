@@ -17,3 +17,11 @@ The derivative approach follows [Poiyomi 10.0.22 source](https://github.com/poiy
 checked 2026-09-21. NXSG retains its existing orientation and scale. The package
 includes the upstream MIT notice. Separate stereo panorama controls are not
 implemented; headset behavior is unverified.
+
+The chart comparison includes a tolerance: without it, rounding differences in
+otherwise equal derivatives can select different UV charts in adjacent pixels.
+This caused speckling in alpha.14–15 and is fixed in alpha.16. A separate GPU
+regression covers fractional tiling away from the wrap.
+
+On **Polar UVs**, Input coordinates chooses what enters the polar transform.
+It does not replace the operation. Use the node header to select plain Panosphere.
