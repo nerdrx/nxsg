@@ -392,3 +392,11 @@ restored to source afterward.
 - ProceduralRenderSmoke passed real GPU checks for coordinate channels and camera response, including Panosphere and Matcap.
 - Downloaded GitHub alpha.13 archive matched VPM SHA256 `2f0cfe8bd07da55a35368c0600023d9ff2a52ce2eb8985068ad904afe03be0d2`; CoordinateMenuSmoke passed against the extracted release.
 - VR headset appearance and Poiyomi's separate stereo panorama controls are not validated or claimed.
+
+## 2026-09-21 — alpha.14 Panosphere seam
+
+- GPU regression with seamless Repeat/trilinear texture reproduced the old stripe (red .949 to .496 across adjacent pixels).
+- Corrected derivative selection passed the same test at four azimuths and two near-pole views.
+- Portable checks and 7 packaging checks passed.
+- Downloaded alpha.14 SHA256 `157370a55ddf0e1872e1cb15ae119787033a62e5c13def8a2bb41263b3200e59` matched the listing; PanosphereSeamSmoke passed against that extracted archive.
+- This is Linux Unity OpenGL evidence, not VR headset validation.
