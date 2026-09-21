@@ -889,8 +889,8 @@ namespace NXSG.Editor
                     case "core.emission": AddNumber(node, "strength", "Strength", 1, "strength"); break;
                     case "core.fresnel": AddNumber(node, "power", "Power", 5, "power"); break;
                     case "core.layer": AddNumber(node, "mask", "Mask", 1, "mask"); break;
-                    case "core.pbrSurface": AddAlbedoAlphaToggle(node); AddNumber(node, "opacity", "Opacity", 1, "opacity"); AddNumber(node, "cutoff", "Cutoff", .001f); AddNumber(node, "displacement", "Displacement", 0, "displacement"); AddNumber(node, "metallic", "Metallic", 0, "metallic"); AddNumber(node, "roughness", "Roughness", .5f, "roughness"); break;
-                    case "core.toonSurface": AddAlbedoAlphaToggle(node); AddNumber(node, "opacity", "Opacity", 1, "opacity"); AddNumber(node, "cutoff", "Cutoff", .001f); AddNumber(node, "displacement", "Displacement", 0, "displacement"); break;
+                    case "core.pbrSurface": AddLightingControls(node); AddAlbedoAlphaToggle(node); AddNumber(node, "opacity", "Opacity", 1, "opacity"); AddNumber(node, "cutoff", "Cutoff", .001f); AddNumber(node, "displacement", "Displacement", 0, "displacement"); AddNumber(node, "metallic", "Metallic", 0, "metallic"); AddNumber(node, "roughness", "Roughness", .5f, "roughness"); break;
+                    case "core.toonSurface": AddLightingControls(node); AddAlbedoAlphaToggle(node); AddNumber(node, "opacity", "Opacity", 1, "opacity"); AddNumber(node, "cutoff", "Cutoff", .001f); AddNumber(node, "displacement", "Displacement", 0, "displacement"); break;
                     case "core.surfaceParticles":
                         var sourceUvToggle = new Toggle("Color from mesh UVs") { value = (int?)node.Properties["sourceUV"] == 1,
                             tooltip = "On: particle Albedo and Emission sample the connected texture at the spawn point on mesh UV0. Off: each particle displays the texture using its own sprite UVs. Opacity keeps sprite UVs." };

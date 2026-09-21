@@ -90,6 +90,15 @@ namespace NXSG.Editor
             }
         }
 
+        void AddLightingControls(GraphNode node)
+        {
+            inspector.Add(new Label("Lighting influence") { style = { unityFontStyleAndWeight = FontStyle.Bold } });
+            AddNumber(node, "lightingMin", "Minimum brightness", 0);
+            AddNumber(node, "lightingMax", "Maximum brightness", 0);
+            AddNumber(node, "lightingSaturation", "Lighting saturation", 1);
+            FeatureNote("Maximum 0 = unlimited. Saturation: 0 = neutral light, 1 = original, above 1 = stronger color. Affects lighting, not albedo or emission. Brightness limits apply per lighting contribution; multiple lights can add above the maximum.");
+        }
+
         void AddAlbedoAlphaToggle(GraphNode node)
         {
             var field = new Toggle("Use albedo alpha")

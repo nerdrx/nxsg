@@ -278,3 +278,12 @@ Toon, Unlit and PBR expose **Use albedo alpha**. Disable it to ignore transparen
 in an Albedo texture/color. Opacity and material Tint alpha still apply. Leave it
 enabled to multiply all three. The choice also affects shell layers, additional
 lights and shadow casting. Existing graphs retain their behavior.
+
+### Lighting influence
+
+Toon and PBR surfaces have Minimum brightness, Maximum brightness (0 = unlimited),
+and Lighting saturation (0 = neutral light, 1 = original, above 1 = more saturated).
+Albedo and emission are not desaturated. Defaults preserve existing shading.
+The minimum is applied only in the base pass; maximum limits each lighting
+contribution, not the sum of additional-light passes. Maximum wins if lower than
+minimum. Unlit has no light response. Fur overlays retain separate lighting.

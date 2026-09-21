@@ -25,6 +25,7 @@ namespace NXSG.Backend
         readonly List<Diagnostic> diagnostics = new List<Diagnostic>();
         bool wireframeEnabled;
         bool ltcgiEnabled;
+        bool lightingControlsEnabled;
         int depth;
 
         sealed class SurfacePass
@@ -51,7 +52,21 @@ namespace NXSG.Backend
                 GraphTypes.PortType(graph, liveById[edge.To.NodeId], edge.To.PortId, inferred) == "float");
             return live.Any(n => ops.Contains(n.Operation) || FeatureNodes.IsKnown(n.Operation)) || live.Any(n => (n.Operation == "core.noise" || n.Operation == "core.uv0" || n.Operation == "core.polarUV" || n.Operation == "core.texture2D") && IsAdvancedCoordinates(n, incoming[n.Id])) || live.Count(n => n.Operation == "core.texture2D") > 1 ||
                 hasColorScalarEdge ||
-                live.Any(n => n.Operation == "core.toonSurface" && (n.Properties?["useAlbedoAlpha"] != null || n.Properties?["opacity"] != null || n.Properties?["displacement"] != null || incoming[n.Id].Any(e => e.To.PortId == "opacity" || e.To.PortId == "displacement" || e.To.PortId == "normal")));
+                live.Any(n => n.Operation == "core.toonSurface" && (n.Properties?["useAlbedoAlpha"] != null || n.Properties?["opacity"] != null || n.Properties?["displacement"] != null || incoming[n.Id].Any(e => e.To.PortId == "opacity" || e.To.PortId == "displacement" || e.To.PortId == "normal") || HasLightingControls(n)));
+        }
+
+        static bool HasLightingControls(GraphNode node)
+        {
+            if (node == null || (node.Operation != "core.toonSurface" && node.Operation != "core.pbrSurface")) return false;
+            return LightingValueDiffers(node, "lightingMin", 0) || LightingValueDiffers(node, "lightingMax", 0) || LightingValueDiffers(node, "lightingSaturation", 1);
+        }
+
+        static bool LightingValueDiffers(GraphNode node, string key, double defaultValue)
+        {
+            var value = node.Properties?[key];
+            if (value == null) return false;
+            if (value.Type != JTokenType.Integer && value.Type != JTokenType.Float) return true;
+            return Math.Abs((double)value - defaultValue) > 0;
         }
 
         static bool IsAdvancedNoise(GraphNode n, IEnumerable<GraphConnection> incoming)
@@ -147,6 +162,7 @@ namespace NXSG.Backend
                 foreach(var axis in new[]{"Speed","X","Y","Z"})
                     properties.Add(new MaterialProperty { Name="_NXSG_Motion"+axis, DisplayName="Motion "+axis, Type=GraphValueType.Float, Binding=GraphBindingKind.AnimatedMaterial });
             ltcgiEnabled = live.Any(id => nodes[id].Operation == "core.ltcgi");
+            lightingControlsEnabled = live.Select(id => nodes[id]).Any(HasLightingControls);
             if (ltcgiEnabled && !options.LtcgiAvailable)
                 throw new InvalidOperationException("LTCGI Lighting requires the optional at.pimaker.ltcgi package. Install LTCGI from https://ltcgi.dev, then rebuild the graph.");
             var passes = new List<SurfacePass>();
@@ -209,6 +225,7 @@ namespace NXSG.Backend
             b.AppendLine(PreviewClock.Hlsl);
 
             b.AppendLine(Helpers);
+            if (lightingControlsEnabled) b.AppendLine(LightingHelpers);
             if(furNode!=null) {
                 int quality=IntProp(furNode,"selfShadowQuality",0,0,3);
                 b.AppendLine(FurLighting.Helpers(quality,double.Parse(RawProp(furNode,"selfShadowStrength",1),CultureInfo.InvariantCulture),double.Parse(RawProp(furNode,"selfShadowBias",.03),CultureInfo.InvariantCulture)));
@@ -587,6 +604,10 @@ namespace NXSG.Backend
             var metallic = Scalar(surface,"metallic",0);
             var roughness = Scalar(surface,"roughness",.5);
             var threshold=ToonSetting(surface,"threshold",passIndex);var softness=ToonSetting(surface,"softness",passIndex);var shadow=ToonSetting(surface,"shadowStrength",passIndex);
+            var lighting = HasLightingControls(surface);
+            var lightingMin = lighting ? Prop(surface, "lightingMin", 0) : null;
+            var lightingMax = lighting ? Prop(surface, "lightingMax", 0) : null;
+            var lightingSaturation = lighting ? Prop(surface, "lightingSaturation", 1) : null;
             var tess = tessellation != null;
             var b=new StringBuilder("Pass {\nName \""+(shell?(passIndex == 1 ? "Shell" : "Shell" + passIndex.ToString(CultureInfo.InvariantCulture)):"ForwardBase")+"\"\nTags { \"LightMode\"=\""+(shell?"Always":"ForwardBase")+"\" }\nCull Back\n"+(shell?"ZWrite Off\nBlend SrcAlpha OneMinusSrcAlpha":"ZWrite On")+"\nCGPROGRAM\n#pragma target "+(tess?"4.6":wireframeEnabled?"4.0":"3.5")+"\n#pragma vertex "+(tess?"vertTess":"vert")+"\n"+(tess?"#pragma hull hullTess\n#pragma domain domainTess\n":"")+"#pragma fragment frag\n"+(wireframeEnabled?"#pragma geometry geomWire\n":"")+"#pragma multi_compile_fwdbase\n#pragma multi_compile_instancing\n");
             b.AppendLine("NXInput vert(NXApp v) { UNITY_SETUP_INSTANCE_ID(v); NXInput input=NX_Make(v); v.vertex.xyz+=v.normal*("+displacement+"+"+offset+"+"+tessHeight+"); NXInput o=NX_Make(v); o.originalLocal=input.originalLocal; o.originalWs=input.originalWs; UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o); TRANSFER_VERTEX_TO_FRAGMENT(o); return o; }");
@@ -600,9 +621,11 @@ namespace NXSG.Backend
                 b.AppendLine("float3 tn="+normal+"; float3 n=normalize(normalize(input.tangent)*tn.x+normalize(input.bitangent)*tn.y+normalize(input.n)*tn.z); float3 view=normalize(_WorldSpaceCameraPos-input.ws); float3 lightDir=normalize(UnityWorldSpaceLightDir(input.ws)); UNITY_LIGHT_ATTENUATION(atten,input,input.ws);");
                 if(surface.Operation=="core.pbrSurface")
                 {
-                    b.AppendLine("half3 spec; half reflectivity; half3 diffuse=DiffuseAndSpecularFromMetallic(c.rgb,saturate("+metallic+"),spec,reflectivity); UnityLight light; light.color=_LightColor0.rgb*atten; light.dir=lightDir; light.ndotl=saturate(dot(n,lightDir)); UnityIndirect indirect; indirect.diffuse=max(0,ShadeSH9(float4(n,1))); half rough=saturate("+roughness+"); half4 env=UNITY_SAMPLE_TEXCUBE_LOD(unity_SpecCube0,reflect(-view,n),rough*6); indirect.specular=DecodeHDR(env,unity_SpecCube0_HDR); return float4(UNITY_BRDF_PBS(diffuse,spec,reflectivity,1-rough,n,view,light,indirect).rgb+emission,alpha);");
+                    if (!lighting) b.AppendLine("half3 spec; half reflectivity; half3 diffuse=DiffuseAndSpecularFromMetallic(c.rgb,saturate("+metallic+"),spec,reflectivity); UnityLight light; light.color=_LightColor0.rgb*atten; light.dir=lightDir; light.ndotl=saturate(dot(n,lightDir)); UnityIndirect indirect; indirect.diffuse=max(0,ShadeSH9(float4(n,1))); half rough=saturate("+roughness+"); half4 env=UNITY_SAMPLE_TEXCUBE_LOD(unity_SpecCube0,reflect(-view,n),rough*6); indirect.specular=DecodeHDR(env,unity_SpecCube0_HDR); return float4(UNITY_BRDF_PBS(diffuse,spec,reflectivity,1-rough,n,view,light,indirect).rgb+emission,alpha);");
+                    else b.AppendLine("half3 spec; half reflectivity; half3 diffuse=DiffuseAndSpecularFromMetallic(c.rgb,saturate("+metallic+"),spec,reflectivity); UnityLight light; light.color=NX_LightingContribution(_LightColor0.rgb*atten,"+lightingSaturation+","+lightingMax+"); light.dir=lightDir; light.ndotl=saturate(dot(n,lightDir)); UnityIndirect indirect; indirect.diffuse=NX_LightingBase(NX_LightingContribution(max(0,ShadeSH9(float4(n,1))),"+lightingSaturation+","+lightingMax+"),"+lightingMin+","+lightingMax+"); half rough=saturate("+roughness+"); half4 env=UNITY_SAMPLE_TEXCUBE_LOD(unity_SpecCube0,reflect(-view,n),rough*6); indirect.specular=NX_LightingBase(NX_LightingContribution(DecodeHDR(env,unity_SpecCube0_HDR),"+lightingSaturation+","+lightingMax+"),"+lightingMin+","+lightingMax+"); return float4(UNITY_BRDF_PBS(diffuse,spec,reflectivity,1-rough,n,view,light,indirect).rgb+emission,alpha);");
                 }
-                else b.AppendLine("float lit=smoothstep("+threshold+"-max(.001,"+softness+"),"+threshold+"+max(.001,"+softness+"),dot(n,lightDir)*.5+.5); return float4(c.rgb*(max(0,ShadeSH9(float4(n,1)))+_LightColor0.rgb*atten*lerp(1-saturate("+shadow+"),1,lit))+emission,alpha);");
+                else if (!lighting) b.AppendLine("float lit=smoothstep("+threshold+"-max(.001,"+softness+"),"+threshold+"+max(.001,"+softness+"),dot(n,lightDir)*.5+.5); return float4(c.rgb*(max(0,ShadeSH9(float4(n,1)))+_LightColor0.rgb*atten*lerp(1-saturate("+shadow+"),1,lit))+emission,alpha);");
+                else b.AppendLine("float lit=smoothstep("+threshold+"-max(.001,"+softness+"),"+threshold+"+max(.001,"+softness+"),dot(n,lightDir)*.5+.5); float3 ambient=NX_LightingContribution(max(0,ShadeSH9(float4(n,1))),"+lightingSaturation+","+lightingMax+"); float3 direct=NX_LightingContribution(_LightColor0.rgb*atten*lerp(1-saturate("+shadow+"),1,lit),"+lightingSaturation+","+lightingMax+"); return float4(c.rgb*NX_LightingBase(ambient+direct,"+lightingMin+","+lightingMax+")+emission,alpha);");
             }
             var result = b.AppendLine("}\nENDCG\n}").ToString().Replace("#pragma target 3.5", wireframeEnabled ? "#pragma target 4.0" : "#pragma target 3.5");
             if (!shell && (surface.Operation == "core.toonSurface" || surface.Operation == "core.pbrSurface"))
@@ -619,6 +642,9 @@ namespace NXSG.Backend
             var metallic = Scalar(surface,"metallic",0);
             var roughness = Scalar(surface,"roughness",.5);
             var threshold=ToonSetting(surface,"threshold",passIndex); var softness=ToonSetting(surface,"softness",passIndex); var shadow=ToonSetting(surface,"shadowStrength",passIndex);
+            var lighting = HasLightingControls(surface);
+            var lightingMax = lighting ? Prop(surface, "lightingMax", 0) : null;
+            var lightingSaturation = lighting ? Prop(surface, "lightingSaturation", 1) : null;
             var tess = tessellation != null;
             var b = new StringBuilder("\nPass {\nName \"ForwardAdd\"\nTags { \"LightMode\"=\"ForwardAdd\" }\nBlend One One\nColorMask RGB\nZWrite Off\nCGPROGRAM\n#pragma target "+(tess?"4.6":wireframeEnabled?"4.0":"3.5")+"\n#pragma vertex "+(tess?"vertTessAdd":"vertAdd")+"\n"+(tess?"#pragma hull hullTessAdd\n#pragma domain domainTessAdd\n":"")+"#pragma fragment fragAdd\n"+(wireframeEnabled?"#pragma geometry geomWireAdd\n":"")+"#pragma multi_compile_fwdadd_fullshadows\n#pragma multi_compile_instancing\n");
             b.AppendLine("NXInput vertAdd(NXApp v) { UNITY_SETUP_INSTANCE_ID(v); NXInput input=NX_Make(v); v.vertex.xyz+=v.normal*("+displacement+"+"+offset+"+"+tessHeight+"); NXInput o=NX_Make(v); o.originalLocal=input.originalLocal; o.originalWs=input.originalWs; UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o); TRANSFER_VERTEX_TO_FRAGMENT(o); return o; }");
@@ -626,9 +652,9 @@ namespace NXSG.Backend
             if (wireframeEnabled) b.AppendLine(WireGeometry.Replace("geomWire", "geomWireAdd"));
             b.AppendLine("float4 fragAdd(NXInput input):SV_Target { UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input); float4 c="+color+"*_Color; float alpha=saturate("+(IntProp(surface,"useAlbedoAlpha",1,0,1)==1 ? "c.a" : "_Color.a")+"*"+opacity+"); clip(alpha-"+Prop(surface,"cutoff",.001)+"); float3 tn="+normal+"; float3 n=normalize(normalize(input.tangent)*tn.x+normalize(input.bitangent)*tn.y+normalize(input.n)*tn.z); float3 view=normalize(_WorldSpaceCameraPos-input.ws); float3 lightDir=normalize(UnityWorldSpaceLightDir(input.ws)); UNITY_LIGHT_ATTENUATION(atten,input,input.ws);");
             if (surface.Operation == "core.pbrSurface")
-                b.AppendLine("half3 spec; half reflectivity; half3 diffuse=DiffuseAndSpecularFromMetallic(c.rgb,saturate("+metallic+"),spec,reflectivity); UnityLight light; light.color=_LightColor0.rgb*atten; light.dir=lightDir; light.ndotl=saturate(dot(n,lightDir)); UnityIndirect indirect; indirect.diffuse=0; indirect.specular=0; half rough=saturate("+roughness+"); return float4(UNITY_BRDF_PBS(diffuse,spec,reflectivity,1-rough,n,view,light,indirect).rgb,0);");
+                b.AppendLine(lighting ? "half3 spec; half reflectivity; half3 diffuse=DiffuseAndSpecularFromMetallic(c.rgb,saturate("+metallic+"),spec,reflectivity); UnityLight light; light.color=NX_LightingContribution(_LightColor0.rgb*atten,"+lightingSaturation+","+lightingMax+"); light.dir=lightDir; light.ndotl=saturate(dot(n,lightDir)); UnityIndirect indirect; indirect.diffuse=0; indirect.specular=0; half rough=saturate("+roughness+"); return float4(UNITY_BRDF_PBS(diffuse,spec,reflectivity,1-rough,n,view,light,indirect).rgb,0);" : "half3 spec; half reflectivity; half3 diffuse=DiffuseAndSpecularFromMetallic(c.rgb,saturate("+metallic+"),spec,reflectivity); UnityLight light; light.color=_LightColor0.rgb*atten; light.dir=lightDir; light.ndotl=saturate(dot(n,lightDir)); UnityIndirect indirect; indirect.diffuse=0; indirect.specular=0; half rough=saturate("+roughness+"); return float4(UNITY_BRDF_PBS(diffuse,spec,reflectivity,1-rough,n,view,light,indirect).rgb,0);");
             else
-                b.AppendLine("float lit=smoothstep("+threshold+"-max(.001,"+softness+"),"+threshold+"+max(.001,"+softness+"),dot(n,lightDir)*.5+.5); return float4(c.rgb*_LightColor0.rgb*atten*lerp(1-saturate("+shadow+"),1,lit),0);");
+                b.AppendLine(lighting ? "float lit=smoothstep("+threshold+"-max(.001,"+softness+"),"+threshold+"+max(.001,"+softness+"),dot(n,lightDir)*.5+.5); return float4(c.rgb*NX_LightingContribution(_LightColor0.rgb*atten*lerp(1-saturate("+shadow+"),1,lit),"+lightingSaturation+","+lightingMax+"),0);" : "float lit=smoothstep("+threshold+"-max(.001,"+softness+"),"+threshold+"+max(.001,"+softness+"),dot(n,lightDir)*.5+.5); return float4(c.rgb*_LightColor0.rgb*atten*lerp(1-saturate("+shadow+"),1,lit),0);");
             return b.AppendLine("}\nENDCG\n}").ToString();
         }
         string ParticlePass(GraphNode surface)
@@ -703,6 +729,12 @@ float2 NX_Flipbook(float2 uv,float frame,float cols,float rows){float count=cols
 float2 NX_Distort(float2 uv,float strength,float scale,float time){return uv+(float2(NX_Noise(uv*scale+time),NX_Noise(uv*scale+time+17.2))-.5)*strength;}
 float4 NX_DarkGlow(NXInput input,float4 color,float strength,float threshold,float softness){float3 n=normalize(input.n); float3 lighting=max(0,ShadeSH9(float4(n,1))); UNITY_LIGHT_ATTENUATION(atten,input,input.ws); lighting+=_LightColor0.rgb*atten*saturate(dot(n,normalize(UnityWorldSpaceLightDir(input.ws)))); float level=dot(lighting,float3(.2126,.7152,.0722)); float mask=1-smoothstep(max(0,threshold)-max(.001,softness),max(0,threshold)+max(.001,softness),level); return float4(color.rgb*max(0,strength)*mask,color.a);}
 float3 NX_Normal(float4 encoded,float strength){float3 n=UnpackNormal(encoded);n.xy*=strength;n.z=sqrt(saturate(1-dot(n.xy,n.xy)));return normalize(n);}
+";
+
+        const string LightingHelpers = @"
+float3 NX_LightingSaturate(float3 value,float saturation){float gray=dot(value,float3(.2126,.7152,.0722));return lerp(float3(gray,gray,gray),value,max(0,saturation));}
+float3 NX_LightingContribution(float3 value,float saturation,float maximum){value=max(float3(0,0,0),NX_LightingSaturate(value,saturation));return maximum>0?min(value,float3(maximum,maximum,maximum)):value;}
+float3 NX_LightingBase(float3 value,float minimum,float maximum){value=max(float3(0,0,0),value);if(maximum>0)value=min(value,float3(maximum,maximum,maximum));float floorValue=min(minimum,maximum>0?maximum:minimum);return max(value,float3(floorValue,floorValue,floorValue));}
 ";
     }
 }

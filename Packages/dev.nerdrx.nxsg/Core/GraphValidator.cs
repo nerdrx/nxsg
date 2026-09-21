@@ -241,6 +241,9 @@ namespace NXSG.Core
             }
             if (node.Operation == "core.toonSurface" || node.Operation == "core.unlitSurface" || node.Operation == "core.pbrSurface")
                 CheckIntegerRange(node.Properties["useAlbedoAlpha"], path + ".properties.useAlbedoAlpha", 0, 1, diagnostics);
+            if (node.Operation == "core.toonSurface" || node.Operation == "core.pbrSurface")
+                foreach (var setting in new[] { "lightingMin", "lightingMax", "lightingSaturation" })
+                    CheckRange(node.Properties[setting], path + ".properties." + setting, 0, 65504, diagnostics);
             if (node.Properties["coordinateSource"] != null)
                 CheckChoice(node.Properties["coordinateSource"], path + ".properties.coordinateSource", new[] { "uv0", "uv1", "uv2", "uv3", "object", "world", "polar", "panosphere", "matcap" }, diagnostics);
             if (new[] { "core.noise", "core.musgrave", "core.voronoi", "core.checker", "core.wave" }.Contains(node.Operation))
