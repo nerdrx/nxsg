@@ -328,13 +328,20 @@ namespace NXSG.Editor
                 var temporary = sourcePath + ".saving-" + Guid.NewGuid().ToString("N");
                 try
                 {
-                    File.WriteAllText(temporary, text);
-                    if (File.Exists(sourcePath)) File.Replace(temporary, sourcePath, null);
-                    else File.Move(temporary, sourcePath);
+                    if (!File.Exists(sourcePath) || File.ReadAllText(sourcePath) != text)
+                    {
+                        File.WriteAllText(temporary, text);
+                        if (File.Exists(sourcePath)) File.Replace(temporary, sourcePath, null);
+                        else File.Move(temporary, sourcePath);
+                    }
                 }
                 finally { if (File.Exists(temporary)) File.Delete(temporary); }
                 diskSource = text; session.json = text; hasUnsavedChanges = false;
-                AssetDatabase.Refresh(); UpdateIdentity(); sceneQueuedHash = null; QueueSceneUpdate(); SetStatus("Saved " + Path.GetFileName(sourcePath));
+                var assetsRoot = Path.GetFullPath(Application.dataPath) + Path.DirectorySeparatorChar;
+                var savedPath = Path.GetFullPath(sourcePath);
+                if (savedPath.StartsWith(assetsRoot, StringComparison.Ordinal))
+                    AssetDatabase.ImportAsset("Assets/" + savedPath.Substring(assetsRoot.Length).Replace('\\', '/'), ImportAssetOptions.ForceSynchronousImport);
+                UpdateIdentity(); sceneQueuedHash = null; QueueSceneUpdate(); SetStatus("Saved " + Path.GetFileName(sourcePath));
                 return true;
             }
             catch (Exception exception) { SetStatus(exception.Message); return false; }
@@ -352,6 +359,7 @@ namespace NXSG.Editor
 
         void Build()
         {
+            var buildWatch = System.Diagnostics.Stopwatch.StartNew();
             if (!SaveGraph()) return;
             try
             {
@@ -365,7 +373,7 @@ namespace NXSG.Editor
                 if (!useContext && preview.HasProperty("_Color")) preview.SetColor("_Color", Color.white);
                 previewEditor = UnityEditor.Editor.CreateEditor(preview);
                 RebuildInspector();
-                SetStatus("Built local shader + material. Preview updated. Client validation is a separate step.");
+                SetStatus("Built in " + buildWatch.Elapsed.TotalSeconds.ToString("F2") + " s. Preview updated. Client validation is separate.");
             }
             catch (Exception exception) { SceneBuildFailed(exception); SetStatus(exception.Message); }
         }

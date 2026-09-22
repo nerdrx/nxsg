@@ -38,7 +38,7 @@ Open **Window → NXSG → Example Gallery**, or **Examples** in the graph toolb
 
 Volume Nebula, Volume Carved Orb and Volume Smoke Ring use a closed default Unity Cube as their proxy. Open the Example Gallery to create editable copies. They use 128 steps for detail; lower Steps for everyday use. See the repository volume guide for setup and limits.
 
-## Raymarching studies (source additions after alpha.26)
+## Raymarching studies (included in alpha.27)
 
 - **Volume Pearl Sculpture** — a hollow sphere with six openings and gold bands. Needs a directional light.
 - **Volume Dust Nebula** — violet and amber dust from layered 3D noise.

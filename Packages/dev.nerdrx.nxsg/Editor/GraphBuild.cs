@@ -16,7 +16,32 @@ namespace NXSG.Editor
         // Development failure injection; no production behavior depends on it.
         public static Action<string> Checkpoint;
 
+        public static string LastBuildSummary { get; private set; }
+        public static double LastBuildMilliseconds { get; private set; }
+
         public static Material Build(ShaderGraph graph, string sourcePath)
+        {
+            var timer = new BuildTimer();
+            try { return BuildCore(graph, sourcePath, timer); }
+            finally
+            {
+                LastBuildMilliseconds = timer.Elapsed;
+                LastBuildSummary = timer.Summary;
+                Debug.Log("NXSG build: " + LastBuildSummary);
+            }
+        }
+
+        sealed class BuildTimer
+        {
+            readonly System.Diagnostics.Stopwatch watch = System.Diagnostics.Stopwatch.StartNew();
+            readonly List<string> stages = new List<string>();
+            double last;
+            public double Elapsed => watch.Elapsed.TotalMilliseconds;
+            public void Mark(string name) { var now = Elapsed; stages.Add(name + " " + (now-last).ToString("F0") + " ms"); last=now; }
+            public string Summary => Elapsed.ToString("F0") + " ms total; " + string.Join(", ", stages);
+        }
+
+        static Material BuildCore(ShaderGraph graph, string sourcePath, BuildTimer timer)
         {
             var absolute = Path.GetFullPath(sourcePath);
             var assets = Path.GetFullPath(Application.dataPath) + Path.DirectorySeparatorChar;
@@ -28,7 +53,7 @@ namespace NXSG.Editor
             var directory = "Assets/NXSGGenerated/" + guid;
             var shaderPath = directory + "/Material.shader";
             var materialPath = directory + "/Material.mat";
-            var staging = directory + "/Staged.shader";
+
             var journalPath = "Library/NXSG/" + guid + ".json";
             Directory.CreateDirectory(directory);
             Directory.CreateDirectory("Library/NXSG");
@@ -43,6 +68,7 @@ namespace NXSG.Editor
             var sourceSnapshot = File.ReadAllText(absolute);
             if (GraphJson.ComputeSemanticHash(GraphJson.Parse(sourceSnapshot)) != GraphJson.ComputeSemanticHash(graph))
                 throw new IOException("Save the current graph before building. The source and edit snapshot differ.");
+            timer.Mark("generate/validate");
             var previous = new Journal
             {
                 shader = File.Exists(shaderPath) ? Convert.ToBase64String(File.ReadAllBytes(shaderPath)) : null,
@@ -54,18 +80,20 @@ namespace NXSG.Editor
             try
             {
                 var shaderSource = "// NXSG graph hash: " + GraphJson.ComputeSemanticHash(graph) + "\n" + result.ShaderSource;
-                File.WriteAllText(staging, shaderSource);
-                AssetDatabase.ImportAsset(staging, ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate);
-                CheckShader(staging);
-                Checkpoint?.Invoke("staged");
+                var unchanged = File.Exists(shaderPath) && File.ReadAllText(shaderPath) == shaderSource;
                 if (File.ReadAllText(absolute) != sourceSnapshot)
                     throw new IOException("Graph changed while building. Save and build again.");
-                // Persist original bytes before either output changes. Retain the journal until both imports pass.
+                // Journal before mutating either stable asset. Import once; restore both on any failure.
                 File.WriteAllText(journalPath, JsonUtility.ToJson(previous));
-                File.WriteAllText(shaderPath, shaderSource);
-                AssetDatabase.ImportAsset(shaderPath, ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate);
+                if (!unchanged) File.WriteAllText(shaderPath, shaderSource);
+                // Unity tracks include dependencies. An unchanged shader needs no forced reimport,
+                // but still goes through dependency import and pass validation (including after reload).
+                AssetDatabase.ImportAsset(shaderPath, ImportAssetOptions.ForceSynchronousImport);
                 Checkpoint?.Invoke("shader-promoted");
                 var shader = CheckShader(shaderPath);
+                timer.Mark(unchanged ? "reuse/validate shader" : "import/compile shader");
+                if (File.ReadAllText(absolute) != sourceSnapshot)
+                    throw new IOException("Graph changed while building. Save and build again.");
                 var material = AssetDatabase.LoadAssetAtPath<Material>(materialPath);
                 if (material == null)
                 {
@@ -81,9 +109,9 @@ namespace NXSG.Editor
                 EditorUtility.SetDirty(material);
                 AssetDatabase.SaveAssetIfDirty(material);
                 Checkpoint?.Invoke("material-promoted");
-                AssetDatabase.ImportAsset(materialPath, ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate);
                 if (AssetDatabase.LoadAssetAtPath<Material>(materialPath) == null)
                     throw new IOException("Generated material could not be reloaded.");
+                timer.Mark("material save");
                 File.Delete(journalPath);
                 return AssetDatabase.LoadAssetAtPath<Material>(materialPath);
             }
@@ -95,7 +123,6 @@ namespace NXSG.Editor
             finally
             {
                 ShaderUtil.allowAsyncCompilation = previousAsync;
-                AssetDatabase.DeleteAsset(staging);
             }
         }
 

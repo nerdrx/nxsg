@@ -20,7 +20,7 @@ Three additional editable graphs explore a hollow, gold-banded sculpture, violet
 | --- | --- |
 | ![Violet and amber dust](images/volume-dust-nebula.png) | ![Layered warm ring](images/volume-filament-ring.png) |
 
-The source examples are **Volume Pearl Sculpture**, **Volume Dust Nebula**, and **Volume Filament Ring** in `Packages/dev.nerdrx.nxsg/Samples~`. They are also registered in the source checkout's Example Gallery. These studies were added after alpha.26; that release does not contain them.
+The source examples are **Volume Pearl Sculpture**, **Volume Dust Nebula**, and **Volume Filament Ring** in `Packages/dev.nerdrx.nxsg/Samples~`. They are included in alpha.27 and registered in the Example Gallery.
 
 ## Try the examples
 

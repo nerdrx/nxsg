@@ -39,7 +39,7 @@ A hollow pearl-and-gold sculpture, violet dust, and a burning ring—built with 
 
 [![Three-dimensional pearl sculpture with gold bands](docs/images/volume-pearl-sculpture.png)](https://nerdrx.github.io/nxsg/#raymarching)
 
-[See all three studies and get the graphs](docs/VOLUMES.md). These are Unity renders with presentation bloom and tone mapping. Raymarching nodes ship in alpha.26; these newer study graphs are available in source, not in alpha.26. Use a closed cube proxy. This is an experimental PC effect with a per-pixel cost.
+[See all three studies and get the graphs](docs/VOLUMES.md). These are Unity renders with presentation bloom and tone mapping. Raymarching nodes ship in alpha.26; these study graphs are included in alpha.27. Use a closed cube proxy. This is an experimental PC effect with a per-pixel cost.
 
 ## Made for experimenting
 
@@ -141,3 +141,5 @@ The setup script downloads and verifies pinned VRChat Base/Avatars **3.10.5** pa
 Graphlit, ShaderGraphVRC and Poiyomi informed the research. Panosphere seam handling follows Poiyomi's derivative-aware approach, credited under its MIT license in the [third-party notices](Packages/dev.nerdrx.nxsg/Third%20Party%20Notices.md). [Research notes](docs/research/EDITOR_UX_AND_PRIOR_ART.md) · [Artwork credits](docs/assets/README.md).
 
 NXSG's source is public. **No project-wide open-source license has been selected yet.** Third-party components retain their own licenses.
+
+Build performance: alpha.27 imports the shader once and avoids a whole-project refresh when saving. [Measurements and limits](docs/BUILD_PERFORMANCE.md).
