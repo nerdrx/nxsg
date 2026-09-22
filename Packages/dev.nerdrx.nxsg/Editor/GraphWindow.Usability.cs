@@ -17,6 +17,7 @@ namespace NXSG.Editor
         ScrollView libraryPanel, problemsPanel;
         VisualElement sidebar;
         ToolbarButton problemsButton;
+        ToolbarButton[] sidebarTabs;
         string diagnosticsHash;
         double diagnosticsDue;
         bool diagnosticsPending;
@@ -56,12 +57,15 @@ namespace NXSG.Editor
             sidebar = new VisualElement { name = "nxsg-sidebar", style = { minWidth = 240, backgroundColor = new Color(.10f,.10f,.10f) } };
             sidebar.RegisterCallback<GeometryChangedEvent>(evt => { if (evt.newRect.width > 0) sidebarWidth = evt.newRect.width; });
             var tabs = new Toolbar { style = { minHeight = 30 } };
-            tabs.Add(new ToolbarButton(() => ShowSidebarTab(0)) { text = "Inspector" });
-            tabs.Add(new ToolbarButton(() => ShowSidebarTab(1)) { text = "Nodes" });
+            var inspectorTab = new ToolbarButton(() => ShowSidebarTab(0)) { text = "Inspector" };
+            var nodesTab = new ToolbarButton(() => ShowSidebarTab(1)) { text = "Nodes" };
+            tabs.Add(inspectorTab); tabs.Add(nodesTab);
             problemsButton = new ToolbarButton(() => ShowSidebarTab(2)) { text = "Problems" };
             tabs.Add(problemsButton); sidebar.Add(tabs);
-            libraryPanel = new ScrollView { name = "node-browser", style = { flexGrow = 1, paddingLeft = 12, paddingRight = 12 } };
-            problemsPanel = new ScrollView { name = "graph-problems", style = { flexGrow = 1, paddingLeft = 12, paddingRight = 12 } };
+            sidebarTabs = new[] { inspectorTab, nodesTab, problemsButton };
+            foreach (var button in sidebarTabs) button.AddToClassList("nxsg-tab");
+            libraryPanel = new ScrollView(ScrollViewMode.Vertical) { horizontalScrollerVisibility = ScrollerVisibility.Hidden, name = "node-browser", style = { flexGrow = 1, paddingLeft = 12, paddingRight = 12 } };
+            problemsPanel = new ScrollView(ScrollViewMode.Vertical) { horizontalScrollerVisibility = ScrollerVisibility.Hidden, name = "graph-problems", style = { flexGrow = 1, paddingLeft = 12, paddingRight = 12 } };
             sidebar.Add(inspector); sidebar.Add(libraryPanel); sidebar.Add(problemsPanel);
             ShowSidebarTab(sidebarTab);
             return sidebar;
@@ -70,6 +74,8 @@ namespace NXSG.Editor
         void ShowSidebarTab(int tab)
         {
             sidebarTab = Mathf.Clamp(tab, 0, 2);
+            if (sidebarTabs != null)
+                for (var i = 0; i < sidebarTabs.Length; i++) sidebarTabs[i].EnableInClassList("nxsg-tab-selected", i == sidebarTab);
             if (libraryPanel == null) return;
             inspector.style.display = sidebarTab == 0 ? DisplayStyle.Flex : DisplayStyle.None;
             libraryPanel.style.display = sidebarTab == 1 ? DisplayStyle.Flex : DisplayStyle.None;

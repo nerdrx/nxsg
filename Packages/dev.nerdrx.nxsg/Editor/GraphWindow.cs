@@ -110,6 +110,9 @@ namespace NXSG.Editor
         public void CreateGUI()
         {
             rootVisualElement.Clear();
+            rootVisualElement.AddToClassList("nxsg-window");
+            var chrome = AssetDatabase.LoadAssetAtPath<StyleSheet>("Packages/dev.nerdrx.nxsg/Editor/GraphWindow.uss");
+            if (chrome != null && !rootVisualElement.styleSheets.Contains(chrome)) rootVisualElement.styleSheets.Add(chrome);
             rootVisualElement.style.backgroundColor = new Color(.055f, .055f, .055f);
             var toolbar = new Toolbar { style = { flexWrap = Wrap.Wrap, height = StyleKeyword.Auto, minHeight = 28 } };
             AddFileAndEditMenus(toolbar);
@@ -138,8 +141,8 @@ namespace NXSG.Editor
             rootVisualElement.Add(identity);
             sceneStatus = new Label { style = { whiteSpace = WhiteSpace.Normal, paddingLeft = 10, paddingBottom = 5 } };
             rootVisualElement.Add(sceneStatus);
-            var body = new TwoPaneSplitView(1, sidebarWidth, TwoPaneSplitViewOrientation.Horizontal) { style = { flexGrow = 1 } };
-            canvas = new VisualElement { focusable = true, style = { flexGrow = 1, overflow = Overflow.Hidden } };
+            var body = new TwoPaneSplitView(1, sidebarWidth, TwoPaneSplitViewOrientation.Horizontal) { style = { flexGrow = 1, minHeight = 0 } };
+            canvas = new VisualElement { focusable = true, style = { flexGrow = 1, minWidth = 240, overflow = Overflow.Hidden } };
             layer = new VisualElement { style = { position = UnityEngine.UIElements.Position.Absolute, width = 4000, height = 4000 } };
             layer.style.transformOrigin = new TransformOrigin(0, 0, 0);
             layer.generateVisualContent += DrawEdges;
@@ -173,10 +176,10 @@ namespace NXSG.Editor
                 if (evt.actionKey && evt.keyCode == KeyCode.S) { SaveGraph(); evt.StopPropagation(); }
             });
             body.Add(canvas);
-            inspector = new ScrollView(ScrollViewMode.Vertical) { horizontalScrollerVisibility = ScrollerVisibility.Hidden, style = { flexGrow = 1, minWidth = 240, paddingLeft = 12, paddingRight = 12, paddingTop = 12, backgroundColor = new Color(.10f, .10f, .10f) } };
+            inspector = new ScrollView(ScrollViewMode.Vertical) { horizontalScrollerVisibility = ScrollerVisibility.Hidden, style = { flexGrow = 1, minWidth = 0, minHeight = 0, paddingLeft = 12, paddingRight = 12, paddingTop = 12, backgroundColor = new Color(.10f, .10f, .10f) } };
             body.Add(CreateSidebar());
             rootVisualElement.Add(body);
-            status = new Label("Create or open a graph. Drag empty space to box-select; Shift adds. Middle-drag pans; wheel zooms. Drag between matching sockets in either direction. Drop on empty space to add a node. Esc cancels.")
+            status = new Label("Space: add node · Middle-drag: pan · Wheel: zoom · Home: fit graph")
             { style = { whiteSpace = WhiteSpace.Normal, paddingLeft = 10, paddingTop = 6, paddingBottom = 6 } };
             rootVisualElement.Add(status);
             rootVisualElement.RegisterCallback<KeyDownEvent>(evt =>
@@ -438,20 +441,29 @@ namespace NXSG.Editor
             }
         }
 
+        [SerializeField] bool materialPreviewExpanded = true;
+
         void RefreshPreviewPanel()
         {
             if (previewHost == null) return;
             previewHost.Clear();
             if (!string.IsNullOrEmpty(previewNodeId)) previewHost.Add(new Button(() => { previewNodeId = previewNodePort = null; previewHash = null; QueueLivePreview(); RefreshPreviewPanel(); }) { text = "Back to material preview" });
-            previewHost.Add(new Label(previewMessage ?? (previewEditor != null
+            var message = previewMessage ?? (previewEditor != null
                 ? (contextMaterial != null ? "Last build · " + contextMaterial.name : "Last build · neutral material tint")
-                : livePreview ? "Live preview waiting for a complete graph…" : "Enable Live preview to see unsaved edits."))
-                { style = { whiteSpace = WhiteSpace.Normal, marginBottom = 4 } });
-            if (previewEditor != null)
-                previewHost.Add(new IMGUIContainer(() =>
-                {
-                    if (previewEditor != null) previewEditor.OnPreviewGUI(GUILayoutUtility.GetRect(240, 220), EditorStyles.helpBox);
-                }) { style = { height = 220 } });
+                : livePreview ? "Live preview waiting for a complete graph…" : "Enable Live preview to see unsaved edits.");
+            if (previewEditor == null)
+            {
+                previewHost.Add(new Label(message) { style = { whiteSpace = WhiteSpace.Normal, marginBottom = 4 } });
+                return;
+            }
+            var fold = new Foldout { text = "Material preview", value = materialPreviewExpanded, tooltip = message };
+            fold.RegisterValueChangedCallback(evt => materialPreviewExpanded = evt.newValue);
+            fold.Add(new Label(message) { style = { whiteSpace = WhiteSpace.Normal, marginBottom = 4 } });
+            fold.Add(new IMGUIContainer(() =>
+            {
+                if (previewEditor != null) previewEditor.OnPreviewGUI(GUILayoutUtility.GetRect(0, 10000, 150, 150, GUILayout.ExpandWidth(true)), EditorStyles.helpBox);
+            }) { name = "nxsg-material-preview", style = { height = 150, minWidth = 0, overflow = Overflow.Hidden } });
+            previewHost.Add(fold);
         }
 
         void Rebuild()
@@ -465,7 +477,7 @@ namespace NXSG.Editor
                 {
                     var position = Position(node.Id);
                     var box = new VisualElement { focusable = true, style = { position = UnityEngine.UIElements.Position.Absolute, left = position.x, top = position.y, width = 175, backgroundColor = new Color(.14f, .14f, .14f), borderLeftWidth = 2, borderRightWidth = 2, borderTopWidth = 2, borderBottomWidth = 2, borderTopLeftRadius = 8, borderTopRightRadius = 8, borderBottomLeftRadius = 8, borderBottomRightRadius = 8, paddingBottom = 8 } };
-                    var title = new Label(NodeTitle(node)) { tooltip = Title(node.Operation), style = { paddingLeft = 12, paddingTop = 10, paddingBottom = 10, unityFontStyleAndWeight = FontStyle.Bold, backgroundColor = NodeColor(node.Operation) } };
+                    var title = new Label(NodeTitle(node)) { tooltip = Title(node.Operation), style = { paddingLeft = 12, paddingTop = 10, paddingBottom = 10, unityFontStyleAndWeight = FontStyle.Bold, whiteSpace = WhiteSpace.NoWrap, overflow = Overflow.Hidden, textOverflow = TextOverflow.Ellipsis, backgroundColor = NodeColor(node.Operation) } };
                     var alternatives = OperationAlternatives(node.Operation);
                     if (alternatives.Length > 0)
                     {
@@ -693,8 +705,9 @@ namespace NXSG.Editor
         {
             var type = PortType(node, port);
             var row = new VisualElement { style = { height = 28, justifyContent = Justify.Center } };
+            row.tooltip = SocketTooltip(node, port, output, type);
             row.Add(new Label(PortLabel(port)) { pickingMode = PickingMode.Ignore, style = {
-                marginLeft = 16, marginRight = 16,
+                marginLeft = 16, marginRight = 16, whiteSpace = WhiteSpace.NoWrap, overflow = Overflow.Hidden, textOverflow = TextOverflow.Ellipsis,
                 unityTextAlign = output ? TextAnchor.MiddleRight : TextAnchor.MiddleLeft } });
             var hit = new VisualElement { tooltip = SocketTooltip(node, port, output, type),
                 style = { position = UnityEngine.UIElements.Position.Absolute, top = 1, width = 26, height = 26,
@@ -848,7 +861,6 @@ namespace NXSG.Editor
             };
             search.RegisterValueChangedCallback(evt => { nodeSearch = evt.newValue; filter(nodeSearch); }); filter(nodeSearch);
             AddNodeFinder(library);
-            AddFrameControls();
             if (selection.Count > 1)
             {
                 inspector.Add(new Label(selection.Count + " nodes selected") { style = { marginTop = 15 } });
@@ -975,6 +987,7 @@ namespace NXSG.Editor
             }
             if (libraryPanel != null) { libraryPanel.Clear(); libraryPanel.Add(library); }
             AddParameterControls();
+            AddFrameControls();
         }
 
         void AddNodePreviewControls(GraphNode node)
@@ -1349,16 +1362,18 @@ namespace NXSG.Editor
             var type = PortType(source, endpointPort);
             var graphPosition = layer.WorldToLocal(position);
             var local = canvas.WorldToLocal(position);
-            spawnMenu = new VisualElement { style = {
-                position = UnityEngine.UIElements.Position.Absolute, width = 240,
-                left = Mathf.Clamp(local.x, 0, Mathf.Max(0, canvas.resolvedStyle.width - 240)),
-                top = Mathf.Clamp(local.y, 0, Mathf.Max(0, canvas.resolvedStyle.height - 270)),
+            var menuWidth = Mathf.Min(300, Mathf.Max(1, canvas.resolvedStyle.width - 16));
+            var menuHeight = Mathf.Min(360, Mathf.Max(1, canvas.resolvedStyle.height - 16));
+            spawnMenu = new VisualElement { name = "nxsg-connected-menu", style = {
+                position = UnityEngine.UIElements.Position.Absolute, width = menuWidth, height = menuHeight, overflow = Overflow.Hidden,
+                left = Mathf.Clamp(local.x, 8, Mathf.Max(8, canvas.resolvedStyle.width - menuWidth - 8)),
+                top = Mathf.Clamp(local.y, 8, Mathf.Max(8, canvas.resolvedStyle.height - menuHeight - 8)),
                 backgroundColor = new Color(.18f, .18f, .18f), paddingLeft = 8, paddingRight = 8, paddingTop = 8, paddingBottom = 8 } };
             spawnMenu.RegisterCallback<PointerDownEvent>(evt => evt.StopPropagation());
             spawnMenu.Add(new Label("Add connected node · " + type) { style = { unityFontStyleAndWeight = FontStyle.Bold, marginBottom = 6 } });
-            var menuOptions = new ScrollView(ScrollViewMode.Vertical) { style = { maxHeight = 220 } };
+            var menuOptions = new ScrollView(ScrollViewMode.Vertical) { horizontalScrollerVisibility = ScrollerVisibility.Hidden, style = { flexGrow = 1, minHeight = 0 } };
             spawnMenu.Add(menuOptions);
-            var search = new ToolbarSearchField { name = "connected-node-search", tooltip = "Search compatible nodes by name or purpose." };
+            var search = new ToolbarSearchField { name = "connected-node-search", tooltip = "Search compatible nodes by name or purpose.", style = { width = StyleKeyword.Auto, minWidth = 0, maxWidth = Length.Percent(100), marginLeft = 0, marginRight = 0, flexShrink = 0 } };
             spawnMenu.Insert(1, search);
             void RefreshOptions(string query)
             {

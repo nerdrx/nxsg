@@ -1,0 +1,13 @@
+/* Shared spacing for editor chrome; canvas nodes keep their category colors. */
+.nxsg-window { font-size: 12px; }
+.nxsg-window > .unity-toolbar { flex-shrink: 0; padding-top: 2px; padding-bottom: 2px; }
+.nxsg-window .unity-toolbar-button, .nxsg-window .unity-toolbar-menu, .nxsg-window .unity-toolbar-toggle { min-height: 26px; padding-left: 7px; padding-right: 7px; }
+#nxsg-sidebar .unity-button { min-height: 25px; white-space: normal; }
+#nxsg-sidebar .unity-base-field { min-height: 25px; margin-top: 3px; margin-bottom: 3px; }
+#nxsg-sidebar .unity-base-field__label { min-width: 0; width: 44%; flex-shrink: 0; white-space: normal; }
+#nxsg-sidebar .unity-base-text-field__input, #nxsg-sidebar .unity-base-popup-field__input { min-width: 0; }
+#nxsg-sidebar .unity-toolbar-search-field { margin-top: 6px; margin-bottom: 8px; }
+#nxsg-sidebar .nxsg-tab { white-space: nowrap; min-width: 0; flex-grow: 1; -unity-text-align: middle-center; }
+#nxsg-sidebar .nxsg-tab-selected { background-color: rgb(58, 68, 80); color: white; border-bottom-width: 2px; border-bottom-color: rgb(135, 182, 238); }
+#nxsg-connected-menu { border-left-width: 1px; border-right-width: 1px; border-top-width: 1px; border-bottom-width: 1px; border-left-color: rgb(100,100,100); border-right-color: rgb(100,100,100); border-top-color: rgb(100,100,100); border-bottom-color: rgb(100,100,100); }
+#nxsg-connected-menu .unity-button { min-height: 26px; white-space: normal; flex-shrink: 0; }
