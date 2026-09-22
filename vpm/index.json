@@ -473,6 +473,32 @@
           "version": "0.1.0-alpha.25",
           "zipSHA256": "8af8aec07744bbfe41f87d558465b6ed98a0cc55f0f9cf51c29406e9c1ae04ac"
         },
+        "0.1.0-alpha.26": {
+          "author": {
+            "name": "nerdrx",
+            "url": "https://github.com/nerdrx"
+          },
+          "changelogUrl": "https://github.com/nerdrx/nxsg/releases",
+          "dependencies": {
+            "com.unity.nuget.newtonsoft-json": "3.2.1"
+          },
+          "description": "Linux-first shader graph authoring for PC VRChat Built-In. Experimental development package.",
+          "displayName": "NX Shader Graph",
+          "documentationUrl": "https://github.com/nerdrx/nxsg/blob/main/docs/NODES.md",
+          "name": "dev.nerdrx.nxsg",
+          "samples": [
+            {
+              "description": "Ready-to-edit fur, hologram, procedural and surface graphs.",
+              "displayName": "Example Graphs",
+              "path": "Samples~"
+            }
+          ],
+          "unity": "2022.3",
+          "unityRelease": "22f1",
+          "url": "https://github.com/nerdrx/nxsg/releases/download/v0.1.0-alpha.26/dev.nerdrx.nxsg-0.1.0-alpha.26.zip",
+          "version": "0.1.0-alpha.26",
+          "zipSHA256": "f782d02296570cfaa7a734abc992281c0cfb5caca66ba534a05724d5f378cd47"
+        },
         "0.1.0-alpha.3": {
           "author": {
             "name": "nerdrx",
