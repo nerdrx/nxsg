@@ -139,8 +139,13 @@ namespace NXSG.Editor
             field.RegisterValueChangedCallback(e =>
             {
                 var values = e.newValue?.keys;
-                if (values == null || values.Length < 2 || values.Length > 16 || values.Any(k => k.time < 0 || k.time > 1 || k.value < 0 || k.value > 1)) { field.SetValueWithoutNotify(curve); SetStatus("Use 2–16 curve points inside the 0–1 square."); return; }
-                Edit("Change " + label, () => node.Properties[property] = new JArray(values.Select(k => new JArray(Mathf.Clamp01(k.time), Mathf.Clamp01(k.value)))));
+                if (values == null || values.Length < 2 || values.Length > 16 || values.Any(k => float.IsNaN(k.time) || float.IsNaN(k.value) || float.IsInfinity(k.time) || float.IsInfinity(k.value) || k.time < 0 || k.time > 1 || k.value < 0 || k.value > 1) || values.Zip(values.Skip(1), (a, b) => b.time - a.time).Any(gap => gap < .000001f)) { field.SetValueWithoutNotify(curve); SetStatus("Use 2–16 curve points inside the 0–1 square."); return; }
+                // Keep the popup's owner attached while Unity sends successive edits.
+                EditValue("Change " + label, () => node.Properties[property] = new JArray(values.Select(k => new JArray(k.time, k.value))));
+                curve = new AnimationCurve(values);
+                for (var i = 0; i < curve.length; i++) { AnimationUtility.SetKeyLeftTangentMode(curve, i, AnimationUtility.TangentMode.Linear); AnimationUtility.SetKeyRightTangentMode(curve, i, AnimationUtility.TangentMode.Linear); }
+                field.SetValueWithoutNotify(curve);
+                SetStatus("Unsaved " + label + " · preview updates after a short pause.");
             });
             inspector.Add(field);
         }
@@ -158,7 +163,11 @@ namespace NXSG.Editor
             {
                 var positions = e.newValue.colorKeys.Select(k => k.time).Concat(e.newValue.alphaKeys.Select(k => k.time)).Distinct().OrderBy(v => v).ToList();
                 if (positions.Count < 2 || positions.Count > 8) { field.SetValueWithoutNotify(gradient); SetStatus("Use 2–8 color points inside the 0–1 range."); return; }
-                Edit("Change " + label, () => node.Properties[property] = new JArray(positions.Select(t => { var c = e.newValue.Evaluate(t); return new JArray(t, c.r, c.g, c.b, c.a); })));
+                EditValue("Change " + label, () => node.Properties[property] = new JArray(positions.Select(t => { var c = e.newValue.Evaluate(t); return new JArray(t, c.r, c.g, c.b, c.a); })));
+                gradient = new Gradient();
+                gradient.SetKeys(e.newValue.colorKeys, e.newValue.alphaKeys);
+                field.SetValueWithoutNotify(gradient);
+                SetStatus("Unsaved " + label + " · preview updates after a short pause.");
             });
             inspector.Add(field);
         }

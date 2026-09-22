@@ -44,12 +44,39 @@ public static class GoodiesEditorSmoke
             Require(frame != null && (string)frame["note"] == "Tune lifetime first" && (bool?)frame["collapsed"] == false, "Frame metadata missing");
             var roundTrip = GraphJson.Parse(GraphJson.Serialize(graph, true)); Require((string)GraphGroups.All(roundTrip).First(g => (bool?)g["frame"] == true)["note"] == "Tune lifetime first", "Frame note did not round trip");
             Set("selection", new System.Collections.Generic.List<string> { "particles" }); Set("selected", "particles"); Invoke("RebuildInspector");
-            var curves = window.rootVisualElement.Query<CurveField>().ToList(); Require(curves.Count >= 2, "Particle identity curves missing on old node"); curves[0].value = new AnimationCurve(new Keyframe(0, 1), new Keyframe(1, .4f));
+            var curves = window.rootVisualElement.Query<CurveField>().ToList(); Require(curves.Count >= 2, "Particle identity curves missing on old node");
+            var sizeCurve = curves[0]; var colorCurve = window.rootVisualElement.Query<GradientField>().ToList().FirstOrDefault();
+            Require(colorCurve != null, "Particle color curve missing on old node");
+            sizeCurve.value = new AnimationCurve(new Keyframe(0, 1), new Keyframe(1, .4f));
             var particle = ((ShaderGraph)Get("graph")).Nodes.First(n => n.Id == "particles"); Require(particle.Properties["sizeCurve"] is JArray, "Particle curve edit did not persist");
+            Require(sizeCurve.panel != null && colorCurve.panel != null, "Particle curve fields detached after first edit");
+            var firstSize = particle.Properties["sizeCurve"].ToString();
+            var firstColor = particle.Properties["colorCurve"]?.ToString();
+            colorCurve.value = Gradient(Color.red, Color.white);
+            Require(particle.Properties["colorCurve"].ToString() != firstColor, "Particle gradient edit did not persist");
+            Require(sizeCurve.panel != null && colorCurve.panel != null, "Particle curve fields detached after gradient edit");
+            sizeCurve.value = new AnimationCurve(new Keyframe(0, .2f), new Keyframe(1, .8f));
+            colorCurve.value = Gradient(Color.blue, Color.yellow);
+            Require(particle.Properties["sizeCurve"].ToString() != firstSize, "Repeated particle curve edit did not persist");
+            Require(particle.Properties["colorCurve"].ToString() != firstColor, "Repeated particle gradient edit did not persist");
+            Require(Mathf.Abs(sizeCurve.value.Evaluate(0) - .2f) < .001f && Mathf.Abs(sizeCurve.value.Evaluate(1) - .8f) < .001f, "Curve field did not display latest edit");
+            Require(colorCurve.value.Evaluate(0) == Color.blue, "Gradient field did not display latest edit");
+            sizeCurve.value = new AnimationCurve(new Keyframe(0, -1), new Keyframe(1, 1));
+            Require(Mathf.Abs(sizeCurve.value.Evaluate(0) - .2f) < .001f, "Invalid curve did not restore last accepted edit");
+            var restored = GraphJson.Parse(session.json).Nodes.First(n => n.Id == "particles");
+            Require(Mathf.Abs((float)restored.Properties["sizeCurve"][0][1] - .2f) < .001f, "Saved curve differs from field");
             Invoke("RebuildInspector"); var finder = window.rootVisualElement.Q<ToolbarSearchField>("existing-node-search"); Require(finder != null, "Existing node finder missing"); finder.value = "particles";
             var button = finder.parent.Children().SelectMany(e => e.Children()).OfType<Button>().FirstOrDefault(); Require(button != null, "Existing node finder result missing"); using (var submit = NavigationSubmitEvent.GetPooled()) button.SendEvent(submit); Require((string)Get("selected") == "particles", "Finder did not select existing node");
             Debug.Log("NXSG GOODIES EDITOR SMOKE PASSED: inline edit/undo, frame note round trip, finder selection, identity particle curves/edit"); window.DiscardChanges(); window.Close(); EditorApplication.Exit(0);
         }
         catch (Exception e) { Debug.LogException(e); window.DiscardChanges(); window.Close(); EditorApplication.Exit(1); }
+    }
+
+    static Gradient Gradient(Color first, Color last)
+    {
+        var gradient = new Gradient();
+        gradient.SetKeys(new[] { new GradientColorKey(first, 0), new GradientColorKey(last, 1) },
+            new[] { new GradientAlphaKey(1, 0), new GradientAlphaKey(1, 1) });
+        return gradient;
     }
 }
