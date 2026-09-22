@@ -99,3 +99,11 @@ retimes procedural particles immediately; this is not a persistent simulation.
 ### Edge sharpness
 
 Surface Particles offers Edge sharpness as both a slider and a float input. Zero preserves the soft circular falloff; one produces a hard circular edge. Intermediate values narrow the soft border. The shader limits this control to 0–1. Particle opacity, texture alpha, emitter mask, and lifetime fading still apply, so a hard edge does not guarantee fully opaque particles or resolve mirror alpha compositing. Older graphs retain their existing appearance.
+
+### Lifetime controls and Particle Info
+
+Size curve and opacity curve are multipliers over age 0 (birth) to 1 (death). Color curve multiplies particle albedo, including its alpha; emission remains independently controlled. Curves use linear segments. Existing lifetime fade still applies. Empty/missing curve properties mean identity, preserving old graphs.
+
+Particle Info provides normalized age and a stable 0–1 random value for a procedural particle slot. Feed these through Ramp, Color Ramp, or Remap into particle appearance, size, or movement. Random values repeat when the same procedural slot is reused. The node is only valid in Surface Particles branches; base shading, mask, time, density, rate, and lifetime cannot use it. Changing rate/lifetime still retimes particles rather than preserving simulation history.
+
+Alpha.24 separates framebuffer alpha blending from RGB blending. Local render-target tests cover opaque backgrounds and transparent backgrounds in Alpha and Additive modes. This does not establish compatibility with every custom mirror shader.

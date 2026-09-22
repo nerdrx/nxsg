@@ -533,3 +533,11 @@ approximately. No live VRChat/AudioLink runtime validation is claimed.
 ## 2026-09-21 — Particle edge sharpness (alpha.23)
 
 Portable checks and all seven packaging tests passed. Unity 2022.3.22f1 under hidden Gamescope/OpenGL passed SurfaceParticleRenderSmoke, including missing-property versus zero parity, increased hard-edge coverage, and connected-value versus property parity. Log: `work/unity/particle-sharpness.log`. These are local render checks, not a VRChat mirror verification; alpha blending is unchanged.
+
+## 2026-09-22 — Particle and graph usability (alpha.24)
+
+- Portable suite passes, including lifetime schema/order validation, texture Alpha wiring, AudioLink range validation, and rejecting Particle Info in indirect budget/base paths.
+- Hidden Gamescope Unity 2022.3.22f1 / OpenGL: `SurfaceParticleRenderSmoke` passes (`work/unity/alpha24-particles2.log`). Covers separate alpha blending over opaque/transparent targets in both RGB blend modes; lifetime identity parity, zero size/opacity, interpolated opacity versus Particle Info age; AudioLink range endpoints/midpoint/clamping; prior particle checks.
+- Windows/D3D11 strict shader bundle cross-compilation passes for 11 shaders, including Particle Lifetime (`work/unity/alpha24-d3d.log`). Not native Windows rendering.
+- `GoodiesEditorSmoke` passes (`work/unity/alpha24-editor2.log`): inline value editing/undo, frame notes roundtrip, finder selection, and editing identity curves on an older particle node.
+- Seven packaging tests pass. The actual reported VRChat mirror requires a client retest; no client-level resolution is claimed.

@@ -37,7 +37,7 @@ namespace NXSG.Backend
         public static bool IsAdvanced(ShaderGraph graph)
         {
             if (graph?.Nodes == null) return false;
-            var ops = new HashSet<string> { "core.unlitSurface", "core.pbrSurface", "core.particleSurface", "core.particleColor", "core.surfaceParticles", "core.fur", "core.tessellation", "core.fresnel", "core.colorRamp", "core.layer", "core.sticker", "core.dissolve", "core.flipbook", "core.uvDistort", "core.vertexMotion", "core.audioLink", "core.ltcgi", "core.darknessGlow", "core.shell", "core.normalMap", "core.previewVector", "core.musgrave", "core.voronoi", "core.checker", "core.wave", "core.gradient", "core.uvTile", "core.posterize", "core.absolute", "core.power", "core.sqrt", "core.sine", "core.cosine", "core.fraction", "core.floor", "core.ceil", "core.round", "core.step", "core.smoothstep", "core.remap", "core.pingPong", "core.splitColor", "core.combineColor", "core.luminance", "core.contrast", "core.saturation", "core.splitUV", "core.combineUV", "core.position", "core.normalDirection", "core.viewDirection", "core.vertexColor", "core.cameraDistance", "core.screenUV", "core.circleMask", "core.boxMask", "core.polygonMask", "core.starMask", "core.radialRays", "core.spiral", "core.brick", "core.hexGrid", "core.triplanarTexture", "core.matcapTexture", "core.rimGlow", "core.heightMask", "core.slopeMask", "core.distanceFade", "core.wireframe" };
+            var ops = new HashSet<string> { "core.unlitSurface", "core.pbrSurface", "core.particleSurface", "core.particleColor", "core.particleInfo", "core.surfaceParticles", "core.fur", "core.tessellation", "core.fresnel", "core.colorRamp", "core.layer", "core.sticker", "core.dissolve", "core.flipbook", "core.uvDistort", "core.vertexMotion", "core.audioLink", "core.ltcgi", "core.darknessGlow", "core.shell", "core.normalMap", "core.previewVector", "core.musgrave", "core.voronoi", "core.checker", "core.wave", "core.gradient", "core.uvTile", "core.posterize", "core.absolute", "core.power", "core.sqrt", "core.sine", "core.cosine", "core.fraction", "core.floor", "core.ceil", "core.round", "core.step", "core.smoothstep", "core.remap", "core.pingPong", "core.splitColor", "core.combineColor", "core.luminance", "core.contrast", "core.saturation", "core.splitUV", "core.combineUV", "core.position", "core.normalDirection", "core.viewDirection", "core.vertexColor", "core.cameraDistance", "core.screenUV", "core.circleMask", "core.boxMask", "core.polygonMask", "core.starMask", "core.radialRays", "core.spiral", "core.brick", "core.hexGrid", "core.triplanarTexture", "core.matcapTexture", "core.rimGlow", "core.heightMask", "core.slopeMask", "core.distanceFade", "core.wireframe" };
             // Only reachable effects select the extended lowering; disconnected nodes never change shading.
             var connected = new HashSet<string>();
             var queue = new Queue<string>(graph.Nodes.Where(n => n?.Operation == "core.output").Select(n => n.Id));
@@ -50,8 +50,12 @@ namespace NXSG.Backend
                 edge?.From != null && edge.To != null && connected.Contains(edge.From.NodeId) && connected.Contains(edge.To.NodeId) &&
                 GraphTypes.PortType(graph, liveById[edge.From.NodeId], edge.From.PortId, inferred) == "color" &&
                 GraphTypes.PortType(graph, liveById[edge.To.NodeId], edge.To.PortId, inferred) == "float");
+            var hasTextureAlphaEdge = (graph.Connections ?? new List<GraphConnection>()).Any(edge =>
+                edge?.From != null && edge.To != null && connected.Contains(edge.From.NodeId) &&
+                liveById.TryGetValue(edge.From.NodeId, out var textureNode) && textureNode.Operation == "core.texture2D" && edge.From.PortId == "alpha");
             return live.Any(n => ops.Contains(n.Operation) || FeatureNodes.IsKnown(n.Operation)) || live.Any(n => (n.Operation == "core.noise" || n.Operation == "core.uv0" || n.Operation == "core.polarUV" || n.Operation == "core.texture2D") && IsAdvancedCoordinates(n, incoming[n.Id])) || live.Count(n => n.Operation == "core.texture2D") > 1 ||
                 hasColorScalarEdge ||
+                hasTextureAlphaEdge ||
                 live.Any(n => n.Operation == "core.toonSurface" && (n.Properties?["useAlbedoAlpha"] != null || n.Properties?["opacity"] != null || n.Properties?["displacement"] != null || incoming[n.Id].Any(e => e.To.PortId == "opacity" || e.To.PortId == "displacement" || e.To.PortId == "normal") || HasLightingControls(n)));
         }
 
@@ -118,6 +122,7 @@ namespace NXSG.Backend
             if (root == null) throw new InvalidOperationException("Connect a Surface to Output.");
             var particle = root.Operation == "core.particleSurface";
             var surfaceParticles = root.Operation == "core.surfaceParticles";
+            ValidateParticleInfo(root, particle, surfaceParticles);
             var tessNode = root.Operation == "core.tessellation" ? root : null;
             if (surfaceParticles && Source(root, "base")?.Operation == "core.tessellation") throw new InvalidOperationException("Tessellation and Surface Particles cannot be combined in this version. Use a regular surface as Base.");
             if (tessNode != null && Source(tessNode, "base")?.Operation == "core.fur") throw new InvalidOperationException("Tessellation cannot wrap Fur; connect Tessellation to Toon, Unlit or PBR.");
@@ -209,7 +214,8 @@ namespace NXSG.Backend
             }
             if (surfaceParticles) passCode.Append(SurfaceParticleShader.Pass(
                 Scalar(root,"mask",1,true), Input(root,"albedo","float4(1,1,1,1)","color"), Input(root,"emission","float4(0,0,0,1)","color"), Scalar(root,"opacity",1), Input(root,"time","NXSG_Time()","float",true),
-                Scalar(root,"density",.1,true), Input(root,"emissionRate",root.Properties["emissionRate"] == null ? "1.0/max(" + Scalar(root,"lifetime",2,true) + ",0.0001)" : Prop(root,"emissionRate",0),"float",true), Scalar(root,"size",.03,true), Scalar(root,"lifetime",2,true), Scalar(root,"speed",.2,true), Scalar(root,"gravity",0,true), Scalar(root,"spread",.05,true), IntProp(root,"blendMode",1,0,1), IntProp(root,"sourceUV",0,0,1) == 1, Scalar(root,"edgeSharpness",0), Source(root,"emissionRate") != null || Source(root,"lifetime") != null));
+                Scalar(root,"density",.1,true), Input(root,"emissionRate",root.Properties["emissionRate"] == null ? "1.0/max(" + Scalar(root,"lifetime",2,true) + ",0.0001)" : Prop(root,"emissionRate",0),"float",true), Scalar(root,"size",.03,true), Scalar(root,"lifetime",2,true), Scalar(root,"speed",.2,true), Scalar(root,"gravity",0,true), Scalar(root,"spread",.05,true), IntProp(root,"blendMode",1,0,1), IntProp(root,"sourceUV",0,0,1) == 1, Scalar(root,"edgeSharpness",0), Source(root,"emissionRate") != null || Source(root,"lifetime") != null,
+                ParticleCurve(root, "sizeCurve", false, "1"), ParticleCurve(root, "colorCurve", true, "float4(1,1,1,1)"), ParticleCurve(root, "opacityCurve", false, "1")));
             var screenDependentShadow = !particle && options.IncludeShadowCaster &&
                 ((IntProp(passes[0].Surface,"useAlbedoAlpha",1,0,1)==1 && ContainsScreenDependentOperation(passes[0].Surface, "albedo")) || ContainsScreenDependentOperation(passes[0].Surface, "opacity"));
             if (screenDependentShadow)
@@ -346,6 +352,10 @@ namespace NXSG.Backend
             {
                 case "core.previewVector": body = Source(n,"normal") != null ? "float4(" + P("normal","float3(0,0,1)","vector3") + "*.5+.5,1)" : "float4(" + P("uv",uv,"vector2") + ",0,1)"; break;
                 case "core.particleColor": body = port == "alpha" ? "input.color.a" : "input.color"; break;
+                case "core.particleInfo":
+                    if (port != "age" && port != "random") throw new InvalidOperationException("Particle Info output must be age or random.");
+                    body = port == "age" ? "input.particleAge" : "input.particleRandom";
+                    break;
                 case "core.value": body = Prop(n, "value", 0); break;
                 case "core.constant": body = Literal(n.Properties["value"], type); break;
                 case "core.parameter":
@@ -359,7 +369,7 @@ namespace NXSG.Backend
                 case "core.uvScroll": body = "(" + P("uv", uv) + "+" + Vec(n, "speed", .1, 0) + "*" + P("time", "NXSG_Time()", "float") + ")"; break;
                 case "core.uvRotate": body = "NX_Rotate(" + P("uv", uv) + "," + Vec(n, "center", .5, .5) + "," + S("angle", 0) + ")"; break;
                 case "core.polarUV": body = "NX_Polar(" + P("uv", uv) + "," + Vec(n, "center", .5, .5) + "," + Prop(n, "radialScale", 1) + "," + Prop(n, "angleScale", 1) + ")"; break;
-                case "core.texture2D": body = Sample(n, P("uv", uv, "vector2"), vertex); break;
+                case "core.texture2D": body = port == "alpha" ? "(" + Sample(n, P("uv", uv, "vector2"), vertex) + ").a" : Sample(n, P("uv", uv, "vector2"), vertex); break;
                 case "core.noise":
                     body = NoiseBody(n, P("uv", uv, "vector2"), vertex);
                     if (port == "color") body = "float4(" + body + "," + body + "," + body + ",1)"; break;
@@ -458,7 +468,7 @@ namespace NXSG.Backend
                 case "core.ltcgi":
                     if (vertex) throw new InvalidOperationException("LTCGI Lighting is fragment-only; do not connect it to displacement, tessellation height or particle emitter inputs.");
                     body = "NX_Ltcgi(input," + P("albedo", "float4(1,1,1,1)", "color") + "," + P("normal", "float3(0,0,1)", "vector3") + "," + S("roughness", .5) + "," + S("metallic", 0) + "," + S("strength", 1) + ")"; break;
-                case "core.audioLink": body = "NXSG_Audio(" + Prop(n, "band", 0) + "," + Prop(n, "gain", 1) + "," + Prop(n, "smoothing", .5) + "," + Prop(n, "fallback", 0) + ")"; break;
+                case "core.audioLink": body = "NXSG_Audio(" + Prop(n, "band", 0) + "," + Prop(n, "gain", 1) + "," + Prop(n, "smoothing", .5) + "," + Prop(n, "fallback", 0) + "," + IntProp(n, "rangeEnabled", 0, 0, 1) + "," + Prop(n, "min", 0) + "," + Prop(n, "max", 1) + ")"; break;
                 case "core.glitter":
                     if(vertex)throw new InvalidOperationException("Glitter needs fragment derivatives and view direction. Use it for color, emission or opacity, not vertex displacement.");
                     var glitterMask = port == "color" ? Eval(n,"value",false) : null;
@@ -659,6 +669,39 @@ namespace NXSG.Backend
                 b.AppendLine(lighting ? "float lit=smoothstep("+threshold+"-max(.001,"+softness+"),"+threshold+"+max(.001,"+softness+"),dot(n,lightDir)*.5+.5); return float4(c.rgb*NX_LightingContribution(_LightColor0.rgb*atten*lerp(1-saturate("+shadow+"),1,lit),"+lightingSaturation+","+lightingMax+"),0);" : "float lit=smoothstep("+threshold+"-max(.001,"+softness+"),"+threshold+"+max(.001,"+softness+"),dot(n,lightDir)*.5+.5); return float4(c.rgb*_LightColor0.rgb*atten*lerp(1-saturate("+shadow+"),1,lit),0);");
             return b.AppendLine("}\nENDCG\n}").ToString();
         }
+        void ValidateParticleInfo(GraphNode root, bool particle, bool surfaceParticles)
+        {
+            var infos = nodes.Values.Where(n => n.Operation == "core.particleInfo").ToArray();
+            if (infos.Length == 0) return;
+            var live = new HashSet<string>();
+            var pending = new Stack<string>(); pending.Push(root.Id);
+            while (pending.Count > 0) { var id = pending.Pop(); if (!live.Add(id)) continue; foreach (var edge in graph.Connections.Where(e => e.To.NodeId == id)) pending.Push(edge.From.NodeId); }
+            infos = infos.Where(info => live.Contains(info.Id)).ToArray();
+            if (infos.Length == 0) return;
+            if (!surfaceParticles)
+                throw new InvalidOperationException("Particle Info is only valid inside Surface Particles; particle surface has no particle lifetime context.");
+            var forbidden = new HashSet<string>(new[] { "base", "mask", "time", "density", "emissionRate", "lifetime" }, StringComparer.Ordinal);
+            foreach (var info in infos)
+            {
+                var queue = new Queue<GraphConnection>(); var seen = new HashSet<GraphConnection>();
+                foreach (var edge in graph.Connections.Where(e => e.From.NodeId == info.Id)) queue.Enqueue(edge);
+                while (queue.Count > 0)
+                {
+                    var edge = queue.Dequeue();
+                    if (!seen.Add(edge)) continue;
+                    if (edge.To.NodeId == root.Id && forbidden.Contains(edge.To.PortId))
+                        throw new InvalidOperationException("Particle Info age/random cannot drive Surface Particles " + edge.To.PortId + "; use it for particle appearance only.");
+                    foreach (var next in graph.Connections.Where(e => e.From.NodeId == edge.To.NodeId)) queue.Enqueue(next);
+                }
+            }
+        }
+
+        string ParticleCurve(GraphNode node, string primary, bool color, string fallback)
+        {
+            var token = node.Properties[primary];
+            return SurfaceParticleShader.Curve(token, "normalizedAge", color, fallback);
+        }
+
         string ParticlePass(GraphNode surface)
         {
             var color = Input(surface, "albedo", "float4(1,1,1,1)", "color");
@@ -706,7 +749,7 @@ namespace NXSG.Backend
         }
         const string Helpers=@"
 struct NXApp { float4 vertex:POSITION; float3 normal:NORMAL; float4 tangent:TANGENT; float2 uv:TEXCOORD0; float2 uv1:TEXCOORD1; float2 uv2:TEXCOORD2; float2 uv3:TEXCOORD3; float4 color:COLOR; UNITY_VERTEX_INPUT_INSTANCE_ID };
-struct NXInput { float4 pos:SV_POSITION; float2 uv:TEXCOORD0; float2 uv1:TEXCOORD7; float2 uv2:TEXCOORD8; float2 uv3:TEXCOORD9; float3 ws:TEXCOORD1; float3 n:TEXCOORD2; float3 local:TEXCOORD3; float3 originalWs:TEXCOORD10; float3 originalLocal:TEXCOORD11; float3 tangent:TEXCOORD4; float3 bitangent:TEXCOORD5; float4 color:TEXCOORD12; float4 screenPos:TEXCOORD13; float2 sourceUV:TEXCOORD14; float3 wireBary:TEXCOORD15; float particleAlpha:TEXCOORD20; LIGHTING_COORDS(16,17) UNITY_VERTEX_OUTPUT_STEREO };
+struct NXInput { float4 pos:SV_POSITION; float2 uv:TEXCOORD0; float2 uv1:TEXCOORD7; float2 uv2:TEXCOORD8; float2 uv3:TEXCOORD9; float3 ws:TEXCOORD1; float3 n:TEXCOORD2; float3 local:TEXCOORD3; float3 originalWs:TEXCOORD10; float3 originalLocal:TEXCOORD11; float3 tangent:TEXCOORD4; float3 bitangent:TEXCOORD5; float4 color:TEXCOORD12; float4 screenPos:TEXCOORD13; float2 sourceUV:TEXCOORD14; float3 wireBary:TEXCOORD15; float particleAlpha:TEXCOORD20; float particleAge:TEXCOORD21; float particleRandom:TEXCOORD22; LIGHTING_COORDS(16,17) UNITY_VERTEX_OUTPUT_STEREO };
 NXInput NX_Make(NXApp v){ NXInput o=(NXInput)0; o.pos=UnityObjectToClipPos(v.vertex); o.screenPos=ComputeGrabScreenPos(o.pos); o.uv=v.uv; o.uv1=v.uv1; o.uv2=v.uv2; o.uv3=v.uv3; o.local=v.vertex.xyz; o.ws=mul(unity_ObjectToWorld,v.vertex).xyz; o.originalLocal=o.local; o.originalWs=o.ws; o.color=v.color; o.n=UnityObjectToWorldNormal(v.normal); o.tangent=UnityObjectToWorldDir(v.tangent.xyz); o.bitangent=cross(o.n,o.tangent)*v.tangent.w*unity_WorldTransformParams.w; return o; }
 float4 NX_Splat(float x){return float4(x,x,x,x);}
 

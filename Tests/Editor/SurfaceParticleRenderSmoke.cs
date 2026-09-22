@@ -23,7 +23,7 @@ public static class SurfaceParticleRenderSmoke
             subject = GameObject.CreatePrimitive(PrimitiveType.Cube); subject.transform.localScale = Vector3.one * 1.4f;
             camera = new GameObject("NXSG Surface Particle Camera").AddComponent<Camera>(); camera.clearFlags = CameraClearFlags.SolidColor; camera.backgroundColor = Color.black; camera.orthographic = true; camera.orthographicSize = 2.5f; camera.transform.position = new Vector3(0, 0, -4); camera.transform.LookAt(Vector3.zero);
             target = new RenderTexture(Size, Size, 24, RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.Linear); target.Create(); camera.targetTexture = target;
-            CheckRender(); CheckSourceVertexAlpha(); CheckRate(); CheckParticleInputs(); CheckEdgeSharpness(); CheckSkinnedSource(); CheckSample(); Debug.Log("NXSG SURFACE PARTICLE RENDER SMOKE PASSED"); EditorApplication.Exit(0);
+            CheckRender(); CheckSourceVertexAlpha(); CheckRate(); CheckParticleInputs(); CheckEdgeSharpness(); CheckMirrorAlpha(); CheckLifetimeCurves(); CheckAudioRange(); CheckSkinnedSource(); CheckSample(); Debug.Log("NXSG SURFACE PARTICLE RENDER SMOKE PASSED"); EditorApplication.Exit(0);
         }
         catch (Exception exception) { Debug.LogException(exception); EditorApplication.Exit(1); }
         finally { RenderTexture.active = null; if (target != null) { target.Release(); UnityEngine.Object.DestroyImmediate(target); } if (camera != null) UnityEngine.Object.DestroyImmediate(camera.gameObject); if (subject != null) UnityEngine.Object.DestroyImmediate(subject); }
@@ -171,6 +171,81 @@ public static class SurfaceParticleRenderSmoke
         particle.Properties["emissionRate"] = 8; particle.Properties["size"] = .2; particle.Properties.Remove("edgeSharpness");
         wired.Nodes.Add(Float("edgeSharpness", 1)); Edge(wired, "edgeSharpness", "value", "particles", "edgeSharpness");
         using (var preview = GraphPreview.Create(wired, null)) { subject.GetComponent<Renderer>().sharedMaterial = preview.Material; if (!Same(propertyOne, Capture(), .001f)) throw new InvalidOperationException("Connected edgeSharpness 1 did not match property 1"); }
+    }
+    static void CheckMirrorAlpha()
+    {
+        camera.transform.position = new Vector3(0, 0, -4); camera.transform.LookAt(Vector3.zero);
+        var oldBackground = camera.backgroundColor;
+        try
+        {
+            foreach (var mode in new[] { 0, 1 })
+            {
+                var graph = Graph(1, 1, .6);
+                var particle = graph.Nodes.Single(n => n.Id == "particles");
+                particle.Properties["blendMode"] = mode;
+                particle.Properties["size"] = .3;
+                using (var preview = GraphPreview.Create(graph, null))
+                {
+                    subject.GetComponent<Renderer>().sharedMaterial = preview.Material;
+                    camera.backgroundColor = Color.black;
+                    var opaque = Capture();
+                    if (CountRed(opaque) < 3 || opaque.Any(c => Mathf.Abs(c.a - 1) > .002f))
+                        throw new InvalidOperationException("Particles changed opaque mirror alpha in blend mode " + mode);
+                    camera.backgroundColor = Color.clear;
+                    var transparent = Capture();
+                    if (transparent.Any(c => c.a < -.002f || c.a > 1.002f) || !transparent.Any(c => c.r > .01f && c.a > .001f && c.a < .99f))
+                        throw new InvalidOperationException("Particles lost partial coverage in transparent mirror in blend mode " + mode);
+                }
+            }
+        }
+        finally { camera.backgroundColor = oldBackground; }
+    }
+    static void CheckLifetimeCurves()
+    {
+        camera.transform.position = new Vector3(0, 0, -4); camera.transform.LookAt(Vector3.zero);
+        var graph = Graph(1,1,.6); var particle = graph.Nodes.Single(n=>n.Id=="particles");
+        Color[] original;
+        using(var preview=GraphPreview.Create(graph,null)) { subject.GetComponent<Renderer>().sharedMaterial=preview.Material; original=Capture(); }
+        particle.Properties["sizeCurve"]=new JArray(new JArray(0,1),new JArray(1,1));
+        particle.Properties["opacityCurve"]=new JArray(new JArray(0,1),new JArray(1,1));
+        particle.Properties["colorCurve"]=new JArray(new JArray(0,1,1,1,1),new JArray(1,1,1,1,1));
+        using(var preview=GraphPreview.Create(graph,null)) { subject.GetComponent<Renderer>().sharedMaterial=preview.Material; if(!Same(original,Capture(),.001f)) throw new Exception("Identity lifetime curves changed legacy rendering"); }
+        foreach(var property in new[]{"sizeCurve","opacityCurve"})
+        {
+            particle.Properties[property]=new JArray(new JArray(0,0),new JArray(1,0));
+            using(var preview=GraphPreview.Create(graph,null)) { subject.GetComponent<Renderer>().sharedMaterial=preview.Material; if(CountRed(Capture())>2) throw new Exception(property+" zero did not hide particles"); }
+            particle.Properties[property]=new JArray(new JArray(0,1),new JArray(1,1));
+        }
+        particle.Properties["opacityCurve"]=new JArray(new JArray(0,0),new JArray(1,1));
+        Color[] ramp;
+        using(var preview=GraphPreview.Create(graph,null)) { subject.GetComponent<Renderer>().sharedMaterial=preview.Material; ramp=Capture(); }
+        var sum=ramp.Sum(c=>(double)c.r); var full=original.Sum(c=>(double)c.r);
+        if(sum<=.01 || sum>=full*.99)throw new Exception("Lifetime opacity must interpolate between its endpoints");
+        particle.Properties.Remove("opacityCurve");
+        graph.Nodes.Add(NodeCatalog.Create("core.particleInfo"));graph.Nodes.Last().Id="info";
+        Edge(graph,"info","age","particles","opacity");
+        using(var preview=GraphPreview.Create(graph,null)) { subject.GetComponent<Renderer>().sharedMaterial=preview.Material; if(!Same(ramp,Capture(),.002f))throw new Exception("Particle Info age disagrees with lifetime ramp"); }
+    }
+    static void CheckAudioRange()
+    {
+        var graph=new ShaderGraph {GraphId="audio-range-render"};
+        var audio=NodeCatalog.Create("core.audioLink");audio.Id="audio";audio.Properties["rangeEnabled"]=1;audio.Properties["min"]=.2;audio.Properties["max"]=.8;
+        var surface=NodeCatalog.Create("core.unlitSurface");surface.Id="surface";surface.Properties["useAlbedoAlpha"]=0;
+        var output=NodeCatalog.Create("core.output");output.Id="output";
+        graph.Nodes.Add(audio);graph.Nodes.Add(surface);graph.Nodes.Add(output);
+        Edge(graph,"audio","value","surface","albedo");Edge(graph,"surface","surface","output","surface");
+        using(var preview=GraphPreview.Create(graph,null))
+        {
+            subject.GetComponent<Renderer>().sharedMaterial=preview.Material;
+            preview.Material.SetFloat("_NXSG_AudioLinkPreview",1);
+            foreach(var value in new[]{0f,.5f,1f,2f})
+            {
+                preview.Material.SetFloat("_NXSG_AudioLinkValue",value);
+                var pixel=Capture()[Size/2*Size+Size/2];
+                var expected=Mathf.Lerp(.2f,.8f,Mathf.Clamp01(value));
+                if(Mathf.Abs(pixel.r-expected)>.015f)throw new Exception("AudioLink range wrong: "+value+" -> "+pixel.r);
+            }
+        }
     }
     static void CheckSkinnedSource()
     {

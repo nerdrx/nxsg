@@ -1,14 +1,17 @@
 using System;
 using System.Globalization;
+using Newtonsoft.Json.Linq;
 
 namespace NXSG.Backend
 {
     // Geometry emission keeps particles attached to the mesh that owns the material.
     internal static class SurfaceParticleShader
     {
-        public static string Pass(string mask, string color, string emission, string opacity, string time, string density, string emissionRate, string size, string lifetime, string speed, string gravity, string spread, int blendMode, bool sourceUV, string edgeSharpness, bool dynamicBudget = false)
+        public static string Pass(string mask, string color, string emission, string opacity, string time, string density, string emissionRate, string size, string lifetime, string speed, string gravity, string spread, int blendMode, bool sourceUV, string edgeSharpness, bool dynamicBudget = false, string sizeCurve = "1", string colorCurve = "float4(1,1,1,1)", string opacityCurve = "1")
         {
-            var blend = blendMode == 1 ? "One" : "OneMinusSrcAlpha";
+            // Keep RGB source-over/additive modes, but use separate alpha factors so
+            // straight-alpha output is not multiplied by source alpha twice.
+            var blend = blendMode == 1 ? "One, One OneMinusSrcAlpha" : "OneMinusSrcAlpha, One OneMinusSrcAlpha";
             double.TryParse(emissionRate, NumberStyles.Float, CultureInfo.InvariantCulture, out var requestedRate);
             double.TryParse(lifetime, NumberStyles.Float, CultureInfo.InvariantCulture, out var requestedLife);
             var level = (int)Math.Min(64, Math.Max(1, Math.Ceiling(Math.Sqrt(Math.Max(0, requestedRate) * Math.Max(.0001, requestedLife) / 4))));
@@ -84,6 +87,8 @@ void geomEmit(triangle NXInput tri[3], inout TriangleStream<NXInput> stream, uin
         float active = densityGate * rateVisible * step(0.000001, particleMask) * (ageSeconds < life ? 1.0 : 0.0);
         float t = min(ageSeconds, life);
         float normalizedAge = saturate(ageSeconds / life);
+        input.particleAge = normalizedAge;
+        input.particleRandom = NX_SurfaceParticleHash(seed + 91.37 + slot * 79.11);
         float3 localNormal = normalize(mul(input.n, (float3x3)unity_ObjectToWorld));
         float3 randomDirection = normalize(float3(
             NX_SurfaceParticleHash(seed + 41.7 + slot * 61.3) * 2.0 - 1.0,
@@ -92,7 +97,7 @@ void geomEmit(triangle NXInput tri[3], inout TriangleStream<NXInput> stream, uin
         float3 localMotion = localNormal * (" + speed + @" * t) + float3(0.0, 0.5 * " + gravity + @" * t * t, 0.0) + randomDirection * (" + spread + @" * t);
         float3 worldCenter = mul(unity_ObjectToWorld, float4(input.local + localMotion, 1.0)).xyz;
         float objectScale = max(length(float3(unity_ObjectToWorld._m00, unity_ObjectToWorld._m10, unity_ObjectToWorld._m20)), max(length(float3(unity_ObjectToWorld._m01, unity_ObjectToWorld._m11, unity_ObjectToWorld._m21)), length(float3(unity_ObjectToWorld._m02, unity_ObjectToWorld._m12, unity_ObjectToWorld._m22))));
-        float halfSize = 0.5 * max(0.0, " + size + @") * objectScale * active;
+        float halfSize = 0.5 * max(0.0, (" + size + @") * (" + sizeCurve + @")) * objectScale * active;
         float3 right = normalize(float3(UNITY_MATRIX_I_V._m00, UNITY_MATRIX_I_V._m10, UNITY_MATRIX_I_V._m20));
         float3 up = normalize(float3(UNITY_MATRIX_I_V._m01, UNITY_MATRIX_I_V._m11, UNITY_MATRIX_I_V._m21));
         float3 corners[4] = { float3(-1,-1,0), float3(1,-1,0), float3(-1,1,0), float3(1,1,0) };
@@ -108,6 +113,8 @@ void geomEmit(triangle NXInput tri[3], inout TriangleStream<NXInput> stream, uin
             corner.sourceUV = input.uv;
             corner.uv = spriteUV[i];
             corner.particleAlpha = fade * particleMask * active;
+            corner.particleAge = normalizedAge;
+            corner.particleRandom = input.particleRandom;
             corner.n = normalize(_WorldSpaceCameraPos - worldPosition);
             UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(corner);
             stream.Append(corner);
@@ -125,9 +132,10 @@ float4 fragEmit(NXInput input) : SV_Target
     circle = sharpness >= 1.0 ? step(0.000001, circle) : saturate(circle / max(1.0 - sharpness, 0.000001));
     circle *= circle;
     clip(circle - 0.001);
-    float particleOpacity = " + opacity + @";
+    float normalizedAge = input.particleAge;
+    float particleOpacity = max(0.0, " + opacity + @") * max(0.0, (" + opacityCurve + @"));
     " + (sourceUV ? "input.uv = input.sourceUV;" : "") + @"
-    float4 c = (" + color + @") * _Color;
+    float4 c = (" + color + @") * (" + colorCurve + @") * _Color;
     float3 e = (" + emission + @").rgb;
     float alpha = saturate(c.a * input.particleAlpha * particleOpacity * circle);
     return float4(c.rgb + e, alpha);
@@ -135,6 +143,39 @@ float4 fragEmit(NXInput input) : SV_Target
 ENDCG
 }
 ";
+        }
+
+        // Curves use normalized particle age. Malformed points fall back to a constant;
+        // graph validation owns user-facing shape checks.
+        internal static string Curve(JToken token, string age, bool color, string fallback)
+        {
+            var points = token as JArray;
+            if (points == null || points.Count == 0) return fallback;
+            var first = points[0] as JArray;
+            if (first == null || first.Count < (color ? 5 : 2)) return fallback;
+            string Value(JArray p) { return color ? "float4(" + Number(p[1]) + "," + Number(p[2]) + "," + Number(p[3]) + "," + Number(p[4]) + ")" : Number(p[1]); }
+            if (points.Count == 1) return Value(first);
+            var previous = first;
+            var next = points[1] as JArray;
+            if (next == null || next.Count < (color ? 5 : 2)) return Value(first);
+            var expression = "lerp(" + Value(previous) + "," + Value(next) + ",saturate(NX_Div(" + age + "-" + Number(previous[0]) + "," + Number((double)next[0] - (double)previous[0]) + ")))";
+            previous = next;
+            for (var i = 2; i < points.Count; i++)
+            {
+                var point = points[i] as JArray;
+                if (point == null || point.Count < (color ? 5 : 2)) continue;
+                var span = Number((double)point[0] - (double)previous[0]);
+                var segment = "lerp(" + Value(previous) + "," + Value(point) + ",saturate(NX_Div(" + age + "-" + Number(previous[0]) + "," + span + ")))";
+                expression = "lerp(" + expression + "," + segment + ",step(" + Number(previous[0]) + "," + age + "))";
+                previous = point;
+            }
+            return expression;
+        }
+
+        static string Number(JToken token)
+        {
+            if (token == null || (token.Type != JTokenType.Integer && token.Type != JTokenType.Float)) return "0";
+            return ((double)token).ToString("R", CultureInfo.InvariantCulture);
         }
 
         static string Tessellation(int level, string dynamicRate, string lifetime)

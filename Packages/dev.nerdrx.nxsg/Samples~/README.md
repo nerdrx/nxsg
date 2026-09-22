@@ -27,3 +27,9 @@ These samples target Unity 2022.3.22f1, PC Built-In shader generation on Linux. 
 These graphs need no external textures. Render previews use simple meshes; they are not avatar/client validation.
 
 - **LTCGI Receiver** requires the optional LTCGI package and active emitters. See [setup](../../../docs/LTCGI.md).
+
+## Example gallery
+
+Open **Window → NXSG → Example Gallery**, or **Examples** in the graph toolbar. Each card creates a new graph in `Assets/NXSGExamples`, with a unique filename and graph identity. It does not overwrite your existing graphs.
+
+**Particle Lifetime** demonstrates Particle Info age driving a color ramp, random values controlling size, and lifetime curves. **Audio Hologram** can be tested using the AudioLink preview controls without an active world audio source.

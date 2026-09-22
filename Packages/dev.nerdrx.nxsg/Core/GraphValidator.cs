@@ -225,7 +225,7 @@ namespace NXSG.Core
                 case "core.layer": numeric = new[] { "mask" }; break;
                 case "core.sticker": vectors = new[] { "position", "size" }; numeric = new[] { "rotation" }; break;
                 case "core.flipbook": numeric = new[] { "rows", "columns", "speed" }; break;
-                case "core.audioLink": numeric = new[] { "band", "gain", "smoothing", "fallback" }; break;
+                case "core.audioLink": numeric = new[] { "band", "gain", "smoothing", "fallback", "min", "max" }; break;
                 case "core.normalMap": numeric = new[] { "strength", "flipGreen" }; break;
                 case "core.darknessGlow": numeric = new[] { "strength", "threshold", "softness" }; break;
                 case "core.ltcgi": numeric = new[] { "roughness", "metallic", "strength" }; break;
@@ -309,11 +309,18 @@ namespace NXSG.Core
             if(node.Operation=="core.normalMap")CheckIntegerRange(node.Properties["flipGreen"],path+".properties.flipGreen",0,1,diagnostics);
             if (numeric != null) foreach (var name in numeric) CheckNumber(node.Properties[name], path + ".properties." + name, diagnostics);
             if (vectors != null) foreach (var name in vectors) CheckVector2(node.Properties[name], path + ".properties." + name, diagnostics);
+            if (node.Operation == "core.surfaceParticles")
+            {
+                CheckRampPoints(node.Properties["sizeCurve"], path + ".properties.sizeCurve", diagnostics);
+                CheckRampPoints(node.Properties["opacityCurve"], path + ".properties.opacityCurve", diagnostics);
+                CheckColorRampStops(node.Properties["colorCurve"], path + ".properties.colorCurve", diagnostics);
+            }
             if (node.Operation == "core.ramp") CheckRampPoints(node.Properties["points"], path + ".properties.points", diagnostics);
             if (node.Operation == "core.colorRamp") CheckColorRampStops(node.Properties["stops"], path + ".properties.stops", diagnostics);
             if (node.Operation == "core.flipbook") CheckFlipbookLimits(node, path, diagnostics);
             if (node.Operation == "core.audioLink")
             {
+                CheckIntegerRange(node.Properties["rangeEnabled"],path+".properties.rangeEnabled",0,1,diagnostics);
                 CheckIntegerRange(node.Properties["band"],path+".properties.band",0,3,diagnostics);
                 var smoothing = node.Properties["smoothing"];
                 if (IsNumber(smoothing) && ((double)smoothing < 0 || (double)smoothing > 1)) Add(diagnostics,DiagnosticSeverity.Error,"value.range",path+".properties.smoothing","Smoothing must be between 0 and 1.");
@@ -690,7 +697,7 @@ namespace NXSG.Core
                     return input ? (GraphValueType?)null : GraphValueType.Vector2;
                 case "core.texture2D":
                     return input ? (port == "uv" ? GraphValueType.Vector2 : (GraphValueType?)null) :
-                        (port == "color" ? GraphValueType.Color : (GraphValueType?)null);
+                        (port == "color" ? GraphValueType.Color : port == "alpha" ? GraphValueType.Float : (GraphValueType?)null);
                 case "core.multiply":
                     return ReadType(node.Properties == null ? null : node.Properties["valueType"]);
                 case "core.toonSurface":

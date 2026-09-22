@@ -18,10 +18,13 @@ float _NXSG_AudioLinkValue;
 
 // AudioLink layout: current 4-band values at (0,0..3), filtered values at
 // (smoothing level 0..15, 28..31). Missing/default textures return fallback.
-float NXSG_Audio(float band, float gain, float smoothing, float fallback)
+float NXSG_Audio(float band, float gain, float smoothing, float fallback, int rangeEnabled, float minimum, float maximum)
 {
     if (_NXSG_AudioLinkPreview > 0.5)
-        return _NXSG_AudioLinkValue * gain;
+    {
+        float preview = _NXSG_AudioLinkValue * gain;
+        return rangeEnabled != 0 ? lerp(minimum, maximum, saturate(preview)) : preview;
+    }
 
     // AudioLink's official availability test is width > 16. Filtered rows
     // require the 128x64 layout.
@@ -41,7 +44,8 @@ float NXSG_Audio(float band, float gain, float smoothing, float fallback)
     float s = clamp(floor((1.0 - saturate(smoothing)) * 15.0 + 0.5), 0.0, 15.0);
     int2 pixel = smoothing <= 0.0 ? int2(0, (int)b) : int2((int)s, 28 + (int)b);
     float value = _AudioTexture.Load(int3(pixel, 0)).r;
-    return value * gain;
+    value *= gain;
+    return rangeEnabled != 0 ? lerp(minimum, maximum, saturate(value)) : value;
 }
 ";
 

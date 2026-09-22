@@ -8,7 +8,7 @@ public static class EffectsBackendChecks
 {
     public static void Run(Action<bool,string> assert)
     {
-        foreach(var op in NodeCatalog.All.Where(op => op != "core.parameter" && op != "core.output" && op != "core.shell" && op != "core.surfaceParticles"))
+        foreach(var op in NodeCatalog.All.Where(op => op != "core.parameter" && op != "core.output" && op != "core.shell" && op != "core.surfaceParticles" && op != "core.particleInfo"))
         {
             var graph=new ShaderGraph {GraphId="effects"};
             var node=NodeCatalog.Create(op); node.Id="effect";

@@ -74,6 +74,7 @@ internal static class Program
         EffectsCoreChecks.Run(Assert);
         ParticleChecks.Run(Assert);
         SurfaceParticleChecks.Run(Assert);
+        UsabilityChecks.Run(Assert, fixtures);
         EffectsBackendChecks.Run(Assert);
         PixelLightChecks.Run(Assert);
         LtcgiChecks.Run(Assert);

@@ -22,6 +22,7 @@ namespace NXSG.Editor
         {
             if (node == null || nodeBox == null) return;
             if (node.Operation == "core.colorRamp") AddInlineGradient(node, nodeBox);
+            if (node.Operation == "core.constant" || node.Operation == "core.value") AddInlineValue(node, nodeBox);
             var outputs = Ports(node.Operation, true).Where(p => {
                 var type = PortType(node, p);
                 return type == "float" || type == "color" || type == "surface" || type == "vector2" || type == "vector3";
@@ -47,6 +48,37 @@ namespace NXSG.Editor
             nodeBox.Add(row);
             state.Toggle = toggle;
             EnsureThumbnailHost(state, nodeBox);
+        }
+
+        void AddInlineValue(GraphNode node, VisualElement nodeBox)
+        {
+            var row = new VisualElement { style = { marginTop = 3, marginLeft = 6, marginRight = 6 } };
+            VisualElement field;
+            if (node.Operation == "core.constant" && string.Equals((string)node.Properties["valueType"], "color", StringComparison.OrdinalIgnoreCase))
+            {
+                var values = node.Properties["value"] as JArray;
+                var color = values != null && values.Count == 4 ? new Color((float)values[0], (float)values[1], (float)values[2], (float)values[3]) : Color.white;
+                var colorField = new ColorField("Color") { value = color, tooltip = "Inline color. Drag the node header to move it." };
+                colorField.labelElement.style.minWidth = 40; colorField.labelElement.style.width = 40;
+                colorField.RegisterCallback<PointerDownEvent>(e => e.StopPropagation());
+                colorField.RegisterCallback<PointerMoveEvent>(e => e.StopPropagation());
+                colorField.RegisterCallback<PointerUpEvent>(e => e.StopPropagation());
+                colorField.RegisterValueChangedCallback(e => EditValue("Change color", () => node.Properties["value"] = new JArray(e.newValue.r, e.newValue.g, e.newValue.b, e.newValue.a)));
+                field = colorField;
+            }
+            else if (node.Operation == "core.value" || node.Operation == "core.constant" && node.Properties["value"] != null && node.Properties["value"].Type != JTokenType.Array)
+            {
+                var value = node.Properties["value"] != null && (node.Properties["value"].Type == JTokenType.Float || node.Properties["value"].Type == JTokenType.Integer) ? (float)node.Properties["value"] : 0;
+                var number = new FloatField("Value") { value = value, isDelayed = true, tooltip = "Inline value. Drag the node header to move it." };
+                number.labelElement.style.minWidth = 40; number.labelElement.style.width = 40;
+                number.RegisterCallback<PointerDownEvent>(e => e.StopPropagation());
+                number.RegisterCallback<PointerMoveEvent>(e => e.StopPropagation());
+                number.RegisterCallback<PointerUpEvent>(e => e.StopPropagation());
+                number.RegisterValueChangedCallback(e => { if (!float.IsNaN(e.newValue) && !float.IsInfinity(e.newValue)) EditValue("Change value", () => node.Properties["value"] = e.newValue); });
+                field = number;
+            }
+            else return;
+            row.Add(field); nodeBox.Add(row);
         }
 
         void AddInlineGradient(GraphNode node, VisualElement nodeBox)

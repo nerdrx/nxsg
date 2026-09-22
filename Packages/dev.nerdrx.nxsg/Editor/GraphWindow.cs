@@ -129,8 +129,10 @@ namespace NXSG.Editor
             AddSceneToggle(toolbar);
             AddViewMenu(toolbar);
             AddCreatorMenu(toolbar);
+            toolbar.Add(new ToolbarButton(() => ExampleGalleryWindow.Open()) { text = "Examples", tooltip = "Open example graphs." });
             toolbar.Add(new ToolbarButton(FocusNodeSearch) { text = "+ Add node", tooltip = "Search nodes (Space on canvas)." });
             AddPatternToolbar(toolbar);
+            AddFrameToolbar(toolbar);
             rootVisualElement.Add(toolbar);
             identity = new Label { style = { whiteSpace = WhiteSpace.Normal, paddingLeft = 10, paddingTop = 5, paddingBottom = 5 } };
             rootVisualElement.Add(identity);
@@ -686,7 +688,7 @@ namespace NXSG.Editor
             row.Add(new Label(PortLabel(port)) { pickingMode = PickingMode.Ignore, style = {
                 marginLeft = 16, marginRight = 16,
                 unityTextAlign = output ? TextAnchor.MiddleRight : TextAnchor.MiddleLeft } });
-            var hit = new VisualElement { tooltip = (output ? "Output" : "Input") + ": " + port + " (" + type + ") — drag or click to connect. Drag a connected input to detach its wire.",
+            var hit = new VisualElement { tooltip = SocketTooltip(node, port, output, type),
                 style = { position = UnityEngine.UIElements.Position.Absolute, top = 1, width = 26, height = 26,
                     alignItems = Align.Center, justifyContent = Justify.Center } };
             if (output) hit.style.right = -13; else hit.style.left = -13;
@@ -837,6 +839,8 @@ namespace NXSG.Editor
                     { style = { whiteSpace = WhiteSpace.Normal, marginTop = 8 } });
             };
             search.RegisterValueChangedCallback(evt => { nodeSearch = evt.newValue; filter(nodeSearch); }); filter(nodeSearch);
+            AddNodeFinder(library);
+            AddFrameControls();
             if (selection.Count > 1)
             {
                 inspector.Add(new Label(selection.Count + " nodes selected") { style = { marginTop = 15 } });
@@ -903,6 +907,7 @@ namespace NXSG.Editor
                         AddBoundedNumber(node,"edgeSharpness","Edge sharpness",0,1,0,"edgeSharpness");
                         inspector.Add(new Label("Edge sharpness: 0 = soft puff, 1 = crisp circle. Opacity and lifetime fading still apply.") { style = { whiteSpace = WhiteSpace.Normal } });
                         AddBoundedNumber(node,"lifetime","Lifetime (seconds)",.05f,30,2,"lifetime");
+                        AddParticleCurves(node);
                         AddNumber(node,"speed","Outward speed",.2f,"speed");
                         AddNumber(node,"gravity","Gravity (local Y)",0,"gravity");
                         AddBoundedNumber(node,"spread","Velocity randomness",0,5,.05f,"spread");
@@ -1074,6 +1079,12 @@ namespace NXSG.Editor
             band.RegisterValueChangedCallback(evt => Edit("Change AudioLink band", () => node.Properties["band"] = band.index));
             inspector.Add(band);
             AddNumber(node, "gain", "Gain", 1);
+            var range = new Toggle("Clamp range") { value = (int?)node.Properties["rangeEnabled"] == 1,
+                tooltip = "Clamp AudioLink output after gain. Disabled keeps the full gain response." };
+            range.RegisterValueChangedCallback(e => Edit("Change AudioLink range mode", () => node.Properties["rangeEnabled"] = e.newValue ? 1 : 0));
+            inspector.Add(range);
+            AddNumber(node, "min", "Minimum", 0);
+            AddNumber(node, "max", "Maximum", 1);
             AddUnitNumber(node, "smoothing", "Smoothing", .5f);
             AddNumber(node, "fallback", "Fallback", 0);
             var toggle = new Toggle("Preview AudioLink") { value = audioPreviewEnabled, tooltip = "Simulate AudioLink only in temporary preview material." };
