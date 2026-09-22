@@ -1,0 +1,385 @@
+{
+  "format": "nxsg",
+  "schemaVersion": 1,
+  "graphId": "volume-nebula",
+  "nodes": [
+    {
+      "id": "ray",
+      "operation": "core.rayPosition",
+      "version": 1,
+      "properties": {}
+    },
+    {
+      "id": "noise",
+      "operation": "core.noise",
+      "version": 1,
+      "properties": {
+        "dimensions": 4,
+        "scale": 7,
+        "speed": 0.2,
+        "coordinateSpace": "object"
+      }
+    },
+    {
+      "id": "densityRamp",
+      "operation": "core.ramp",
+      "version": 1,
+      "properties": {
+        "blackPoint": 0.5,
+        "whitePoint": 0.7
+      }
+    },
+    {
+      "id": "densityGain",
+      "operation": "core.multiply",
+      "version": 1,
+      "properties": {
+        "valueType": "float"
+      }
+    },
+    {
+      "id": "densityValue",
+      "operation": "core.constant",
+      "version": 1,
+      "properties": {
+        "valueType": "float",
+        "value": 8
+      }
+    },
+    {
+      "id": "colors",
+      "operation": "core.colorRamp",
+      "version": 1,
+      "properties": {
+        "stops": [
+          [
+            0,
+            0.005,
+            0.005,
+            0.03,
+            1
+          ],
+          [
+            0.38,
+            0.06,
+            0.005,
+            0.15,
+            1
+          ],
+          [
+            0.56,
+            0.55,
+            0.015,
+            0.85,
+            1
+          ],
+          [
+            0.7,
+            0.03,
+            0.75,
+            1,
+            1
+          ],
+          [
+            1,
+            0.7,
+            1,
+            1,
+            1
+          ]
+        ]
+      }
+    },
+    {
+      "id": "sphere",
+      "operation": "core.sdfSphere",
+      "version": 1,
+      "properties": {
+        "radius": 0.45
+      }
+    },
+    {
+      "id": "volume",
+      "operation": "core.volumeSurface",
+      "version": 1,
+      "properties": {
+        "density": 1,
+        "color": [
+          0.4,
+          0.2,
+          1,
+          1
+        ],
+        "emission": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "distance": -1,
+        "steps": 128,
+        "maxDistance": 4,
+        "bounds": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "depthClip": 0
+      }
+    },
+    {
+      "id": "output",
+      "operation": "core.output",
+      "version": 1,
+      "properties": {}
+    },
+    {
+      "id": "detail",
+      "operation": "core.noise",
+      "version": 1,
+      "properties": {
+        "dimensions": 4,
+        "scale": 65,
+        "speed": 0.07,
+        "coordinateSpace": "object"
+      }
+    },
+    {
+      "id": "detailRamp",
+      "operation": "core.ramp",
+      "version": 1,
+      "properties": {
+        "blackPoint": 0.4,
+        "whitePoint": 0.64
+      }
+    },
+    {
+      "id": "clouds",
+      "operation": "core.multiply",
+      "version": 1,
+      "properties": {}
+    }
+  ],
+  "connections": [
+    {
+      "id": "ray-noise",
+      "from": {
+        "nodeId": "ray",
+        "portId": "position"
+      },
+      "to": {
+        "nodeId": "noise",
+        "portId": "position"
+      }
+    },
+    {
+      "id": "ray-sphere",
+      "from": {
+        "nodeId": "ray",
+        "portId": "position"
+      },
+      "to": {
+        "nodeId": "sphere",
+        "portId": "position"
+      }
+    },
+    {
+      "id": "noise-densityRamp",
+      "from": {
+        "nodeId": "noise",
+        "portId": "value"
+      },
+      "to": {
+        "nodeId": "densityRamp",
+        "portId": "value"
+      }
+    },
+    {
+      "id": "densityValue-gain",
+      "from": {
+        "nodeId": "densityValue",
+        "portId": "value"
+      },
+      "to": {
+        "nodeId": "densityGain",
+        "portId": "b"
+      }
+    },
+    {
+      "id": "gain-volumeDensity",
+      "from": {
+        "nodeId": "densityGain",
+        "portId": "value"
+      },
+      "to": {
+        "nodeId": "volume",
+        "portId": "density"
+      }
+    },
+    {
+      "id": "noise-colors",
+      "from": {
+        "nodeId": "noise",
+        "portId": "value"
+      },
+      "to": {
+        "nodeId": "colors",
+        "portId": "value"
+      }
+    },
+    {
+      "id": "colors-volumeColor",
+      "from": {
+        "nodeId": "colors",
+        "portId": "color"
+      },
+      "to": {
+        "nodeId": "volume",
+        "portId": "color"
+      }
+    },
+    {
+      "id": "colors-volumeEmission",
+      "from": {
+        "nodeId": "colors",
+        "portId": "color"
+      },
+      "to": {
+        "nodeId": "volume",
+        "portId": "emission"
+      }
+    },
+    {
+      "id": "sphere-volumeDistance",
+      "from": {
+        "nodeId": "sphere",
+        "portId": "distance"
+      },
+      "to": {
+        "nodeId": "volume",
+        "portId": "distance"
+      }
+    },
+    {
+      "id": "volume-output",
+      "from": {
+        "nodeId": "volume",
+        "portId": "surface"
+      },
+      "to": {
+        "nodeId": "output",
+        "portId": "surface"
+      }
+    },
+    {
+      "id": "ray-detail-position",
+      "from": {
+        "nodeId": "ray",
+        "portId": "position"
+      },
+      "to": {
+        "nodeId": "detail",
+        "portId": "position"
+      }
+    },
+    {
+      "id": "detail-detailRamp-value",
+      "from": {
+        "nodeId": "detail",
+        "portId": "value"
+      },
+      "to": {
+        "nodeId": "detailRamp",
+        "portId": "value"
+      }
+    },
+    {
+      "id": "densityRamp-clouds-a",
+      "from": {
+        "nodeId": "densityRamp",
+        "portId": "value"
+      },
+      "to": {
+        "nodeId": "clouds",
+        "portId": "a"
+      }
+    },
+    {
+      "id": "detailRamp-clouds-b",
+      "from": {
+        "nodeId": "detailRamp",
+        "portId": "value"
+      },
+      "to": {
+        "nodeId": "clouds",
+        "portId": "b"
+      }
+    },
+    {
+      "id": "clouds-densityGain-a",
+      "from": {
+        "nodeId": "clouds",
+        "portId": "value"
+      },
+      "to": {
+        "nodeId": "densityGain",
+        "portId": "a"
+      }
+    }
+  ],
+  "parameters": [],
+  "resources": [],
+  "patterns": [],
+  "layout": {
+    "nodes": {
+      "ray": {
+        "x": 0,
+        "y": 0
+      },
+      "noise": {
+        "x": 240,
+        "y": 0
+      },
+      "densityRamp": {
+        "x": 480,
+        "y": 0
+      },
+      "densityGain": {
+        "x": 960,
+        "y": 0
+      },
+      "densityValue": {
+        "x": 0,
+        "y": 180
+      },
+      "colors": {
+        "x": 480,
+        "y": 180
+      },
+      "sphere": {
+        "x": 240,
+        "y": 180
+      },
+      "volume": {
+        "x": 1200,
+        "y": 0
+      },
+      "output": {
+        "x": 1440,
+        "y": 0
+      },
+      "detail": {
+        "x": 240,
+        "y": 360
+      },
+      "detailRamp": {
+        "x": 480,
+        "y": 360
+      },
+      "clouds": {
+        "x": 720,
+        "y": 0
+      }
+    }
+  }
+}

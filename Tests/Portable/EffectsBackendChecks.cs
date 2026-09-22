@@ -8,7 +8,7 @@ public static class EffectsBackendChecks
 {
     public static void Run(Action<bool,string> assert)
     {
-        foreach(var op in NodeCatalog.All.Where(op => op != "core.parameter" && op != "core.output" && op != "core.shell" && op != "core.surfaceParticles" && op != "core.particleInfo"))
+        foreach(var op in NodeCatalog.All.Where(op => op != "core.parameter" && op != "core.output" && op != "core.shell" && op != "core.surfaceParticles" && op != "core.particleInfo" && op != "core.rayPosition"))
         {
             var graph=new ShaderGraph {GraphId="effects"};
             var node=NodeCatalog.Create(op); node.Id="effect";
@@ -18,7 +18,7 @@ public static class EffectsBackendChecks
             var surface=NodeCatalog.Create("core.unlitSurface"); surface.Id="surface";graph.Nodes.Add(surface);
             var output=NodeCatalog.Create("core.output");output.Id="output";graph.Nodes.Add(output);
             var port=NodeCatalog.Ports(op,true).First();var type=NodeCatalog.PortType(node,port);
-            if(type=="surface") { if(op=="core.fur" || op=="core.tessellation") Connect(graph,node.Id,port,"output","surface"); else { var color=NodeCatalog.Create("core.constant");color.Id="albedo";graph.Nodes.Add(color);Connect(graph,color.Id,"value",node.Id,"albedo");Connect(graph,node.Id,port,"output","surface"); } }
+            if(type=="surface") { if(op=="core.fur" || op=="core.tessellation" || op=="core.volumeSurface") Connect(graph,node.Id,port,"output","surface"); else { var color=NodeCatalog.Create("core.constant");color.Id="albedo";graph.Nodes.Add(color);Connect(graph,color.Id,"value",node.Id,"albedo");Connect(graph,node.Id,port,"output","surface"); } }
             else
             {
                 if(type=="vector2")

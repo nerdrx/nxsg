@@ -1,0 +1,386 @@
+{
+  "format": "nxsg",
+  "schemaVersion": 1,
+  "graphId": "volume-carved-orb",
+  "nodes": [
+    {
+      "id": "ray",
+      "operation": "core.rayPosition",
+      "version": 1,
+      "properties": {}
+    },
+    {
+      "id": "orb",
+      "operation": "core.sdfSphere",
+      "version": 1,
+      "properties": {
+        "radius": 0.42
+      }
+    },
+    {
+      "id": "hole",
+      "operation": "core.sdfBox",
+      "version": 1,
+      "properties": {
+        "size": [
+          0.21,
+          0.55,
+          0.21
+        ]
+      }
+    },
+    {
+      "id": "carve",
+      "operation": "core.sdfBlend",
+      "version": 1,
+      "properties": {
+        "mode": 1,
+        "smoothing": 0.015
+      }
+    },
+    {
+      "id": "density",
+      "operation": "core.constant",
+      "version": 1,
+      "properties": {
+        "valueType": "float",
+        "value": 6
+      }
+    },
+    {
+      "id": "color",
+      "operation": "core.constant",
+      "version": 1,
+      "properties": {
+        "valueType": "color",
+        "value": [
+          0.18,
+          0.02,
+          0.9,
+          1
+        ]
+      }
+    },
+    {
+      "id": "emission",
+      "operation": "core.constant",
+      "version": 1,
+      "properties": {
+        "valueType": "color",
+        "value": [
+          0.02,
+          0.45,
+          1,
+          1
+        ]
+      }
+    },
+    {
+      "id": "volume",
+      "operation": "core.volumeSurface",
+      "version": 1,
+      "properties": {
+        "density": 15,
+        "color": [
+          0.18,
+          0.02,
+          0.9,
+          1
+        ],
+        "emission": [
+          0.005,
+          0.01,
+          0.015,
+          1
+        ],
+        "distance": -1,
+        "steps": 128,
+        "maxDistance": 4,
+        "bounds": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "depthClip": 0,
+        "mode": 1
+      }
+    },
+    {
+      "id": "output",
+      "operation": "core.output",
+      "version": 1,
+      "properties": {}
+    },
+    {
+      "id": "holeX",
+      "operation": "core.sdfBox",
+      "version": 1,
+      "properties": {
+        "size": [
+          0.55,
+          0.21,
+          0.21
+        ]
+      }
+    },
+    {
+      "id": "carveX",
+      "operation": "core.sdfBlend",
+      "version": 1,
+      "properties": {
+        "mode": 1,
+        "smoothing": 0.015
+      }
+    },
+    {
+      "id": "field",
+      "operation": "core.noise",
+      "version": 1,
+      "properties": {
+        "dimensions": 3,
+        "scale": 24
+      }
+    },
+    {
+      "id": "tint",
+      "operation": "core.colorRamp",
+      "version": 1,
+      "properties": {
+        "stops": [
+          [
+            0,
+            0.005,
+            0.01,
+            0.08,
+            1
+          ],
+          [
+            0.35,
+            0.02,
+            0.15,
+            0.4,
+            1
+          ],
+          [
+            0.65,
+            0.03,
+            0.8,
+            0.6,
+            1
+          ],
+          [
+            1,
+            0.8,
+            1,
+            0.3,
+            1
+          ]
+        ]
+      }
+    }
+  ],
+  "connections": [
+    {
+      "id": "ray-orb",
+      "from": {
+        "nodeId": "ray",
+        "portId": "position"
+      },
+      "to": {
+        "nodeId": "orb",
+        "portId": "position"
+      }
+    },
+    {
+      "id": "ray-hole",
+      "from": {
+        "nodeId": "ray",
+        "portId": "position"
+      },
+      "to": {
+        "nodeId": "hole",
+        "portId": "position"
+      }
+    },
+    {
+      "id": "orb-carve",
+      "from": {
+        "nodeId": "orb",
+        "portId": "distance"
+      },
+      "to": {
+        "nodeId": "carve",
+        "portId": "a"
+      }
+    },
+    {
+      "id": "hole-carve",
+      "from": {
+        "nodeId": "hole",
+        "portId": "distance"
+      },
+      "to": {
+        "nodeId": "carve",
+        "portId": "b"
+      }
+    },
+    {
+      "id": "density-volume",
+      "from": {
+        "nodeId": "density",
+        "portId": "value"
+      },
+      "to": {
+        "nodeId": "volume",
+        "portId": "density"
+      }
+    },
+    {
+      "id": "volume-output",
+      "from": {
+        "nodeId": "volume",
+        "portId": "surface"
+      },
+      "to": {
+        "nodeId": "output",
+        "portId": "surface"
+      }
+    },
+    {
+      "id": "ray-holeX-position",
+      "from": {
+        "nodeId": "ray",
+        "portId": "position"
+      },
+      "to": {
+        "nodeId": "holeX",
+        "portId": "position"
+      }
+    },
+    {
+      "id": "carve-carveX-a",
+      "from": {
+        "nodeId": "carve",
+        "portId": "distance"
+      },
+      "to": {
+        "nodeId": "carveX",
+        "portId": "a"
+      }
+    },
+    {
+      "id": "holeX-carveX-b",
+      "from": {
+        "nodeId": "holeX",
+        "portId": "distance"
+      },
+      "to": {
+        "nodeId": "carveX",
+        "portId": "b"
+      }
+    },
+    {
+      "id": "carveX-volume-distance",
+      "from": {
+        "nodeId": "carveX",
+        "portId": "distance"
+      },
+      "to": {
+        "nodeId": "volume",
+        "portId": "distance"
+      }
+    },
+    {
+      "id": "ray-field-position",
+      "from": {
+        "nodeId": "ray",
+        "portId": "position"
+      },
+      "to": {
+        "nodeId": "field",
+        "portId": "position"
+      }
+    },
+    {
+      "id": "field-tint-value",
+      "from": {
+        "nodeId": "field",
+        "portId": "value"
+      },
+      "to": {
+        "nodeId": "tint",
+        "portId": "value"
+      }
+    },
+    {
+      "id": "tint-volume-color",
+      "from": {
+        "nodeId": "tint",
+        "portId": "color"
+      },
+      "to": {
+        "nodeId": "volume",
+        "portId": "color"
+      }
+    }
+  ],
+  "parameters": [],
+  "resources": [],
+  "patterns": [],
+  "layout": {
+    "nodes": {
+      "ray": {
+        "x": 0,
+        "y": 0
+      },
+      "orb": {
+        "x": 240,
+        "y": 0
+      },
+      "hole": {
+        "x": 240,
+        "y": 180
+      },
+      "carve": {
+        "x": 480,
+        "y": 0
+      },
+      "density": {
+        "x": 0,
+        "y": 180
+      },
+      "color": {
+        "x": 0,
+        "y": 360
+      },
+      "emission": {
+        "x": 0,
+        "y": 540
+      },
+      "volume": {
+        "x": 960,
+        "y": 0
+      },
+      "output": {
+        "x": 1200,
+        "y": 0
+      },
+      "holeX": {
+        "x": 240,
+        "y": 360
+      },
+      "carveX": {
+        "x": 720,
+        "y": 0
+      },
+      "field": {
+        "x": 240,
+        "y": 540
+      },
+      "tint": {
+        "x": 480,
+        "y": 180
+      }
+    }
+  }
+}

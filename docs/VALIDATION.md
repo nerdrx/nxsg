@@ -541,3 +541,9 @@ Portable checks and all seven packaging tests passed. Unity 2022.3.22f1 under hi
 - Windows/D3D11 strict shader bundle cross-compilation passes for 11 shaders, including Particle Lifetime (`work/unity/alpha24-d3d.log`). Not native Windows rendering.
 - `GoodiesEditorSmoke` passes (`work/unity/alpha24-editor2.log`): inline value editing/undo, frame notes roundtrip, finder selection, and editing identity curves on an older particle node.
 - Seven packaging tests pass. The actual reported VRChat mirror requires a client retest; no client-level resolution is claimed.
+
+## Raymarching (alpha.26)
+
+Unity 2022.3.22f1, Linux, hidden Gamescope/OpenGL: bounded volume render checks cover density zero, SDF sphere coverage, union/subtraction, box/torus imports, outside orthographic and inside perspective cameras, opaque camera-depth clipping, solid SDF rendering and animated 4D density. The actual showcase PNGs use the shipped sample graphs. Strict Windows-target D3D11 asset-bundle compilation passed for 14 shaders including the three volume samples; this is compilation, not native Windows or VRChat runtime proof.
+
+Portable checks cover emitted bounds/alpha contracts, invalid box shapes/colors/step budgets, missing SDF distance and Ray Position outside its context. The timeout helper is tested with a disposable sleeping process group. No client/headset performance, stereo appearance, or VRChat mirror acceptance is claimed.

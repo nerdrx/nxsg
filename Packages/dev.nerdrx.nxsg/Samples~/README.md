@@ -33,3 +33,7 @@ These graphs need no external textures. Render previews use simple meshes; they 
 Open **Window → NXSG → Example Gallery**, or **Examples** in the graph toolbar. Each card creates a new graph in `Assets/NXSGExamples`, with a unique filename and graph identity. It does not overwrite your existing graphs.
 
 **Particle Lifetime** demonstrates Particle Info age driving a color ramp, random values controlling size, and lifetime curves. **Audio Hologram** can be tested using the AudioLink preview controls without an active world audio source.
+
+## Raymarching examples
+
+Volume Nebula, Volume Carved Orb and Volume Smoke Ring use a closed default Unity Cube as their proxy. Open the Example Gallery to create editable copies. They use 128 steps for detail; lower Steps for everyday use. See the repository volume guide for setup and limits.

@@ -812,7 +812,7 @@ namespace NXSG.Editor
                 var searching = !string.IsNullOrWhiteSpace(query);
                 var matches = NodeCatalog.All.Where(op => op != "core.previewVector" &&
                     MatchesNodeSearch(op, query)).ToList();
-                foreach (var category in new[] { "Inputs", "Coordinates", "Textures", "Math", "Color", "Animation", "Surface" })
+                foreach (var category in new[] { "Inputs", "Coordinates", "Textures", "Math", "Color", "Animation", "Surface", "Volumes" })
                 {
                     var operations = matches.Where(op => NodeCatalog.Category(op) == category).ToList();
                     if (operations.Count == 0) continue;
@@ -915,6 +915,23 @@ namespace NXSG.Editor
                         AddBoundedNumber(node,"mask","Emitter mask",0,1,1,"mask");
                         inspector.Add(new Label("Connect your surface to Base, then this node to Output. Emits from the same mesh: Density selects source triangles (1 = all). Rate requests births per source triangle per second. Connected Rate and Lifetime drive adaptive tessellation up to level 64; high values cost more. Change Rate or Lifetime to retime procedural particles; there is no persistent simulation. Mask uses mesh UVs. Color from mesh UVs samples particle color at its spawn point; otherwise it uses sprite UVs. Particles follow the current pose. Expand renderer bounds if particles disappear near screen edges.") { style = { whiteSpace = WhiteSpace.Normal } });
                         break;
+                    case "core.volumeSurface":
+                        AddIndexedChoice(node,"mode","Rendering",new[]{"Volume · smoke / nebula","Solid SDF · lit surface"});
+                        if ((int?)node.Properties["mode"] != 1) AddBoundedNumber(node,"density","Density",0,100,1,"density");
+                        AddColorField(node,"color","Color",new Color(.4f,.2f,1,1),"color");
+                        AddColorField(node,"emission","Emission",Color.black,"emission");
+                        var stepsField = new IntegerField("March steps (8–128)") { isDelayed = true, value = (int?)node.Properties["steps"] ?? 32 };
+                        stepsField.RegisterValueChangedCallback(e => { if (e.newValue < 8 || e.newValue > 128) { stepsField.SetValueWithoutNotify(e.previousValue); SetStatus("Use 8–128 march steps."); return; } EditValue("Change march steps", () => node.Properties["steps"] = e.newValue); });
+                        inspector.Add(stepsField);
+                        AddNumber(node,"maxDistance","Max travel (local units)",4);
+                        AddVolumeVector(node,"bounds","Box half extents",Vector3.one*.5f);
+                        AddIndexedChoice(node,"depthClip","Camera depth clipping",new[]{"Off · no depth required","On · needs camera depth"});
+                        inspector.Add(new Label("Use a closed cube proxy, centered at the object origin, matching these bounds. Distance accepts an SDF shape. Connect Ray Position to 3D/4D Noise position for volumetric density. More steps cost more per pixel and per eye. Depth clipping cannot include most transparent objects; this volume does not cast self-shadows.") { style = { whiteSpace = WhiteSpace.Normal } });
+                        break;
+                    case "core.sdfSphere": AddNumber(node,"radius","Radius",.3f,"radius"); break;
+                    case "core.sdfBox": AddVolumeVector(node,"size","Half extents",Vector3.one*.3f); break;
+                    case "core.sdfTorus": AddNumber(node,"radius","Ring radius",.3f,"radius"); AddNumber(node,"thickness","Tube radius",.08f,"thickness"); break;
+                    case "core.sdfBlend": AddIndexedChoice(node,"mode","Combine",new[]{"Union · merge","Subtract B from A","Intersection"}); AddBoundedNumber(node,"smoothing","Smooth blend",0,1,.1f,"smoothing"); break;
                     case "core.particleSurface":
                         AddIndexedChoice(node, "blendMode", "Blending", new[] { "Alpha · smoke / fluff", "Additive · sparks / glow" });
                         AddBoundedNumber(node, "opacity", "Opacity", 0, 1, 1, "opacity");
@@ -1192,6 +1209,18 @@ namespace NXSG.Editor
             {
                 if (float.IsNaN(evt.newValue) || float.IsInfinity(evt.newValue)) { SetStatus("Enter a finite number."); return; }
                 Edit("Change " + label, () => node.Properties[property] = evt.newValue);
+            });
+            inspector.Add(field);
+        }
+
+        void AddVolumeVector(GraphNode node, string property, string label, Vector3 fallback)
+        {
+            var v = node.Properties[property] as JArray;
+            var field = new Vector3Field(label) { value = v != null && v.Count == 3 ? new Vector3((float)v[0], (float)v[1], (float)v[2]) : fallback };
+            field.RegisterValueChangedCallback(e => {
+                var value = e.newValue;
+                if (new[]{value.x,value.y,value.z}.Any(x => float.IsNaN(x) || float.IsInfinity(x) || x <= 0 || x > 100)) { SetStatus("Use positive extents up to 100 local units."); return; }
+                EditValue("Change " + label, () => node.Properties[property] = new JArray(value.x,value.y,value.z));
             });
             inspector.Add(field);
         }

@@ -23,6 +23,7 @@ namespace NXSG.Backend
         readonly Dictionary<string, string> functions = new Dictionary<string, string>();
         readonly StringBuilder code = new StringBuilder();
         readonly List<Diagnostic> diagnostics = new List<Diagnostic>();
+        bool volumeEnabled;
         bool wireframeEnabled;
         bool ltcgiEnabled;
         bool lightingControlsEnabled;
@@ -37,7 +38,7 @@ namespace NXSG.Backend
         public static bool IsAdvanced(ShaderGraph graph)
         {
             if (graph?.Nodes == null) return false;
-            var ops = new HashSet<string> { "core.unlitSurface", "core.pbrSurface", "core.particleSurface", "core.particleColor", "core.particleInfo", "core.surfaceParticles", "core.fur", "core.tessellation", "core.fresnel", "core.colorRamp", "core.layer", "core.sticker", "core.dissolve", "core.flipbook", "core.uvDistort", "core.vertexMotion", "core.audioLink", "core.ltcgi", "core.darknessGlow", "core.shell", "core.normalMap", "core.previewVector", "core.musgrave", "core.voronoi", "core.checker", "core.wave", "core.gradient", "core.uvTile", "core.posterize", "core.absolute", "core.power", "core.sqrt", "core.sine", "core.cosine", "core.fraction", "core.floor", "core.ceil", "core.round", "core.step", "core.smoothstep", "core.remap", "core.pingPong", "core.splitColor", "core.combineColor", "core.luminance", "core.contrast", "core.saturation", "core.splitUV", "core.combineUV", "core.position", "core.normalDirection", "core.viewDirection", "core.vertexColor", "core.cameraDistance", "core.screenUV", "core.circleMask", "core.boxMask", "core.polygonMask", "core.starMask", "core.radialRays", "core.spiral", "core.brick", "core.hexGrid", "core.triplanarTexture", "core.matcapTexture", "core.rimGlow", "core.heightMask", "core.slopeMask", "core.distanceFade", "core.wireframe" };
+            var ops = new HashSet<string> { "core.volumeSurface", "core.rayPosition", "core.sdfSphere", "core.sdfBox", "core.sdfTorus", "core.sdfBlend", "core.unlitSurface", "core.pbrSurface", "core.particleSurface", "core.particleColor", "core.particleInfo", "core.surfaceParticles", "core.fur", "core.tessellation", "core.fresnel", "core.colorRamp", "core.layer", "core.sticker", "core.dissolve", "core.flipbook", "core.uvDistort", "core.vertexMotion", "core.audioLink", "core.ltcgi", "core.darknessGlow", "core.shell", "core.normalMap", "core.previewVector", "core.musgrave", "core.voronoi", "core.checker", "core.wave", "core.gradient", "core.uvTile", "core.posterize", "core.absolute", "core.power", "core.sqrt", "core.sine", "core.cosine", "core.fraction", "core.floor", "core.ceil", "core.round", "core.step", "core.smoothstep", "core.remap", "core.pingPong", "core.splitColor", "core.combineColor", "core.luminance", "core.contrast", "core.saturation", "core.splitUV", "core.combineUV", "core.position", "core.normalDirection", "core.viewDirection", "core.vertexColor", "core.cameraDistance", "core.screenUV", "core.circleMask", "core.boxMask", "core.polygonMask", "core.starMask", "core.radialRays", "core.spiral", "core.brick", "core.hexGrid", "core.triplanarTexture", "core.matcapTexture", "core.rimGlow", "core.heightMask", "core.slopeMask", "core.distanceFade", "core.wireframe" };
             // Only reachable effects select the extended lowering; disconnected nodes never change shading.
             var connected = new HashSet<string>();
             var queue = new Queue<string>(graph.Nodes.Where(n => n?.Operation == "core.output").Select(n => n.Id));
@@ -120,7 +121,8 @@ namespace NXSG.Backend
             var output = nodes.Values.Single(n => n.Operation == "core.output");
             var root = Source(output, "surface");
             if (root == null) throw new InvalidOperationException("Connect a Surface to Output.");
-            var particle = root.Operation == "core.particleSurface";
+            volumeEnabled = root.Operation == "core.volumeSurface";
+            var particle = root.Operation == "core.particleSurface" || volumeEnabled;
             var surfaceParticles = root.Operation == "core.surfaceParticles";
             ValidateParticleInfo(root, particle, surfaceParticles);
             var tessNode = root.Operation == "core.tessellation" ? root : null;
@@ -138,6 +140,8 @@ namespace NXSG.Backend
             if (particle && fallback == "toonstandard") fallback = "Particle";
             var live = new HashSet<string>();
             Visit(root, live);
+            if (!volumeEnabled && live.Any(id => nodes[id].Operation == "core.rayPosition")) throw new InvalidOperationException("Ray Position requires Volume Surface connected directly to Output.");
+            if (volumeEnabled && live.Any(id => new[]{"core.particleInfo", "core.ltcgi", "core.wireframe", "core.refraction", "core.parallaxOcclusion"}.Contains(nodes[id].Operation))) throw new InvalidOperationException("Volume Surface cannot evaluate particle data, lighting, wireframe, refraction or parallax branches inside its march loop.");
             var refracts = live.Any(id => nodes[id].Operation == "core.refraction");
             if(refracts && (particle || surfaceParticles)) throw new InvalidOperationException("Screen refraction currently supports regular mesh surfaces, not particle surfaces.");
             var wireNode = live.Select(id => nodes[id]).FirstOrDefault(n => n.Operation == "core.wireframe");
@@ -198,7 +202,8 @@ namespace NXSG.Backend
             }
             for (var i = 0; i < passes.Count; i++) AddToonProperties(b, passes[i].Surface, i);
             var passCode = new StringBuilder();
-            if (particle) passCode.Append(ParticlePass(root));
+            if (volumeEnabled) passCode.Append(VolumePass(root));
+            else if (particle) passCode.Append(ParticlePass(root));
             else for (var i = 0; i < passes.Count; i++) passCode.Append(Pass(passes[i].Surface, i, passes[i].Offset, tessNode));
             bool cardsOnly = furNode != null && IntProp(furNode, "cardsOnly", 0, 0, 1) == 1;
             if (furNode != null) diagnostics.Add(new Diagnostic(DiagnosticSeverity.Warning, "lighting.forwardAdd", furNode.Id, "Additional pixel lights affect the lit base surface only; fur overlays use the main light and ambient lighting."));
@@ -221,7 +226,7 @@ namespace NXSG.Backend
             if (screenDependentShadow)
                 diagnostics.Add(new Diagnostic(DiagnosticSeverity.Warning, "shadow.screenDependent", passes[0].Surface.Id, "View-dependent opacity or enabled albedo alpha disables the shadow/depth pass. Disable Use albedo alpha when only the surface color depends on the camera."));
             var shadowPass = !particle && options.IncludeShadowCaster && !screenDependentShadow ? Shadow(passes[0].Surface, passes[0].Offset, tessNode) : "";
-            b.AppendLine("}\nSubShader {\nTags { \"RenderType\"=\"" + (particle || refracts ? "Transparent" : "Opaque") + "\" \"Queue\"=\"" + (particle || refracts ? "Transparent" : "Geometry") + "\"" + (surfaceParticles ? " \"DisableBatching\"=\"True\"" : "") + (ltcgiEnabled ? " \"LTCGI\"=\"ALWAYS\"" : "") + (fallback == null ? "" : " \"VRCFallback\"=\"" + fallback + "\"") + " }");
+            b.AppendLine("}\nSubShader {\nTags { \"RenderType\"=\"" + (particle || refracts ? "Transparent" : "Opaque") + "\" \"Queue\"=\"" + (particle || refracts ? "Transparent" : "Geometry") + "\"" + (surfaceParticles || volumeEnabled ? " \"DisableBatching\"=\"True\"" : "") + (ltcgiEnabled ? " \"LTCGI\"=\"ALWAYS\"" : "") + (fallback == null ? "" : " \"VRCFallback\"=\"" + fallback + "\"") + " }");
             if(refracts) b.AppendLine("GrabPass { \"_NXSG_GrabTexture\" }");
             b.AppendLine("CGINCLUDE\n#include \"UnityCG.cginc\"\n#include \"Lighting.cginc\"\n#include \"AutoLight.cginc\"\n#include \"UnityPBSLighting.cginc\"");
             b.AppendLine("float4 _Color;");
@@ -231,6 +236,7 @@ namespace NXSG.Backend
             b.AppendLine(PreviewClock.Hlsl);
 
             b.AppendLine(Helpers);
+            b.AppendLine(VolumeShader.Helpers);
             if (lightingControlsEnabled) b.AppendLine(LightingHelpers);
             if(furNode!=null) {
                 int quality=IntProp(furNode,"selfShadowQuality",0,0,3);
@@ -356,6 +362,11 @@ namespace NXSG.Backend
                     if (port != "age" && port != "random") throw new InvalidOperationException("Particle Info output must be age or random.");
                     body = port == "age" ? "input.particleAge" : "input.particleRandom";
                     break;
+                case "core.rayPosition": body = "input.local"; break;
+                case "core.sdfSphere": body = "(length("+P("position","input.local","vector3")+")-max(.00001,"+S("radius",.3)+"))"; break;
+                case "core.sdfBox": body = "NX_SdfBox("+P("position","input.local","vector3")+","+P("size",n.Properties["size"] == null ? "float3(.3,.3,.3)" : Literal(n.Properties["size"],"vector3"),"vector3")+")"; break;
+                case "core.sdfTorus": body = "NX_SdfTorus("+P("position","input.local","vector3")+",max(.00001,"+S("radius",.3)+"),max(.00001,"+S("thickness",.08)+"))"; break;
+                case "core.sdfBlend": body = "NX_SdfBlend("+S("a",1)+","+S("b",1)+",max(0,"+S("smoothing",.1)+"),"+IntProp(n,"mode",0,0,2)+")"; break;
                 case "core.value": body = Prop(n, "value", 0); break;
                 case "core.constant": body = Literal(n.Properties["value"], type); break;
                 case "core.parameter":
@@ -493,7 +504,7 @@ namespace NXSG.Backend
         {
             var tex = textureNames[(string)n.Properties["resourceId"]];
             var transformed = "(" + uv + "*" + tex + "_ST.xy+" + tex + "_ST.zw)";
-            return vertex ? "tex2Dlod(" + tex + ",float4(" + transformed + ",0,0))" : "tex2D(" + tex + "," + transformed + ")";
+            return vertex || volumeEnabled ? "tex2Dlod(" + tex + ",float4(" + transformed + ",0,0))" : "tex2D(" + tex + "," + transformed + ")";
         }
         string StringProp(GraphNode n, string key, string fallback, params string[] allowed)
         {
@@ -700,6 +711,22 @@ namespace NXSG.Backend
         {
             var token = node.Properties[primary];
             return SurfaceParticleShader.Curve(token, "normalizedAge", color, fallback);
+        }
+
+        string VolumePass(GraphNode surface)
+        {
+            var density = Scalar(surface, "density", 1);
+            var color = Input(surface, "color", surface.Properties["color"] == null ? "float4(.4,.2,1,1)" : Literal(surface.Properties["color"], "color"), "color");
+            var emission = Input(surface, "emission", surface.Properties["emission"] == null ? "float4(0,0,0,1)" : Literal(surface.Properties["emission"], "color"), "color");
+            var distance = Input(surface, "distance", "-1", "float");
+            var bounds = surface.Properties["bounds"] == null ? "float3(.5,.5,.5)" : Literal(surface.Properties["bounds"], "vector3");
+            int steps = IntProp(surface, "steps", 32, 8, 128);
+            bool depthClip = IntProp(surface, "depthClip", 0, 0, 1) == 1;
+            diagnostics.Add(new Diagnostic(DiagnosticSeverity.Warning, "cost.volume", surface.Id, "Volume raymarching evaluates density, distance, color and emission up to " + steps + " times per pixel per eye. Use a closed box proxy with matching local bounds; it does not infer an avatar's interior or cast self-shadows. Transparent volumes can sort imperfectly. Texture samples inside volumes use mip level zero."));
+            if (depthClip) diagnostics.Add(new Diagnostic(DiagnosticSeverity.Warning, "volume.depth", surface.Id, "Depth clipping requires a valid camera depth texture; disable it in worlds or mirrors without one. Transparent surfaces usually do not contribute to that texture."));
+            bool solid = IntProp(surface, "mode", 0, 0, 1) == 1;
+            if (solid && Source(surface, "distance") == null) throw new InvalidOperationException("Solid SDF mode needs a shape connected to Distance.");
+            return VolumeShader.Pass(density, color, emission, distance, bounds, steps, RawProp(surface, "maxDistance", 4), depthClip, solid);
         }
 
         string ParticlePass(GraphNode surface)

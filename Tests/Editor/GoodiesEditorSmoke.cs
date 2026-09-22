@@ -67,6 +67,12 @@ public static class GoodiesEditorSmoke
             Require(Mathf.Abs((float)restored.Properties["sizeCurve"][0][1] - .2f) < .001f, "Saved curve differs from field");
             Invoke("RebuildInspector"); var finder = window.rootVisualElement.Q<ToolbarSearchField>("existing-node-search"); Require(finder != null, "Existing node finder missing"); finder.value = "particles";
             var button = finder.parent.Children().SelectMany(e => e.Children()).OfType<Button>().FirstOrDefault(); Require(button != null, "Existing node finder result missing"); using (var submit = NavigationSubmitEvent.GetPooled()) button.SendEvent(submit); Require((string)Get("selected") == "particles", "Finder did not select existing node");
+            graph=(ShaderGraph)Get("graph"); var volume=NodeCatalog.Create("core.volumeSurface"); volume.Id="volume"; graph.Nodes.Add(volume);
+            Set("selection",new System.Collections.Generic.List<string>{"volume"}); Set("selected","volume"); Invoke("Rebuild");
+            Require(window.rootVisualElement.Q<Foldout>("category-Volumes")!=null,"Volumes category missing");
+            var steps=window.rootVisualElement.Query<IntegerField>().ToList().FirstOrDefault(f=>f.label=="March steps (8–128)");
+            Require(steps!=null,"Volume steps field missing"); steps.value=64; Require((int)volume.Properties["steps"]==64,"Volume step edit not saved");
+            steps.value=1000; Require(steps.value==64 && (int)volume.Properties["steps"]==64,"Volume step budget not enforced");
             Debug.Log("NXSG GOODIES EDITOR SMOKE PASSED: inline edit/undo, frame note round trip, finder selection, identity particle curves/edit"); window.DiscardChanges(); window.Close(); EditorApplication.Exit(0);
         }
         catch (Exception e) { Debug.LogException(e); window.DiscardChanges(); window.Close(); EditorApplication.Exit(1); }

@@ -24,7 +24,8 @@ namespace NXSG.Core
             "core.constant", "core.parameter", "core.uv0", "core.texture2D", "core.multiply",
             "core.toonSurface", "core.unlitSurface", "core.pbrSurface", "core.fresnel", "core.colorRamp",
             "core.layer", "core.sticker", "core.dissolve", "core.flipbook", "core.uvDistort", "core.vertexMotion",
-            "core.audioLink", "core.shell", "core.normalMap", "core.ltcgi", "core.darknessGlow", "core.previewVector", "core.particleSurface", "core.particleColor", "core.particleInfo", "core.surfaceParticles", "core.output"
+            "core.audioLink", "core.shell", "core.normalMap", "core.ltcgi", "core.darknessGlow", "core.previewVector", "core.particleSurface", "core.particleColor", "core.particleInfo", "core.surfaceParticles", "core.output",
+            "core.volumeSurface", "core.rayPosition", "core.sdfSphere", "core.sdfBox", "core.sdfTorus", "core.sdfBlend"
         };
 
         private static readonly Dictionary<string, string[]> Inputs = new Dictionary<string, string[]>(StringComparer.Ordinal)
@@ -64,7 +65,11 @@ namespace NXSG.Core
             ["core.audioLink"] = new string[0], ["core.shell"] = new[] { "base", "layer", "offset" },
             ["core.normalMap"] = new[] { "color" }, ["core.ltcgi"] = new[] { "albedo", "normal", "roughness", "metallic", "strength" }, ["core.darknessGlow"] = new[] { "color", "strength", "threshold", "softness" },
             ["core.previewVector"] = new[] { "uv", "normal" },
-            ["core.output"] = new[] { "surface" }
+            ["core.output"] = new[] { "surface" },
+            ["core.volumeSurface"] = new[] { "density", "color", "emission", "distance" },
+            ["core.rayPosition"] = new string[0], ["core.sdfSphere"] = new[] { "position", "radius" },
+            ["core.sdfBox"] = new[] { "position", "size" }, ["core.sdfTorus"] = new[] { "position", "radius", "thickness" },
+            ["core.sdfBlend"] = new[] { "a", "b", "smoothing" }
         };
 
         private static readonly Dictionary<string, string[]> Outputs = new Dictionary<string, string[]>(StringComparer.Ordinal)
@@ -101,7 +106,10 @@ namespace NXSG.Core
             ["core.audioLink"] = new[] { "value" }, ["core.shell"] = new[] { "surface" },
             ["core.normalMap"] = new[] { "normal" }, ["core.ltcgi"] = new[] { "color" }, ["core.darknessGlow"] = new[] { "color" },
             ["core.previewVector"] = new[] { "color" },
-            ["core.output"] = new string[0]
+            ["core.output"] = new string[0],
+            ["core.volumeSurface"] = new[] { "surface" }, ["core.rayPosition"] = new[] { "position" },
+            ["core.sdfSphere"] = new[] { "distance" }, ["core.sdfBox"] = new[] { "distance" },
+            ["core.sdfTorus"] = new[] { "distance" }, ["core.sdfBlend"] = new[] { "distance" }
         };
 
         public static IEnumerable<string> All { get { return Operations.Concat(FeatureNodes.All); } }
@@ -135,6 +143,7 @@ namespace NXSG.Core
                 case "core.flipbook": case "core.uvDistort": case "core.vertexMotion": return "Animation";
                 case "core.audioLink": case "core.particleColor": case "core.particleInfo": return "Inputs";
                 case "core.surfaceParticles": case "core.particleSurface": return "Surface";
+                case "core.volumeSurface": case "core.rayPosition": case "core.sdfSphere": case "core.sdfBox": case "core.sdfTorus": case "core.sdfBlend": return "Volumes";
                 default: return "Other";
             }
         }
@@ -200,6 +209,12 @@ namespace NXSG.Core
                 case "core.vertexMotion": return "Vertex Motion"; case "core.audioLink": return "Audio Link";
                 case "core.shell": return "Shell"; case "core.normalMap": return "Normal Map"; case "core.ltcgi": return "LTCGI Lighting"; case "core.darknessGlow": return "Darkness Glow";
                 case "core.output": return "Output";
+                case "core.volumeSurface": return "Volume Surface";
+                case "core.rayPosition": return "Ray Position";
+                case "core.sdfSphere": return "SDF Sphere";
+                case "core.sdfBox": return "SDF Box";
+                case "core.sdfTorus": return "SDF Torus";
+                case "core.sdfBlend": return "SDF Blend";
                 default: return operation;
             }
         }
@@ -302,6 +317,12 @@ namespace NXSG.Core
                 case "core.darknessGlow": return "Emission that fades under bright ambient/main light. Connect Color to Emission. Does not measure additional pixel lights or LTCGI.";
                 case "core.ltcgi": return "Optional LTCGI lighting from an installed LTCGI package and active world controller. Normal input expects a tangent-space vector3. Connect Color to Surface Emission; use Add to combine with existing emission.";
                 case "core.output": return "The final surface of your shader. Connect a Surface or Shell here.";
+                case "core.volumeSurface": return "Ray-marched volume surface with bounded object-space distance-field sampling.";
+                case "core.rayPosition": return "Object-space sample position for signed-distance volume nodes. Use only in a Volume Surface graph.";
+                case "core.sdfSphere": return "Signed distance to a sphere at the current object-space ray position.";
+                case "core.sdfBox": return "Signed distance to an axis-aligned box at the current object-space ray position.";
+                case "core.sdfTorus": return "Signed distance to a torus at the current object-space ray position.";
+                case "core.sdfBlend": return "Combine two signed distances with smooth union, subtraction, or intersection.";
                 default: return string.Empty;
             }
         }
@@ -369,6 +390,12 @@ namespace NXSG.Core
                 case "core.normalMap": return "bump tangent normal";
                 case "core.ltcgi": return "LTCGI area lighting emissive indirect illumination world controller";
                 case "core.texture2D": return "image albedo diffuse";
+                case "core.volumeSurface": return "volume ray march volumetric fog density SDF distance field";
+                case "core.rayPosition": return "ray march sample object position volume";
+                case "core.sdfSphere": return "signed distance sphere SDF volume";
+                case "core.sdfBox": return "signed distance box SDF volume";
+                case "core.sdfTorus": return "signed distance torus SDF volume";
+                case "core.sdfBlend": return "SDF union subtract intersect smooth blend";
                 default: return string.Empty;
             }
         }
@@ -448,6 +475,15 @@ namespace NXSG.Core
                 case "core.darknessGlow": return port == "color" ? "color" : port == "strength" || port == "threshold" || port == "softness" ? "float" : null;
                 case "core.ltcgi": return port == "albedo" ? "color" : port == "normal" ? "vector3" : port == "roughness" || port == "metallic" || port == "strength" ? "float" : port == "color" ? "color" : null;
                 case "core.output": return port == "surface" ? "surface" : null;
+                case "core.volumeSurface":
+                    if (port == "surface") return "surface";
+                    if (port == "color" || port == "emission") return "color";
+                    return port == "density" || port == "distance" ? "float" : null;
+                case "core.rayPosition": return port == "position" ? "vector3" : null;
+                case "core.sdfSphere": return port == "position" ? "vector3" : port == "radius" || port == "distance" ? "float" : null;
+                case "core.sdfBox": return port == "position" || port == "size" ? "vector3" : port == "distance" ? "float" : null;
+                case "core.sdfTorus": return port == "position" ? "vector3" : port == "radius" || port == "thickness" || port == "distance" ? "float" : null;
+                case "core.sdfBlend": return port == "a" || port == "b" || port == "smoothing" || port == "distance" ? "float" : null;
                 default: return null;
             }
         }
@@ -523,10 +559,18 @@ namespace NXSG.Core
                 case "core.uvTile": node.Properties["mode"] = 0; node.Properties["tiling"] = Vector(1,1); node.Properties["offset"] = Vector(0,0); break;
                 case "core.posterize": node.Properties["levels"] = 4.0; break;
                 case "core.uvDistort": node.Properties["strength"] = 0.1; node.Properties["speed"] = 1.0; node.Properties["scale"] = 1.0; break;
+                case "core.volumeSurface":
+                    node.Properties["density"] = 1.0; node.Properties["color"] = new JArray(.4, .2, 1, 1); node.Properties["emission"] = new JArray(0, 0, 0, 1); node.Properties["distance"] = -1.0;
+                    node.Properties["mode"] = 0; node.Properties["steps"] = 32; node.Properties["maxDistance"] = 4.0; node.Properties["bounds"] = Vector3(.5, .5, .5); node.Properties["depthClip"] = 0; break;
+                case "core.sdfSphere": node.Properties["radius"] = .3; break;
+                case "core.sdfBox": node.Properties["size"] = Vector3(.3, .3, .3); break;
+                case "core.sdfTorus": node.Properties["radius"] = .3; node.Properties["thickness"] = .08; break;
+                case "core.sdfBlend": node.Properties["mode"] = 0; node.Properties["smoothing"] = .1; break;
             }
             return node;
         }
         private static JArray Vector(double x, double y) { return new JArray(x, y); }
+        private static JArray Vector3(double x, double y, double z) { return new JArray(x, y, z); }
         private static string TypeName(JToken token) { return token == null ? "color" : token.Value<string>(); }
     }
 }

@@ -169,7 +169,7 @@ namespace NXSG.Core
 
         private static void ValidateCatalogProperties(GraphNode node, string path, List<Diagnostic> diagnostics)
         {
-            string[] numeric = null, vectors = null;
+            string[] numeric = null, vectors = null, vectors3 = null;
             switch (node.Operation)
             {
                 case "core.motionResponse": numeric = new[]{"startSpeed","fullSpeed","curve"}; break;
@@ -237,6 +237,11 @@ namespace NXSG.Core
                 case "core.gradient": numeric = new[] { "angle", "radius" }; vectors = new[] { "center" }; break;
                 case "core.uvTile": vectors = new[] { "tiling", "offset" }; break;
                 case "core.posterize": numeric = new[] { "levels" }; break;
+                case "core.volumeSurface": numeric = new[] { "density", "maxDistance" }; vectors3 = new[] { "bounds" }; break;
+                case "core.sdfSphere": numeric = new[] { "radius" }; break;
+                case "core.sdfBox": vectors3 = new[] { "size" }; break;
+                case "core.sdfTorus": numeric = new[] { "radius", "thickness" }; break;
+                case "core.sdfBlend": numeric = new[] { "smoothing" }; break;
                 default: return;
             }
             if (node.Operation == "core.toonSurface" || node.Operation == "core.unlitSurface" || node.Operation == "core.pbrSurface")
@@ -309,6 +314,27 @@ namespace NXSG.Core
             if(node.Operation=="core.normalMap")CheckIntegerRange(node.Properties["flipGreen"],path+".properties.flipGreen",0,1,diagnostics);
             if (numeric != null) foreach (var name in numeric) CheckNumber(node.Properties[name], path + ".properties." + name, diagnostics);
             if (vectors != null) foreach (var name in vectors) CheckVector2(node.Properties[name], path + ".properties." + name, diagnostics);
+            if (vectors3 != null) foreach (var name in vectors3) CheckVector3(node.Properties[name], path + ".properties." + name, diagnostics);
+            if (node.Operation == "core.volumeSurface")
+            {
+                CheckIntegerRange(node.Properties["mode"], path + ".properties.mode", 0, 1, diagnostics);
+                CheckIntegerRange(node.Properties["steps"], path + ".properties.steps", 8, 128, diagnostics);
+                CheckPositiveRange(node.Properties["maxDistance"], path + ".properties.maxDistance", 100, diagnostics);
+                if (node.Properties["bounds"] is JArray volumeBounds && volumeBounds.Count == 3)
+                    for (int axis = 0; axis < 3; axis++) CheckPositiveRange(volumeBounds[axis], path + ".properties.bounds[" + axis + "]", 100, diagnostics);
+                CheckVector4(node.Properties["color"], path + ".properties.color", diagnostics);
+                CheckVector4(node.Properties["emission"], path + ".properties.emission", diagnostics);
+                CheckIntegerRange(node.Properties["depthClip"], path + ".properties.depthClip", 0, 1, diagnostics);
+                CheckRange(node.Properties["density"], path + ".properties.density", 0, 100, diagnostics);
+            }
+            if (node.Operation == "core.sdfBox" && node.Properties["size"] is JArray boxSize && boxSize.Count == 3)
+                for (int axis=0; axis<3; axis++) CheckPositiveRange(boxSize[axis], path + ".properties.size[" + axis + "]", 100, diagnostics);
+            if (node.Operation == "core.sdfSphere" || node.Operation == "core.sdfTorus")
+            {
+                CheckRange(node.Properties["radius"], path + ".properties.radius", 0, 100, diagnostics);
+            }
+            if (node.Operation == "core.sdfTorus") CheckRange(node.Properties["thickness"], path + ".properties.thickness", 0, 100, diagnostics);
+            if (node.Operation == "core.sdfBlend") CheckIntegerRange(node.Properties["mode"], path + ".properties.mode", 0, 2, diagnostics);
             if (node.Operation == "core.surfaceParticles")
             {
                 CheckRampPoints(node.Properties["sizeCurve"], path + ".properties.sizeCurve", diagnostics);
@@ -427,6 +453,13 @@ namespace NXSG.Core
                 diagnostics.Add(new Diagnostic(DiagnosticSeverity.Error, "node.property.range", path, "Value must be between " + min + " and " + max + "."));
         }
 
+        private static void CheckPositiveRange(JToken token, string path, double maximum, List<Diagnostic> diagnostics)
+        {
+            if (token == null) return;
+            if (!IsNumber(token) || double.IsNaN((double)token) || double.IsInfinity((double)token) || (double)token <= 0 || (double)token > maximum)
+                diagnostics.Add(new Diagnostic(DiagnosticSeverity.Error, "node.property.range", path, "Value must be positive and no greater than " + maximum + "."));
+        }
+
         private static void CheckIntegerRange(JToken token, string path, int minimum, int maximum, List<Diagnostic> diagnostics)
         {
             if (token == null) return;
@@ -460,6 +493,22 @@ namespace NXSG.Core
             if (array == null || array.Count != 2)
             { Add(diagnostics, DiagnosticSeverity.Error, "property.type", path, "Property must be a two-number vector."); return; }
             CheckNumber(array[0], path + "[0]", diagnostics); CheckNumber(array[1], path + "[1]", diagnostics);
+        }
+
+        private static void CheckVector4(JToken token, string path, List<Diagnostic> diagnostics)
+        {
+            if (token == null) return;
+            if (!(token is JArray array) || array.Count != 4) { Add(diagnostics, DiagnosticSeverity.Error, "property.type", path, "Property must be a four-number color."); return; }
+            for (int i=0; i<4; i++) CheckNumber(array[i], path + "[" + i + "]", diagnostics);
+        }
+
+        private static void CheckVector3(JToken token, string path, List<Diagnostic> diagnostics)
+        {
+            if (token == null) return;
+            var array = token as JArray;
+            if (array == null || array.Count != 3)
+            { Add(diagnostics, DiagnosticSeverity.Error, "property.type", path, "Property must be a three-number vector."); return; }
+            CheckNumber(array[0], path + "[0]", diagnostics); CheckNumber(array[1], path + "[1]", diagnostics); CheckNumber(array[2], path + "[2]", diagnostics);
         }
 
         private static void ValidateParameters(List<GraphParameter> parameters, List<Diagnostic> diagnostics,
@@ -629,6 +678,7 @@ namespace NXSG.Core
                         "Connection socket types are incompatible.");
                 }
             }
+
         }
 
         private static bool IsPortDefined(GraphNode node, string port, bool input)

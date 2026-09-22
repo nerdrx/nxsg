@@ -23,6 +23,9 @@ namespace NXSG.Editor
             Add(scroll, "Showcase Hologram", "Hologram", "Animated scanlines above a dark base. No external textures needed.");
             Add(scroll, "Audio Hologram", "Music", "Bass drives glow and opacity. Enable Preview AudioLink in the graph inspector to try it without music.");
             Add(scroll, "Surface Sparkles", "Particles", "Particles emitted by the mesh wearing the material. Explore edge sharpness and lifetime controls.");
+            Add(scroll, "Volume Nebula", "Raymarching", "Animated 4D noise fills a glowing nebula. Apply to a Unity Cube with its default mesh; 128 steps per pixel; lower Steps for everyday use.");
+            Add(scroll, "Volume Carved Orb", "Raymarching", "SDF shapes carve a lit solid orb. Closed cube proxy, no external textures.");
+            Add(scroll, "Volume Smoke Ring", "Raymarching", "A torus filled with procedural smoke. Open the graph to edit density and colors.");
             Add(scroll, "Particle Lifetime", "Lifetime & random", "Particle Info drives a color ramp over each particle's life. Random varies particle size.");
         }
 
