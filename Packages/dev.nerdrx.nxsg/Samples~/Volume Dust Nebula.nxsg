@@ -1,0 +1,456 @@
+{
+  "format": "nxsg",
+  "schemaVersion": 1,
+  "graphId": "volume-dust-nebula",
+  "nodes": [
+    {
+      "id": "ray",
+      "operation": "core.rayPosition",
+      "version": 1,
+      "properties": {}
+    },
+    {
+      "id": "cloud",
+      "operation": "core.musgrave",
+      "version": 1,
+      "properties": {
+        "dimensions": 3,
+        "scale": 5,
+        "octaves": 6,
+        "lacunarity": 2.1,
+        "gain": 0.55,
+        "mode": 0,
+        "speed": 0.07
+      }
+    },
+    {
+      "id": "mask",
+      "operation": "core.ramp",
+      "version": 1,
+      "properties": {
+        "blackPoint": 0.58,
+        "whitePoint": 0.74
+      }
+    },
+    {
+      "id": "fine",
+      "operation": "core.musgrave",
+      "version": 1,
+      "properties": {
+        "dimensions": 3,
+        "scale": 22,
+        "octaves": 3,
+        "lacunarity": 2,
+        "gain": 0.55,
+        "mode": 1,
+        "speed": 0.035
+      }
+    },
+    {
+      "id": "filaments",
+      "operation": "core.ramp",
+      "version": 1,
+      "properties": {
+        "blackPoint": 0.54,
+        "whitePoint": 0.74
+      }
+    },
+    {
+      "id": "shreds",
+      "operation": "core.multiply",
+      "version": 1,
+      "properties": {}
+    },
+    {
+      "id": "sphere",
+      "operation": "core.sdfSphere",
+      "version": 1,
+      "properties": {
+        "radius": 0.44
+      }
+    },
+    {
+      "id": "fade",
+      "operation": "core.remap",
+      "version": 1,
+      "properties": {
+        "inMin": -0.18,
+        "inMax": 0,
+        "outMin": 1,
+        "outMax": 0
+      }
+    },
+    {
+      "id": "clamp",
+      "operation": "core.clamp",
+      "version": 1,
+      "properties": {}
+    },
+    {
+      "id": "edge",
+      "operation": "core.multiply",
+      "version": 1,
+      "properties": {}
+    },
+    {
+      "id": "amount",
+      "operation": "core.value",
+      "version": 1,
+      "properties": {
+        "value": 50
+      }
+    },
+    {
+      "id": "density",
+      "operation": "core.multiply",
+      "version": 1,
+      "properties": {}
+    },
+    {
+      "id": "palette",
+      "operation": "core.colorRamp",
+      "version": 1,
+      "properties": {
+        "stops": [
+          [
+            0,
+            0.008,
+            0.001,
+            0.025,
+            1
+          ],
+          [
+            0.58,
+            0.025,
+            0.003,
+            0.1,
+            1
+          ],
+          [
+            0.65,
+            0.15,
+            0.015,
+            0.28,
+            1
+          ],
+          [
+            0.72,
+            0.55,
+            0.12,
+            0.1,
+            1
+          ],
+          [
+            0.8,
+            0.8,
+            0.42,
+            0.2,
+            1
+          ],
+          [
+            1,
+            1,
+            0.85,
+            0.6,
+            1
+          ]
+        ]
+      }
+    },
+    {
+      "id": "volume",
+      "operation": "core.volumeSurface",
+      "version": 1,
+      "properties": {
+        "mode": 0,
+        "steps": 128,
+        "bounds": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "maxDistance": 4,
+        "depthClip": 0,
+        "emission": [
+          0,
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "id": "output",
+      "operation": "core.output",
+      "version": 1,
+      "properties": {}
+    }
+  ],
+  "connections": [
+    {
+      "id": "ray-cloud-position",
+      "from": {
+        "nodeId": "ray",
+        "portId": "position"
+      },
+      "to": {
+        "nodeId": "cloud",
+        "portId": "position"
+      }
+    },
+    {
+      "id": "cloud-mask-value",
+      "from": {
+        "nodeId": "cloud",
+        "portId": "value"
+      },
+      "to": {
+        "nodeId": "mask",
+        "portId": "value"
+      }
+    },
+    {
+      "id": "ray-fine-position",
+      "from": {
+        "nodeId": "ray",
+        "portId": "position"
+      },
+      "to": {
+        "nodeId": "fine",
+        "portId": "position"
+      }
+    },
+    {
+      "id": "fine-filaments-value",
+      "from": {
+        "nodeId": "fine",
+        "portId": "value"
+      },
+      "to": {
+        "nodeId": "filaments",
+        "portId": "value"
+      }
+    },
+    {
+      "id": "mask-shreds-a",
+      "from": {
+        "nodeId": "mask",
+        "portId": "value"
+      },
+      "to": {
+        "nodeId": "shreds",
+        "portId": "a"
+      }
+    },
+    {
+      "id": "filaments-shreds-b",
+      "from": {
+        "nodeId": "filaments",
+        "portId": "value"
+      },
+      "to": {
+        "nodeId": "shreds",
+        "portId": "b"
+      }
+    },
+    {
+      "id": "ray-sphere-position",
+      "from": {
+        "nodeId": "ray",
+        "portId": "position"
+      },
+      "to": {
+        "nodeId": "sphere",
+        "portId": "position"
+      }
+    },
+    {
+      "id": "sphere-fade-value",
+      "from": {
+        "nodeId": "sphere",
+        "portId": "distance"
+      },
+      "to": {
+        "nodeId": "fade",
+        "portId": "value"
+      }
+    },
+    {
+      "id": "fade-clamp-color",
+      "from": {
+        "nodeId": "fade",
+        "portId": "value"
+      },
+      "to": {
+        "nodeId": "clamp",
+        "portId": "color"
+      }
+    },
+    {
+      "id": "clamp-edge-a",
+      "from": {
+        "nodeId": "clamp",
+        "portId": "color"
+      },
+      "to": {
+        "nodeId": "edge",
+        "portId": "a"
+      }
+    },
+    {
+      "id": "shreds-edge-b",
+      "from": {
+        "nodeId": "shreds",
+        "portId": "value"
+      },
+      "to": {
+        "nodeId": "edge",
+        "portId": "b"
+      }
+    },
+    {
+      "id": "edge-density-a",
+      "from": {
+        "nodeId": "edge",
+        "portId": "value"
+      },
+      "to": {
+        "nodeId": "density",
+        "portId": "a"
+      }
+    },
+    {
+      "id": "amount-density-b",
+      "from": {
+        "nodeId": "amount",
+        "portId": "value"
+      },
+      "to": {
+        "nodeId": "density",
+        "portId": "b"
+      }
+    },
+    {
+      "id": "cloud-palette-value",
+      "from": {
+        "nodeId": "cloud",
+        "portId": "value"
+      },
+      "to": {
+        "nodeId": "palette",
+        "portId": "value"
+      }
+    },
+    {
+      "id": "density-volume-density",
+      "from": {
+        "nodeId": "density",
+        "portId": "value"
+      },
+      "to": {
+        "nodeId": "volume",
+        "portId": "density"
+      }
+    },
+    {
+      "id": "palette-volume-color",
+      "from": {
+        "nodeId": "palette",
+        "portId": "color"
+      },
+      "to": {
+        "nodeId": "volume",
+        "portId": "color"
+      }
+    },
+    {
+      "id": "sphere-volume-distance",
+      "from": {
+        "nodeId": "sphere",
+        "portId": "distance"
+      },
+      "to": {
+        "nodeId": "volume",
+        "portId": "distance"
+      }
+    },
+    {
+      "id": "volume-output-surface",
+      "from": {
+        "nodeId": "volume",
+        "portId": "surface"
+      },
+      "to": {
+        "nodeId": "output",
+        "portId": "surface"
+      }
+    }
+  ],
+  "parameters": [],
+  "resources": [],
+  "patterns": [],
+  "layout": {
+    "nodes": {
+      "ray": {
+        "x": 0,
+        "y": 0
+      },
+      "cloud": {
+        "x": 240,
+        "y": 0
+      },
+      "mask": {
+        "x": 480,
+        "y": 0
+      },
+      "fine": {
+        "x": 240,
+        "y": 180
+      },
+      "filaments": {
+        "x": 480,
+        "y": 180
+      },
+      "shreds": {
+        "x": 720,
+        "y": 0
+      },
+      "sphere": {
+        "x": 240,
+        "y": 360
+      },
+      "fade": {
+        "x": 480,
+        "y": 360
+      },
+      "clamp": {
+        "x": 720,
+        "y": 180
+      },
+      "edge": {
+        "x": 960,
+        "y": 0
+      },
+      "amount": {
+        "x": 0,
+        "y": 180
+      },
+      "density": {
+        "x": 1200,
+        "y": 0
+      },
+      "palette": {
+        "x": 480,
+        "y": 540
+      },
+      "volume": {
+        "x": 1440,
+        "y": 0
+      },
+      "output": {
+        "x": 1680,
+        "y": 0
+      }
+    }
+  }
+}

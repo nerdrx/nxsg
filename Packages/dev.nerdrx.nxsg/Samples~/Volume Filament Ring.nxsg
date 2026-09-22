@@ -1,0 +1,352 @@
+{
+  "format": "nxsg",
+  "schemaVersion": 1,
+  "graphId": "volume-filament-ring",
+  "nodes": [
+    {
+      "id": "ray",
+      "operation": "core.rayPosition",
+      "version": 1,
+      "properties": {}
+    },
+    {
+      "id": "ring",
+      "operation": "core.sdfTorus",
+      "version": 1,
+      "properties": {
+        "radius": 0.32,
+        "thickness": 0.1
+      }
+    },
+    {
+      "id": "musgrave",
+      "operation": "core.musgrave",
+      "version": 1,
+      "properties": {
+        "dimensions": 3,
+        "coordinateSource": "object",
+        "coordinateSpace": "object",
+        "scale": 18,
+        "speed": 0,
+        "octaves": 4,
+        "lacunarity": 2,
+        "gain": 0.55,
+        "mode": 1
+      }
+    },
+    {
+      "id": "waves",
+      "operation": "core.wave",
+      "version": 1,
+      "properties": {
+        "dimensions": 3,
+        "coordinateSource": "object",
+        "coordinateSpace": "object",
+        "scale": 24,
+        "speed": 0,
+        "mode": 0,
+        "axis": 1
+      }
+    },
+    {
+      "id": "filamentMix",
+      "operation": "core.multiply",
+      "version": 1,
+      "properties": {
+        "valueType": "float"
+      }
+    },
+    {
+      "id": "filamentRamp",
+      "operation": "core.ramp",
+      "version": 1,
+      "properties": {
+        "blackPoint": 0.45,
+        "whitePoint": 0.8
+      }
+    },
+    {
+      "id": "densityGain",
+      "operation": "core.multiply",
+      "version": 1,
+      "properties": {}
+    },
+    {
+      "id": "gain",
+      "operation": "core.constant",
+      "version": 1,
+      "properties": {
+        "valueType": "float",
+        "value": 30
+      }
+    },
+    {
+      "id": "colors",
+      "operation": "core.colorRamp",
+      "version": 1,
+      "properties": {
+        "stops": [
+          [
+            0,
+            0.008,
+            0.003,
+            0.001,
+            1
+          ],
+          [
+            0.45,
+            0.12,
+            0.028,
+            0.004,
+            1
+          ],
+          [
+            0.72,
+            0.58,
+            0.19,
+            0.018,
+            1
+          ],
+          [
+            1,
+            1,
+            0.78,
+            0.34,
+            1
+          ]
+        ]
+      }
+    },
+    {
+      "id": "volume",
+      "operation": "core.volumeSurface",
+      "version": 1,
+      "properties": {
+        "density": 1,
+        "color": [
+          0.55,
+          0.18,
+          0.02,
+          1
+        ],
+        "emission": [
+          0.4,
+          0.045,
+          0.004,
+          1
+        ],
+        "distance": -1,
+        "steps": 128,
+        "maxDistance": 4,
+        "bounds": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "depthClip": 0
+      }
+    },
+    {
+      "id": "output",
+      "operation": "core.output",
+      "version": 1,
+      "properties": {}
+    }
+  ],
+  "connections": [
+    {
+      "id": "ray-ring",
+      "from": {
+        "nodeId": "ray",
+        "portId": "position"
+      },
+      "to": {
+        "nodeId": "ring",
+        "portId": "position"
+      }
+    },
+    {
+      "id": "ray-musgrave",
+      "from": {
+        "nodeId": "ray",
+        "portId": "position"
+      },
+      "to": {
+        "nodeId": "musgrave",
+        "portId": "position"
+      }
+    },
+    {
+      "id": "ray-waves",
+      "from": {
+        "nodeId": "ray",
+        "portId": "position"
+      },
+      "to": {
+        "nodeId": "waves",
+        "portId": "position"
+      }
+    },
+    {
+      "id": "musgrave-filamentMix",
+      "from": {
+        "nodeId": "musgrave",
+        "portId": "value"
+      },
+      "to": {
+        "nodeId": "filamentMix",
+        "portId": "a"
+      }
+    },
+    {
+      "id": "waves-filamentMix",
+      "from": {
+        "nodeId": "waves",
+        "portId": "value"
+      },
+      "to": {
+        "nodeId": "filamentMix",
+        "portId": "b"
+      }
+    },
+    {
+      "id": "filamentMix-ramp",
+      "from": {
+        "nodeId": "filamentMix",
+        "portId": "value"
+      },
+      "to": {
+        "nodeId": "filamentRamp",
+        "portId": "value"
+      }
+    },
+    {
+      "id": "ramp-densityGain",
+      "from": {
+        "nodeId": "filamentRamp",
+        "portId": "value"
+      },
+      "to": {
+        "nodeId": "densityGain",
+        "portId": "a"
+      }
+    },
+    {
+      "id": "gain-densityGain",
+      "from": {
+        "nodeId": "gain",
+        "portId": "value"
+      },
+      "to": {
+        "nodeId": "densityGain",
+        "portId": "b"
+      }
+    },
+    {
+      "id": "densityGain-volume",
+      "from": {
+        "nodeId": "densityGain",
+        "portId": "value"
+      },
+      "to": {
+        "nodeId": "volume",
+        "portId": "density"
+      }
+    },
+    {
+      "id": "filamentRamp-colors",
+      "from": {
+        "nodeId": "filamentRamp",
+        "portId": "value"
+      },
+      "to": {
+        "nodeId": "colors",
+        "portId": "value"
+      }
+    },
+    {
+      "id": "colors-volumeColor",
+      "from": {
+        "nodeId": "colors",
+        "portId": "color"
+      },
+      "to": {
+        "nodeId": "volume",
+        "portId": "color"
+      }
+    },
+    {
+      "id": "ring-volumeDistance",
+      "from": {
+        "nodeId": "ring",
+        "portId": "distance"
+      },
+      "to": {
+        "nodeId": "volume",
+        "portId": "distance"
+      }
+    },
+    {
+      "id": "volume-output",
+      "from": {
+        "nodeId": "volume",
+        "portId": "surface"
+      },
+      "to": {
+        "nodeId": "output",
+        "portId": "surface"
+      }
+    }
+  ],
+  "parameters": [],
+  "resources": [],
+  "patterns": [],
+  "layout": {
+    "nodes": {
+      "ray": {
+        "x": 0,
+        "y": 140
+      },
+      "ring": {
+        "x": 260,
+        "y": 20
+      },
+      "musgrave": {
+        "x": 260,
+        "y": 180
+      },
+      "waves": {
+        "x": 260,
+        "y": 340
+      },
+      "filamentMix": {
+        "x": 520,
+        "y": 220
+      },
+      "filamentRamp": {
+        "x": 760,
+        "y": 220
+      },
+      "densityGain": {
+        "x": 1000,
+        "y": 180
+      },
+      "gain": {
+        "x": 760,
+        "y": 400
+      },
+      "colors": {
+        "x": 1000,
+        "y": 360
+      },
+      "volume": {
+        "x": 1260,
+        "y": 180
+      },
+      "output": {
+        "x": 1510,
+        "y": 180
+      }
+    }
+  }
+}

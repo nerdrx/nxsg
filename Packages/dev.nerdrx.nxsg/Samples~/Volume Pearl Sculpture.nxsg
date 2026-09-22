@@ -1,0 +1,510 @@
+{
+  "format": "nxsg",
+  "schemaVersion": 1,
+  "graphId": "volume-pearl-sculpture",
+  "nodes": [
+    {
+      "id": "ray",
+      "operation": "core.rayPosition",
+      "version": 1,
+      "properties": {}
+    },
+    {
+      "id": "pearl",
+      "operation": "core.sdfSphere",
+      "version": 1,
+      "properties": {
+        "radius": 0.42
+      }
+    },
+    {
+      "id": "cut",
+      "operation": "core.sdfBlend",
+      "version": 1,
+      "properties": {
+        "mode": 1,
+        "smoothing": 0.028
+      }
+    },
+    {
+      "id": "density",
+      "operation": "core.constant",
+      "version": 1,
+      "properties": {
+        "valueType": "float",
+        "value": 9
+      }
+    },
+    {
+      "id": "emission",
+      "operation": "core.constant",
+      "version": 1,
+      "properties": {
+        "valueType": "color",
+        "value": [
+          0.004,
+          0.003,
+          0.002,
+          1
+        ]
+      }
+    },
+    {
+      "id": "volume",
+      "operation": "core.volumeSurface",
+      "version": 1,
+      "properties": {
+        "density": 9,
+        "color": [
+          0.78,
+          0.72,
+          0.62,
+          1
+        ],
+        "emission": [
+          0.004,
+          0.003,
+          0.002,
+          1
+        ],
+        "distance": -1,
+        "steps": 128,
+        "maxDistance": 4,
+        "bounds": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "depthClip": 0,
+        "mode": 1
+      }
+    },
+    {
+      "id": "output",
+      "operation": "core.output",
+      "version": 1,
+      "properties": {}
+    },
+    {
+      "id": "inner",
+      "operation": "core.sdfSphere",
+      "version": 1,
+      "properties": {
+        "radius": 0.34
+      }
+    },
+    {
+      "id": "window0",
+      "operation": "core.sdfBox",
+      "version": 1,
+      "properties": {
+        "size": [
+          0.2,
+          0.65,
+          0.2
+        ]
+      }
+    },
+    {
+      "id": "carve0",
+      "operation": "core.sdfBlend",
+      "version": 1,
+      "properties": {
+        "mode": 1,
+        "smoothing": 0.018
+      }
+    },
+    {
+      "id": "window1",
+      "operation": "core.sdfBox",
+      "version": 1,
+      "properties": {
+        "size": [
+          0.2,
+          0.2,
+          0.65
+        ]
+      }
+    },
+    {
+      "id": "carve1",
+      "operation": "core.sdfBlend",
+      "version": 1,
+      "properties": {
+        "mode": 1,
+        "smoothing": 0.018
+      }
+    },
+    {
+      "id": "window2",
+      "operation": "core.sdfBox",
+      "version": 1,
+      "properties": {
+        "size": [
+          0.65,
+          0.2,
+          0.2
+        ]
+      }
+    },
+    {
+      "id": "carve2",
+      "operation": "core.sdfBlend",
+      "version": 1,
+      "properties": {
+        "mode": 1,
+        "smoothing": 0.018
+      }
+    },
+    {
+      "id": "grain",
+      "operation": "core.wave",
+      "version": 1,
+      "properties": {
+        "dimensions": 3,
+        "scale": 60,
+        "speed": 0,
+        "mode": 0,
+        "axis": 1
+      }
+    },
+    {
+      "id": "marble",
+      "operation": "core.colorRamp",
+      "version": 1,
+      "properties": {
+        "stops": [
+          [
+            0,
+            0.72,
+            0.69,
+            0.62,
+            1
+          ],
+          [
+            0.8,
+            0.72,
+            0.69,
+            0.62,
+            1
+          ],
+          [
+            0.85,
+            0.19,
+            0.08,
+            0.018,
+            1
+          ],
+          [
+            0.98,
+            0.35,
+            0.16,
+            0.045,
+            1
+          ],
+          [
+            1,
+            0.72,
+            0.69,
+            0.62,
+            1
+          ]
+        ]
+      }
+    }
+  ],
+  "connections": [
+    {
+      "id": "ray-pearl-position",
+      "from": {
+        "nodeId": "ray",
+        "portId": "position"
+      },
+      "to": {
+        "nodeId": "pearl",
+        "portId": "position"
+      }
+    },
+    {
+      "id": "density-volume",
+      "from": {
+        "nodeId": "density",
+        "portId": "value"
+      },
+      "to": {
+        "nodeId": "volume",
+        "portId": "density"
+      }
+    },
+    {
+      "id": "emission-volume",
+      "from": {
+        "nodeId": "emission",
+        "portId": "value"
+      },
+      "to": {
+        "nodeId": "volume",
+        "portId": "emission"
+      }
+    },
+    {
+      "id": "volume-output",
+      "from": {
+        "nodeId": "volume",
+        "portId": "surface"
+      },
+      "to": {
+        "nodeId": "output",
+        "portId": "surface"
+      }
+    },
+    {
+      "id": "ray-inner-position",
+      "from": {
+        "nodeId": "ray",
+        "portId": "position"
+      },
+      "to": {
+        "nodeId": "inner",
+        "portId": "position"
+      }
+    },
+    {
+      "id": "pearl-cut-a",
+      "from": {
+        "nodeId": "pearl",
+        "portId": "distance"
+      },
+      "to": {
+        "nodeId": "cut",
+        "portId": "a"
+      }
+    },
+    {
+      "id": "inner-cut-b",
+      "from": {
+        "nodeId": "inner",
+        "portId": "distance"
+      },
+      "to": {
+        "nodeId": "cut",
+        "portId": "b"
+      }
+    },
+    {
+      "id": "ray-window0-position",
+      "from": {
+        "nodeId": "ray",
+        "portId": "position"
+      },
+      "to": {
+        "nodeId": "window0",
+        "portId": "position"
+      }
+    },
+    {
+      "id": "cut-carve0-a",
+      "from": {
+        "nodeId": "cut",
+        "portId": "distance"
+      },
+      "to": {
+        "nodeId": "carve0",
+        "portId": "a"
+      }
+    },
+    {
+      "id": "window0-carve0-b",
+      "from": {
+        "nodeId": "window0",
+        "portId": "distance"
+      },
+      "to": {
+        "nodeId": "carve0",
+        "portId": "b"
+      }
+    },
+    {
+      "id": "ray-window1-position",
+      "from": {
+        "nodeId": "ray",
+        "portId": "position"
+      },
+      "to": {
+        "nodeId": "window1",
+        "portId": "position"
+      }
+    },
+    {
+      "id": "carve0-carve1-a",
+      "from": {
+        "nodeId": "carve0",
+        "portId": "distance"
+      },
+      "to": {
+        "nodeId": "carve1",
+        "portId": "a"
+      }
+    },
+    {
+      "id": "window1-carve1-b",
+      "from": {
+        "nodeId": "window1",
+        "portId": "distance"
+      },
+      "to": {
+        "nodeId": "carve1",
+        "portId": "b"
+      }
+    },
+    {
+      "id": "ray-window2-position",
+      "from": {
+        "nodeId": "ray",
+        "portId": "position"
+      },
+      "to": {
+        "nodeId": "window2",
+        "portId": "position"
+      }
+    },
+    {
+      "id": "carve1-carve2-a",
+      "from": {
+        "nodeId": "carve1",
+        "portId": "distance"
+      },
+      "to": {
+        "nodeId": "carve2",
+        "portId": "a"
+      }
+    },
+    {
+      "id": "window2-carve2-b",
+      "from": {
+        "nodeId": "window2",
+        "portId": "distance"
+      },
+      "to": {
+        "nodeId": "carve2",
+        "portId": "b"
+      }
+    },
+    {
+      "id": "carve2-volume-distance",
+      "from": {
+        "nodeId": "carve2",
+        "portId": "distance"
+      },
+      "to": {
+        "nodeId": "volume",
+        "portId": "distance"
+      }
+    },
+    {
+      "id": "ray-grain-position",
+      "from": {
+        "nodeId": "ray",
+        "portId": "position"
+      },
+      "to": {
+        "nodeId": "grain",
+        "portId": "position"
+      }
+    },
+    {
+      "id": "grain-marble-value",
+      "from": {
+        "nodeId": "grain",
+        "portId": "value"
+      },
+      "to": {
+        "nodeId": "marble",
+        "portId": "value"
+      }
+    },
+    {
+      "id": "marble-volume-color",
+      "from": {
+        "nodeId": "marble",
+        "portId": "color"
+      },
+      "to": {
+        "nodeId": "volume",
+        "portId": "color"
+      }
+    }
+  ],
+  "parameters": [],
+  "resources": [],
+  "patterns": [],
+  "layout": {
+    "nodes": {
+      "ray": {
+        "x": 0,
+        "y": 0
+      },
+      "pearl": {
+        "x": 240,
+        "y": 0
+      },
+      "cut": {
+        "x": 480,
+        "y": 0
+      },
+      "density": {
+        "x": 0,
+        "y": 190
+      },
+      "emission": {
+        "x": 0,
+        "y": 380
+      },
+      "volume": {
+        "x": 1440,
+        "y": 0
+      },
+      "output": {
+        "x": 1680,
+        "y": 0
+      },
+      "inner": {
+        "x": 240,
+        "y": 190
+      },
+      "window0": {
+        "x": 240,
+        "y": 380
+      },
+      "carve0": {
+        "x": 720,
+        "y": 0
+      },
+      "window1": {
+        "x": 240,
+        "y": 570
+      },
+      "carve1": {
+        "x": 960,
+        "y": 0
+      },
+      "window2": {
+        "x": 240,
+        "y": 760
+      },
+      "carve2": {
+        "x": 1200,
+        "y": 0
+      },
+      "grain": {
+        "x": 240,
+        "y": 950
+      },
+      "marble": {
+        "x": 480,
+        "y": 190
+      }
+    },
+    "groups": []
+  }
+}

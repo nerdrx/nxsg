@@ -10,6 +10,18 @@ These are direct 1024 × 1024 Unity 2022.3 renders of the included graphs at pre
 | --- | --- | --- |
 | ![Nebula](images/volume-nebula.png) | ![Carved solid](images/volume-carved-orb.png) | ![Smoke ring](images/volume-smoke-ring.png) |
 
+## Studio studies
+
+Three additional editable graphs explore a hollow, gold-banded sculpture, violet-and-amber dust, and layered torus filaments. These 1600 × 1100 Unity renders use the NXSG backend with presentation bloom and tone mapping. The sculpture has a directional light. The graph defines the effect; camera framing and post-processing belong to the showcase scene.
+
+![Pearl sculpture with six openings and gold bands](images/volume-pearl-sculpture.png)
+
+| Dust nebula | Filament ring |
+| --- | --- |
+| ![Violet and amber dust](images/volume-dust-nebula.png) | ![Layered warm ring](images/volume-filament-ring.png) |
+
+The source examples are **Volume Pearl Sculpture**, **Volume Dust Nebula**, and **Volume Filament Ring** in `Packages/dev.nerdrx.nxsg/Samples~`. They are also registered in the source checkout's Example Gallery. These studies were added after alpha.26; that release does not contain them.
+
 ## Try the examples
 
 Open **Window → NXSG → Example Gallery**, then choose **Volume Nebula**, **Volume Carved Orb**, or **Volume Smoke Ring**. Build the graph and apply its material to a Unity **Cube**. The default cube extends from -0.5 to +0.5 on each local axis, matching the default box half extents. Object scaling moves/scales the volume.
@@ -29,7 +41,7 @@ The examples use 128 steps for detail. Start with 32 steps on an avatar, then ra
 | SDF Torus | Ring radius and tube thickness define a torus around local Y. |
 | SDF Blend | Union, subtract B from A, or intersection; Smoothing rounds the join. |
 
-Signed distance is negative inside a shape and positive outside. Leaving Distance disconnected fills the whole box. Subtract a vector from Ray Position to move a shape; scale the position to stretch it. Changes to the distance scale also affect smoothing widths.
+Signed distance is negative inside a shape and positive outside. Leaving Distance disconnected fills the whole box. These primitives are centered at the local origin. Scale or rotate the proxy object to transform the whole effect. The current general math nodes do not provide arbitrary vector transforms for individual SDF shapes.
 
 For smoke, connect **Ray Position → Noise Position**, choose **3D or 4D**, then connect Noise Value through a Ramp/Multiply into Density. Time and AudioLink can drive noise, colors and density. Noise 4D evolves through time; the existing Time node can override it. Mesh UV textures remain mesh-surface samples unless you explicitly construct sample coordinates from Ray Position. Texture sampling inside the volume uses mip level zero.
 
