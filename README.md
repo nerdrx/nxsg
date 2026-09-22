@@ -33,6 +33,14 @@ The editor takes cues from Blender: colored sockets, wires you can drag from eit
 
 Real Unity renders from the included example graphs. The fur study uses **24 shells**—it's a look to experiment with, not a performance recommendation. [Watch the hologram move](https://nerdrx.github.io/nxsg/#material-studies).
 
+## Shapes made in the shader
+
+A hollow pearl-and-gold sculpture, violet dust, and a burning ring—built with Volume Surface, procedural noise and distance fields.
+
+[![Three-dimensional pearl sculpture with gold bands](docs/images/volume-pearl-sculpture.png)](https://nerdrx.github.io/nxsg/#raymarching)
+
+[See all three studies and get the graphs](docs/VOLUMES.md). These are Unity renders with presentation bloom and tone mapping. Raymarching nodes ship in alpha.26; these newer study graphs are available in source, not in alpha.26. Use a closed cube proxy. This is an experimental PC effect with a per-pixel cost.
+
 ## Made for experimenting
 
 | Make | Start with |
@@ -44,7 +52,7 @@ Real Unity renders from the included example graphs. The fur study uses **24 she
 | **Patterns you can reshape** | 1D–4D noise, Voronoi, Musgrave-style fractals, waves, ramps, distortion, texture bombing, Polar and Panosphere coordinates. |
 | **A material that moves** | UV scrolling, flipbooks, dissolve, vertex animation, AudioLink inputs and shader-driven particles emitted from the mesh. |
 
-The [node guide](docs/NODES.md) covers **143 nodes**, their inputs and their controls. A **Fur Cards** example is included alongside the other sample graphs.
+The [node guide](docs/NODES.md) covers the nodes, their inputs and their controls. A **Fur Cards** example is included alongside the other sample graphs.
 
 ### A graph you can work in
 

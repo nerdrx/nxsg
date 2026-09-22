@@ -37,3 +37,11 @@ Open **Window → NXSG → Example Gallery**, or **Examples** in the graph toolb
 ## Raymarching examples
 
 Volume Nebula, Volume Carved Orb and Volume Smoke Ring use a closed default Unity Cube as their proxy. Open the Example Gallery to create editable copies. They use 128 steps for detail; lower Steps for everyday use. See the repository volume guide for setup and limits.
+
+## Raymarching studies (source additions after alpha.26)
+
+- **Volume Pearl Sculpture** — a hollow sphere with six openings and gold bands. Needs a directional light.
+- **Volume Dust Nebula** — violet and amber dust from layered 3D noise.
+- **Volume Filament Ring** — glowing procedural detail inside a torus.
+
+Apply these to a closed Unity Cube. They use 128 steps for detail; reduce quality and screen coverage for practical use. The [rendered gallery](https://nerdrx.github.io/nxsg/#raymarching) uses presentation bloom and tone mapping. See the [volume guide](https://github.com/nerdrx/nxsg/blob/main/docs/VOLUMES.md) for limits.
