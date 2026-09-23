@@ -1,4 +1,4 @@
-# Editor UI pass — alpha.29
+# Editor UI pass — alpha.30
 
 Reviewed the actual Unity 2022.3.22f1 Linux editor using compositor captures in headless Gamescope. Focus: dense particle controls, the minimum window size, node labels, and the connected-node picker.
 

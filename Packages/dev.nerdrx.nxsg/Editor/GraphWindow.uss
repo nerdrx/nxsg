@@ -23,7 +23,7 @@
 .nxsg-window .unity-button:hover, .nxsg-window .unity-toolbar-menu:hover, .nxsg-window .unity-toolbar-toggle:hover { background-color: rgb(63,68,76); }
 .nxsg-window .unity-button:focus { border-color: rgb(181,141,255); }
 .nxsg-window .unity-toolbar-toggle:checked { background-color: rgb(66,49,92); color: rgb(231,216,255); }
-#nxsg-build { background-color: rgb(119,0,255); color: white; padding-left: 14px; padding-right: 14px; }
+#nxsg-build { -unity-text-align: middle-center; padding-top: 0; padding-bottom: 0; height: 28px; background-color: rgb(119,0,255); color: white; padding-left: 14px; padding-right: 14px; }
 #nxsg-build:hover { background-color: rgb(142,51,255); }
 #nxsg-identity { background-color: rgb(39,42,46); color: rgb(215,219,226); }
 #nxsg-scene-status { background-color: rgb(39,42,46); font-size: 11px; }
@@ -47,3 +47,21 @@
 .nxsg-brand { color: rgb(190,146,255); -unity-font-style: bold; -unity-text-align: middle-center; padding-left: 7px; padding-right: 12px; }
 #nxsg-sidebar .nxsg-tab-selected { background-color: rgba(0,0,0,0); }
 #nxsg-sidebar .unity-scroller .unity-base-slider__dragger { background-color: rgb(91,97,109); }
+
+/* Native toolbar styles keep top padding when their height changes. Reset it
+   for all button families so labels share a centered baseline. */
+.nxsg-window .unity-button, .nxsg-window .unity-toolbar-button,
+.nxsg-window .unity-toolbar-menu, .nxsg-window .unity-toolbar-toggle {
+    -unity-text-align: middle-center;
+    padding-top: 0;
+    padding-bottom: 0;
+    justify-content: center;
+    align-items: center;
+}
+.nxsg-window .unity-toolbar-menu .unity-toolbar-menu__text,
+.nxsg-window .unity-toolbar-toggle .unity-toggle__text {
+    -unity-text-align: middle-center;
+    padding-top: 0;
+    padding-bottom: 0;
+    align-self: center;
+}
