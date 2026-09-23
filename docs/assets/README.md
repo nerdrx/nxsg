@@ -1,6 +1,6 @@
 # NXSG repository artwork
 
-[`nxsg-banner.svg`](nxsg-banner.svg) is the editable, self-contained repository banner. Its graph is a simplified vector illustration of the implemented custom Unity canvas, not a screenshot. The 2026-09-19 revision uses the node/header and socket colors from `GraphWindow.cs`, actual Toon Surface ports from `NodeCatalog.cs`, curved wires, and the selected-node outline. It uses ordinary system typography and contains no scripts, external images, webfonts, or animation.
+[`nxsg-banner.svg`](nxsg-banner.svg) is the editable, self-contained repository banner. Its graph is a simplified vector illustration of the implemented custom Unity canvas, not a screenshot. The 2026-09-23 revision uses graphite panels, crisp corners, and a violet selection outline to match the editor. It retains the node/header and socket colors from `GraphWindow.cs`, actual Toon Surface ports from `NodeCatalog.cs`, curved wires, and the selected-node outline. It uses ordinary system typography and contains no scripts, external images, webfonts, or animation.
 
 The compact lowercase **nx** paths are copied unchanged from the approved NX Hub wordmark. Surrounding NXSG typography, node layout, and faceted material illustration are new artwork for this repository.
 

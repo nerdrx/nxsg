@@ -18,11 +18,11 @@
   <path d="M92 246H270" stroke="#7700FF" stroke-width="3"/>
   <text x="92" y="286" fill="#EFEAFF" font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="21" font-weight="500">A node editor for VRChat materials.</text>
   <rect x="92" y="348" width="9" height="9" fill="#00E5FF"/>
-  <text x="116" y="357" fill="#8D7AA8" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="12" font-weight="700" letter-spacing="2">VISUAL SHADERS / VRCHAT</text>
+  <text x="116" y="357" fill="#aaa0bb" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="12" font-weight="700" letter-spacing="2">VISUAL SHADERS / VRCHAT</text>
 
   <!-- Simplified illustration of the actual custom Unity canvas. Colors and ports
        follow GraphWindow.cs and NodeCatalog.cs; this is not a screenshot. -->
-  <rect x="612" y="28" width="800" height="384" rx="12" fill="#0e0e0e" stroke="#252525"/>
+  <rect x="612" y="28" width="800" height="384" rx="4" fill="#1d2023" stroke="#3e434a"/>
   <g fill="none" stroke-width="3.5" stroke-linecap="round">
     <path d="M830 163 C880 163 875 165 925 165" stroke="#ffc740"/>
     <path d="M830 337 C889 337 866 221 925 221" stroke="#ffc740"/>
@@ -31,8 +31,8 @@
 
   <g font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif">
     <!-- Texture: orange header, UV input, color output. -->
-    <rect x="650" y="80" width="180" height="136" rx="8" fill="#242424"/>
-    <path d="M658 80H822Q830 80 830 88V116H650V88Q650 80 658 80" fill="#75401a"/>
+    <rect x="650" y="80" width="180" height="136" rx="3" fill="#292c30"/>
+    <rect x="650" y="80" width="180" height="36" rx="3" fill="#7c4928"/>
     <text x="664" y="104" fill="#eeeeee" font-size="17" font-weight="600">Texture</text>
     <text x="666" y="143" fill="#bdbdbd" font-size="16">uv</text>
     <text x="814" y="169" text-anchor="end" fill="#bdbdbd" font-size="16">color</text>
@@ -40,17 +40,17 @@
     <text x="684" y="199" fill="#a5a5a5" font-size="13">Thumbnail</text>
 
     <!-- Color: the selected card has the editor's light outline. -->
-    <rect x="650" y="282" width="180" height="105" rx="8" fill="#242424"/>
-    <path d="M658 282H822Q830 282 830 290V318H650V290Q650 282 658 282" fill="#66571a"/>
-    <rect x="650" y="282" width="180" height="105" rx="8" fill="none" stroke="#f0f0f0" stroke-width="2"/>
+    <rect x="650" y="282" width="180" height="105" rx="3" fill="#292c30"/>
+    <rect x="650" y="282" width="180" height="36" rx="3" fill="#7a631a"/>
+    <rect x="650" y="282" width="180" height="105" rx="3" fill="none" stroke="#c7a6ff" stroke-width="2"/>
     <text x="664" y="306" fill="#eeeeee" font-size="17" font-weight="600">Color</text>
     <text x="814" y="343" text-anchor="end" fill="#bdbdbd" font-size="16">value</text>
     <rect x="664" y="360" width="12" height="12" rx="2" fill="#171717" stroke="#626262"/>
     <text x="684" y="371" fill="#a5a5a5" font-size="13">Thumbnail</text>
 
     <!-- Toon Surface: the five real inputs and one surface output. -->
-    <rect x="925" y="100" width="205" height="252" rx="8" fill="#242424"/>
-    <path d="M933 100H1122Q1130 100 1130 108V138H925V108Q925 100 933 100" fill="#215e3d"/>
+    <rect x="925" y="100" width="205" height="252" rx="3" fill="#292c30"/>
+    <rect x="925" y="100" width="205" height="38" rx="3" fill="#2c6c47"/>
     <text x="939" y="125" fill="#eeeeee" font-size="17" font-weight="600">Toon Surface ▾</text>
     <g fill="#bdbdbd" font-size="16">
       <text x="941" y="171">albedo</text>
@@ -64,14 +64,14 @@
     <text x="959" y="339" fill="#a5a5a5" font-size="13">Thumbnail</text>
 
     <!-- Output: red header and a surface input on its left edge. -->
-    <rect x="1210" y="212" width="165" height="80" rx="8" fill="#242424"/>
-    <path d="M1218 212H1367Q1375 212 1375 220V248H1210V220Q1210 212 1218 212" fill="#633033"/>
+    <rect x="1210" y="212" width="165" height="80" rx="3" fill="#292c30"/>
+    <rect x="1210" y="212" width="165" height="36" rx="3" fill="#763d40"/>
     <text x="1224" y="236" fill="#eeeeee" font-size="17" font-weight="600">Output</text>
     <text x="1226" y="273" fill="#bdbdbd" font-size="16">surface</text>
   </g>
 
   <!-- Socket colors match data types; wires meet the center of each socket. -->
-  <g stroke="#0e0e0e" stroke-width="2.5">
+  <g stroke="#1d2023" stroke-width="2.5">
     <circle cx="650" cy="137" r="6" fill="#73a6ff"/>
     <circle cx="830" cy="163" r="6" fill="#ffc740"/>
     <circle cx="830" cy="337" r="6" fill="#ffc740"/>

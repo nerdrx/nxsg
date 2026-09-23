@@ -1,89 +1,96 @@
 <p align="center">
-  <img src="docs/assets/nxsg-banner.svg" width="100%" alt="NX Shader Graph — connected material nodes in a Unity-style editor" />
+  <img src="docs/assets/nxsg-banner.svg" width="100%" alt="NX Shader Graph — a visual material editor for VRChat" />
 </p>
 
 <p align="center">
-  <strong>Build your own VRChat materials. Right inside Unity.</strong><br />
-  Connect textures, shape masks, add movement—and see what you’re making.
+  <strong>Your textures. Your effects. Your shader.</strong><br />
+  Make VRChat materials in Unity, one connection at a time.
 </p>
 
 <p align="center">
-  <a href="https://nerdrx.github.io/nxsg/#install"><strong>Install NXSG</strong></a> ·
-  <a href="docs/QUICK_START.md">First material</a> ·
-  <a href="docs/NODES.md">Node guide</a> ·
-  <a href="Packages/dev.nerdrx.nxsg/Samples~/README.md">Examples</a> ·
+  <a href="https://nerdrx.github.io/nxsg/#install"><strong>Install NXSG</strong></a> &nbsp;·&nbsp;
+  <a href="docs/QUICK_START.md">First material</a> &nbsp;·&nbsp;
+  <a href="docs/NODES.md">Node guide</a> &nbsp;·&nbsp;
+  <a href="Packages/dev.nerdrx.nxsg/Samples~/README.md">Example graphs</a> &nbsp;·&nbsp;
   <a href="https://github.com/nerdrx/nxsg/releases">Releases</a>
 </p>
 
-## From a texture to something that's yours
+<p align="center"><sub>Early alpha · Unity 2022.3.22f1 · Built-In pipeline · PC VRChat target</sub></p>
 
-NXSG is a shader graph for VRChat avatar creators. Start with a texture and a surface, then build up the look: soft fur, a scrolling pattern, a glitter mask, a hologram floating above the mesh. You can keep it simple or keep connecting things.
+## Start simple. Keep going.
 
-The editor takes cues from Blender: colored sockets, wires you can drag from either end, searchable nodes and previews while you work. **Build for VRChat** generates the shader and material locally. **Auto scene** applies saved edits after a short pause.
+A texture, a surface, an output. That's enough for a first material. Add a ramp to reshape a mask, let AudioLink drive an effect, or put a layer of fur over the mesh. The graph stays editable as the material grows.
 
-**Early alpha · Unity 2022.3.22f1 · PC Built-In.** Developed and tested on Linux. Native Windows/D3D, headsets and the live VRChat client still need validation; Quest/mobile avatars aren't supported. Start in a test project. [What has been tested](docs/VALIDATION.md).
+NXSG is built around the way avatar creators work: named texture slots, draggable connections, searchable nodes, and previews of the values between them. **Build for VRChat** creates the shader and material locally. No hand-written shader code needed.
 
-<table>
-  <tr>
-    <td align="center" width="33%"><img src="docs/assets/hologram-study.png" alt="Violet and cyan hologram layers on a sphere and capsule" /><br /><strong>Layered hologram</strong></td>
-    <td align="center" width="33%"><img src="docs/assets/pearl-study.png" alt="Iridescent pearl material on a sphere and capsule" /><br /><strong>Pearl finish</strong></td>
-    <td align="center" width="33%"><img src="docs/assets/fur-study.png" alt="Warm short shell fur on a sphere and capsule" /><br /><strong>Short plush fur</strong></td>
-  </tr>
-</table>
+[![NXSG in Unity: type-colored node headers, graphite canvas, violet controls, and a live particle preview](docs/images/editor-ui-pass.png)](docs/UI_POLISH.md)
 
-Real Unity renders from the included example graphs. The fur study uses **24 shells**—it's a look to experiment with, not a performance recommendation. [Watch the hologram move](https://nerdrx.github.io/nxsg/#material-studies).
-
-## Shapes made in the shader
-
-A hollow pearl-and-gold sculpture, violet dust, and a burning ring—built with Volume Surface, procedural noise and distance fields.
-
-[![Three-dimensional pearl sculpture with gold bands](docs/images/volume-pearl-sculpture.png)](https://nerdrx.github.io/nxsg/#raymarching)
-
-[See all three studies and get the graphs](docs/VOLUMES.md). These are Unity renders with presentation bloom and tone mapping. Raymarching nodes ship in alpha.26; these study graphs are included in alpha.27. Use a closed cube proxy. This is an experimental PC effect with a per-pixel cost.
-
-## Made for experimenting
-
-| Make | Start with |
-| :--- | :--- |
-| **Your everyday material** | Toon, PBR or Unlit; textures, normal maps, matcaps, rims and named texture slots. Lit surfaces have minimum/maximum brightness and lighting saturation. Albedo alpha is optional. |
-| **Fur with some character** | Shell fur, silhouette fins or **cards-only fur** generated from mesh edges. Root/tip colors, masks, grooming, wind and local self-shadowing. Shells have distance LOD. |
-| **Something that catches the light** | View-dependent glitter, iridescence, additional pixel lights and optional LTCGI. |
-| **Layers over the mesh** | Nested shells, holograms, stickers, wireframes, parallax, parallax occlusion and tessellation. |
-| **Patterns you can reshape** | 1D–4D noise, Voronoi, Musgrave-style fractals, waves, ramps, distortion, texture bombing, Polar and Panosphere coordinates. |
-| **A material that moves** | UV scrolling, flipbooks, dissolve, vertex animation, AudioLink inputs and shader-driven particles emitted from the mesh. |
-
-The [node guide](docs/NODES.md) covers the nodes, their inputs and their controls. A **Fur Cards** example is included alongside the other sample graphs.
-
-### A graph you can work in
-
-![NXSG's node editor running in Unity on Linux](docs/assets/editor-preview.png)
-
-- Drop a wire on empty space to add a compatible node. Pull from a connected input to detach it.
-- Switch related operations from the node header. Rename texture slots so the graph and material inspector agree.
-- Box-select, copy, paste, duplicate and reuse groups as **Patterns**.
-- Preview intermediate values, compare A/B material snapshots and scrub animation time.
-- Use texture-set import, presets and static texture baking to cut down on repetitive work.
-
-There are also mesh-preview handles for sticker placement and an FX Animator driver for locomotion-aware effects. Motion nodes read avatar speed—not individual bones or PhysBones. [Creator workflow](docs/CREATOR_WORKFLOW.md) · [Motion and handles](docs/MOTION_AND_HANDLES.md).
+<p align="center"><sub>Actual Unity editor on Linux. The Particle Lifetime example is included.</sub></p>
 
 ## Get it into Unity
 
-1. [Open the installer page](https://nerdrx.github.io/nxsg/#install) and add the repository to **ALCOM or Creator Companion**.
+1. [Add the NXSG repository](https://nerdrx.github.io/nxsg/#install) to **ALCOM or Creator Companion**.
 2. Enable **Show Pre-Release Packages**, then add **NX Shader Graph** to your project.
-3. In Unity, open **Tools → NXSG → Open Graph Editor**.
+3. Open **Tools → NXSG → Open Graph Editor** in Unity.
 4. Create a graph, or import **Example Graphs** from NXSG's Unity Package Manager entry.
-5. Save inside **Assets**, click **Build for VRChat**, then assign the material from **Assets/NXSGGenerated** to your mesh.
+5. Save inside **Assets**, choose **Build for VRChat**, and assign the material from **Assets/NXSGGenerated** to your mesh.
 
-Manual repository URL:
+<details>
+<summary>Adding the repository manually?</summary>
 
 ```text
 https://nerdrx.github.io/nxsg/index.json
 ```
 
-Build creates local assets; it does not upload your avatar. [First material walkthrough](docs/QUICK_START.md) · [Install troubleshooting](docs/VPM.md).
+[Installation help](docs/VPM.md) · [First material walkthrough](docs/QUICK_START.md)
+
+</details>
+
+**Start in a test project.** NXSG is an early alpha, developed and tested on Linux. Native Windows/D3D, headset and live VRChat validation remain incomplete. Quest/mobile avatars are not supported. Building creates local assets; it does not upload your avatar. [Tested behavior and remaining limits](docs/VALIDATION.md).
+
+## A few things you can make
+
+<table>
+  <tr>
+    <td width="33%"><a href="Packages/dev.nerdrx.nxsg/Samples~/README.md"><img src="docs/assets/hologram-study.png" alt="Layered violet and cyan hologram rendered on a sphere and capsule" /></a><br /><strong>Layered holograms</strong><br /><sub>Light, scanlines, and a little distance from the mesh.</sub></td>
+    <td width="33%"><a href="Packages/dev.nerdrx.nxsg/Samples~/README.md"><img src="docs/assets/pearl-study.png" alt="Iridescent pearl finish rendered on a sphere and capsule" /></a><br /><strong>Pearl and iridescence</strong><br /><sub>Color that changes with the view.</sub></td>
+    <td width="33%"><a href="docs/FUR_AND_PARALLAX.md"><img src="docs/assets/fur-study.png" alt="Warm short shell fur rendered on a sphere and capsule" /></a><br /><strong>Soft, short fur</strong><br /><sub>Shape the length, roots, tips, and movement.</sub></td>
+  </tr>
+</table>
+
+These are Unity renders from included graphs. The fur study uses **24 shells**; it's an appearance study, not a performance target. [Watch the hologram move](https://nerdrx.github.io/nxsg/#material-studies).
+
+### Go beyond the mesh
+
+[![Pearl sculpture with gold bands, formed by a raymarched distance field](docs/images/volume-pearl-sculpture.png)](docs/VOLUMES.md)
+
+This sculpture is drawn inside a cube using distance fields. The same volume tools can make drifting dust and smoke. [Explore the three volume studies](docs/VOLUMES.md)—the graphs are included. Use a closed cube proxy. These Unity renders use presentation bloom and tone mapping; raymarching is an experimental PC effect with a per-pixel cost.
+
+## Pick a direction
+
+| Want to make… | Tools to start with |
+| :--- | :--- |
+| **An everyday avatar material** | Toon, PBR and Unlit surfaces. Normal maps, matcaps, rims, named texture slots, optional albedo alpha, and lighting brightness/saturation controls. |
+| **Fur** | Shells, silhouette fins, or cards generated from mesh edges. Masks, root/tip colors, grooming, wind, local self-shadowing and shell distance LOD. [Fur guide](docs/FUR_AND_PARALLAX.md) |
+| **Glitter and glow** | View-dependent glitter, emission, iridescence, additional pixel lights and optional LTCGI. [Glitter](docs/GLITTER.md) · [LTCGI](docs/LTCGI.md) |
+| **Layers and surface detail** | Nested shells, stickers, wireframes, parallax, parallax occlusion and tessellation. [Tessellation](docs/TESSELLATION.md) |
+| **Procedural patterns** | 1D–4D noise, Voronoi, Musgrave-style fractals, waves, ramps, distortion, texture bombing, Polar and Panosphere coordinates. [Node guide](docs/NODES.md) |
+| **Movement** | UV scrolling, flipbooks, dissolve, vertex animation, AudioLink inputs and shader-driven particles emitted from the mesh. [Particles](docs/PARTICLES.md) |
+
+## Made to be worked in
+
+- **Follow the color.** Solid type-colored headers and sockets make a graph easier to scan. Selection gets a distinct outline.
+- **Keep connecting.** Drag from either socket direction. Drop on empty space to find a compatible node, or pull from a connected input to detach it.
+- **Change your mind.** Switch related operations in the header. Box-select, duplicate, and reuse groups as **Patterns**.
+- **See what's happening.** Preview intermediate values, compare A/B material snapshots, and scrub animation time. Collapse the material preview when you need more room.
+- **Cut the repetition.** Rename texture slots, import texture sets, use presets, and bake static branches to textures.
+
+**Auto scene** applies saved edits after a short pause. Repeated builds avoid rewriting unchanged shader source, and saving no longer refreshes the entire project. [Build measurements](docs/BUILD_PERFORMANCE.md).
+
+[Creator workflow](docs/CREATOR_WORKFLOW.md) · [Effect handles and motion](docs/MOTION_AND_HANDLES.md) · [Editor UI notes](docs/UI_POLISH.md)
 
 <details>
-<summary><strong>Canvas controls and recovery</strong></summary>
+<summary><strong>Canvas shortcuts and recovery</strong></summary>
 
 | Action | Control |
 | :--- | :--- |
@@ -96,26 +103,24 @@ Build creates local assets; it does not upload your avatar. [First material walk
 | Copy / paste / duplicate | Toolbar or Ctrl+C / Ctrl+V / Ctrl+D |
 | Undo / redo | Toolbar buttons; keyboard undo remains unreliable on Linux/Unity |
 
-Failed builds keep the last working shader. Recovery snapshots are stored under `Library/NXSG/Recovery`; deleting Library removes those snapshots too.
+Failed builds keep the last working shader. Recovery snapshots live under `Library/NXSG/Recovery`; deleting Library removes those snapshots too.
 
 </details>
 
-## Know the rough edges
+## Before you cover an avatar in it
 
-NXSG is moving quickly, and there are bugs to find. A few limits matter before you build a whole avatar around it:
+- **Extra geometry costs extra.** Fur, shells, particles and tessellation can get expensive. Generated cards follow triangle edges and can overlap. Cost warnings are estimates, not GPU measurements.
+- **Lighting varies by effect.** Additional pixel lights affect Toon/PBR base surfaces; fur and shell overlays have more limited lighting. Brightness limits apply per contribution, not to the sum of all lights.
+- **Some effects approximate the result.** Refraction samples the screen. Fur self-shadowing estimates a local volume. Transparent layers can sort incorrectly, and displaced effects may need larger renderer bounds.
+- **Integrations still need live testing.** AudioLink and animatable properties exist; live AudioLink and VRCFury checks remain pending. Motion inputs read avatar speed, not individual bones or PhysBones. Patterns are editable copies, not linked instances.
 
-- **Geometry costs add up.** Fur, shells, particles and tessellation can be expensive. Cards follow triangle edges, which can overlap. Cost warnings are estimates, not GPU measurements.
-- **Lighting isn't identical across every effect.** Additional pixel lights affect Toon/PBR base surfaces; fur and shell overlays have more limited lighting. Brightness limits apply per contribution, not to the sum of all lights.
-- **Some effects are approximations.** Refraction samples the screen, fur self-shadowing estimates a local volume, and transparent layers can have sorting issues. Renderer bounds may need expansion.
-- **Integration testing is unfinished.** AudioLink inputs and animatable properties exist; live AudioLink and VRCFury checks are still pending. Patterns are editable copies, not linked graph instances.
+[Compatibility](docs/COMPATIBILITY.md) · [Validation](docs/VALIDATION.md)
 
-[Fur and parallax](docs/FUR_AND_PARALLAX.md) · [Glitter](docs/GLITTER.md) · [Particles](docs/PARTICLES.md) · [Tessellation](docs/TESSELLATION.md) · [LTCGI](docs/LTCGI.md) · [Compatibility](docs/COMPATIBILITY.md)
+## Found something awkward?
 
-## Help shape it
+[Open an issue](https://github.com/nerdrx/nxsg/issues). A small `.nxsg` graph, your Unity version, and a screenshot help more than a long description. Controls that are confusing count, too.
 
-If something breaks—or a control makes no sense—[open an issue](https://github.com/nerdrx/nxsg/issues). A small `.nxsg` graph, your Unity version and a screenshot make it much easier to reproduce.
-
-Next: more testing on actual avatars and in stereo, better fur performance, and fewer awkward controls. A community node SDK, Blender bridge, CLI and web viewer are longer-term plans.
+Current priorities are testing on actual avatars and in stereo, fur performance, and editor usability. A community node SDK, Blender bridge, CLI and web viewer are longer-term plans.
 
 <details>
 <summary><strong>For contributors</strong></summary>
@@ -141,5 +146,3 @@ The setup script downloads and verifies pinned VRChat Base/Avatars **3.10.5** pa
 Graphlit, ShaderGraphVRC and Poiyomi informed the research. Panosphere seam handling follows Poiyomi's derivative-aware approach, credited under its MIT license in the [third-party notices](Packages/dev.nerdrx.nxsg/Third%20Party%20Notices.md). [Research notes](docs/research/EDITOR_UX_AND_PRIOR_ART.md) · [Artwork credits](docs/assets/README.md).
 
 NXSG's source is public. **No project-wide open-source license has been selected yet.** Third-party components retain their own licenses.
-
-Build performance: alpha.27 imports the shader once and avoids a whole-project refresh when saving. [Measurements and limits](docs/BUILD_PERFORMANCE.md).
