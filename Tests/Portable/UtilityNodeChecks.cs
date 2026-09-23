@@ -11,7 +11,7 @@ public static class UtilityNodeChecks
     {
         "core.absolute", "core.power", "core.sqrt", "core.sine", "core.cosine", "core.fraction", "core.floor", "core.ceil", "core.round",
         "core.step", "core.smoothstep", "core.remap", "core.pingPong", "core.splitColor", "core.combineColor", "core.luminance",
-        "core.contrast", "core.saturation", "core.splitUV", "core.combineUV"
+        "core.contrast", "core.saturation", "core.hueShift", "core.splitUV", "core.combineUV"
     };
 
     private static readonly string[] Dynamic =
@@ -46,7 +46,7 @@ public static class UtilityNodeChecks
 
     private static void RejectNonfinite(Action<bool, string> assert, string operation, GraphNode node)
     {
-        var numeric = new[] { "a", "b", "value", "low", "high", "inMin", "inMax", "outMin", "outMax", "length", "amount", "pivot", "r", "g", "b", "u", "v" };
+        var numeric = new[] { "a", "b", "value", "low", "high", "inMin", "inMax", "outMin", "outMax", "length", "hue", "amount", "pivot", "r", "g", "b", "u", "v" };
         foreach (var property in numeric.Where(name => node.Properties[name] != null))
         {
             var graph = Build(operation);
@@ -71,7 +71,7 @@ public static class UtilityNodeChecks
                 Edge(graph, "exponent", "value", "effect", "b");
             }
         }
-        else if (operation == "core.splitColor" || operation == "core.luminance" || operation == "core.contrast" || operation == "core.saturation")
+        else if (operation == "core.splitColor" || operation == "core.luminance" || operation == "core.contrast" || (operation == "core.saturation" || operation == "core.hueShift"))
         {
             var input = NodeCatalog.Create("core.constant"); input.Id = "input"; graph.Nodes.Add(input); Edge(graph, "input", "value", "effect", "color");
         }
@@ -100,7 +100,7 @@ public static class UtilityNodeChecks
         else
         {
             var surface = NodeCatalog.Create("core.unlitSurface"); surface.Id = "surface"; graph.Nodes.Add(surface);
-            var port = operation == "core.combineColor" || operation == "core.contrast" || operation == "core.saturation" ? "color" : operation == "core.splitColor" ? "r" : operation == "core.splitUV" ? "u" : "value";
+            var port = operation == "core.combineColor" || operation == "core.contrast" || (operation == "core.saturation" || operation == "core.hueShift") ? "color" : operation == "core.splitColor" ? "r" : operation == "core.splitUV" ? "u" : "value";
             var scalarOutput = operation == "core.luminance" || operation == "core.splitColor" || operation == "core.splitUV" || operation == "core.step" || operation == "core.smoothstep" || operation == "core.remap" || operation == "core.pingPong" || (Dynamic.Contains(operation) && !color);
             Edge(graph, "effect", port, "surface", scalarOutput ? "opacity" : "albedo");
             if (scalarOutput) { var albedo = NodeCatalog.Create("core.constant"); albedo.Id = "albedo"; graph.Nodes.Add(albedo); Edge(graph, "albedo", "value", "surface", "albedo"); }

@@ -287,3 +287,7 @@ Albedo and emission are not desaturated. Defaults preserve existing shading.
 The minimum is applied only in the base pass; maximum limits each lighting
 contribution, not the sum of additional-light passes. Maximum wins if lower than
 minimum. Unlit has no light response. Fur overlays retain separate lighting.
+
+## Hue Shift
+
+**Color** category. Connect a color to **Color** and a number to **Hue**. Hue is measured in turns: `0` leaves the color unchanged, `1/3` shifts red to green, and `1` returns to the original hue. Negative values rotate backward; typed values outside 0–1 wrap. Alpha and RGB range are preserved, including HDR colors. Gray stays gray. Connect Time or AudioLink to Hue for animation.

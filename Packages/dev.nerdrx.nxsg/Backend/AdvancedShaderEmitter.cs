@@ -38,7 +38,7 @@ namespace NXSG.Backend
         public static bool IsAdvanced(ShaderGraph graph)
         {
             if (graph?.Nodes == null) return false;
-            var ops = new HashSet<string> { "core.volumeSurface", "core.rayPosition", "core.sdfSphere", "core.sdfBox", "core.sdfTorus", "core.sdfBlend", "core.unlitSurface", "core.pbrSurface", "core.particleSurface", "core.particleColor", "core.particleInfo", "core.surfaceParticles", "core.fur", "core.tessellation", "core.fresnel", "core.colorRamp", "core.layer", "core.sticker", "core.dissolve", "core.flipbook", "core.uvDistort", "core.vertexMotion", "core.audioLink", "core.ltcgi", "core.darknessGlow", "core.shell", "core.normalMap", "core.previewVector", "core.musgrave", "core.voronoi", "core.checker", "core.wave", "core.gradient", "core.uvTile", "core.posterize", "core.absolute", "core.power", "core.sqrt", "core.sine", "core.cosine", "core.fraction", "core.floor", "core.ceil", "core.round", "core.step", "core.smoothstep", "core.remap", "core.pingPong", "core.splitColor", "core.combineColor", "core.luminance", "core.contrast", "core.saturation", "core.splitUV", "core.combineUV", "core.position", "core.normalDirection", "core.viewDirection", "core.vertexColor", "core.cameraDistance", "core.screenUV", "core.circleMask", "core.boxMask", "core.polygonMask", "core.starMask", "core.radialRays", "core.spiral", "core.brick", "core.hexGrid", "core.triplanarTexture", "core.matcapTexture", "core.rimGlow", "core.heightMask", "core.slopeMask", "core.distanceFade", "core.wireframe" };
+            var ops = new HashSet<string> { "core.volumeSurface", "core.rayPosition", "core.sdfSphere", "core.sdfBox", "core.sdfTorus", "core.sdfBlend", "core.unlitSurface", "core.pbrSurface", "core.particleSurface", "core.particleColor", "core.particleInfo", "core.surfaceParticles", "core.fur", "core.tessellation", "core.fresnel", "core.colorRamp", "core.layer", "core.sticker", "core.dissolve", "core.flipbook", "core.uvDistort", "core.vertexMotion", "core.audioLink", "core.ltcgi", "core.darknessGlow", "core.shell", "core.normalMap", "core.previewVector", "core.musgrave", "core.voronoi", "core.checker", "core.wave", "core.gradient", "core.uvTile", "core.posterize", "core.absolute", "core.power", "core.sqrt", "core.sine", "core.cosine", "core.fraction", "core.floor", "core.ceil", "core.round", "core.step", "core.smoothstep", "core.remap", "core.pingPong", "core.splitColor", "core.combineColor", "core.luminance", "core.contrast", "core.saturation", "core.hueShift", "core.splitUV", "core.combineUV", "core.position", "core.normalDirection", "core.viewDirection", "core.vertexColor", "core.cameraDistance", "core.screenUV", "core.circleMask", "core.boxMask", "core.polygonMask", "core.starMask", "core.radialRays", "core.spiral", "core.brick", "core.hexGrid", "core.triplanarTexture", "core.matcapTexture", "core.rimGlow", "core.heightMask", "core.slopeMask", "core.distanceFade", "core.wireframe" };
             // Only reachable effects select the extended lowering; disconnected nodes never change shading.
             var connected = new HashSet<string>();
             var queue = new Queue<string>(graph.Nodes.Where(n => n?.Operation == "core.output").Select(n => n.Id));
@@ -412,6 +412,7 @@ namespace NXSG.Backend
                 case "core.combineColor": body = "float4(" + S("r", 0) + "," + S("g", 0) + "," + S("b", 0) + "," + S("a", 1) + ")"; break;
                 case "core.luminance": body = "dot((" + P("color", "float4(.5,.5,.5,1)", "color") + ").rgb,float3(.2126,.7152,.0722))"; break;
                 case "core.contrast": body = "float4 c=" + P("color", "float4(.5,.5,.5,1)", "color") + "; return float4((c.rgb-" + S("pivot", .5) + ")*" + S("amount", 1) + "+" + S("pivot", .5) + ",c.a);"; break;
+                case "core.hueShift": body = "NX_HueShift(" + P("color", "float4(1,0,0,1)", "color") + "," + S("hue", 0) + ")"; break;
                 case "core.saturation": body = "float4(lerp(dot((" + P("color", "float4(.5,.5,.5,1)", "color") + ").rgb,float3(.2126,.7152,.0722)),(" + P("color", "float4(.5,.5,.5,1)", "color") + ").rgb," + S("amount", 1) + "),(" + P("color", "float4(.5,.5,.5,1)", "color") + ").a)"; break;
                 case "core.splitUV": body = "(" + P("uv", uv, "vector2") + ")." + (port == "u" ? "x" : "y"); break;
                 case "core.combineUV": body = "float2(" + S("u", 0) + "," + S("v", 0) + ")"; break;
@@ -775,6 +776,20 @@ namespace NXSG.Backend
             return shader;
         }
         const string Helpers=@"
+float4 NX_HueShift(float4 color, float turns) {
+    float hi = max(color.r, max(color.g, color.b));
+    float lo = min(color.r, min(color.g, color.b));
+    float chroma = hi - lo;
+    if (chroma <= 0) return color;
+    float hue;
+    if (hi == color.r) hue = (color.g - color.b) / chroma;
+    else if (hi == color.g) hue = 2 + (color.b - color.r) / chroma;
+    else hue = 4 + (color.r - color.g) / chroma;
+    hue = frac(hue / 6 + frac(turns));
+    float3 wheel = saturate(abs(frac(hue + float3(0, 2.0/3.0, 1.0/3.0)) * 6 - 3) - 1);
+    return float4(lo + chroma * wheel, color.a);
+}
+
 struct NXApp { float4 vertex:POSITION; float3 normal:NORMAL; float4 tangent:TANGENT; float2 uv:TEXCOORD0; float2 uv1:TEXCOORD1; float2 uv2:TEXCOORD2; float2 uv3:TEXCOORD3; float4 color:COLOR; UNITY_VERTEX_INPUT_INSTANCE_ID };
 struct NXInput { float4 pos:SV_POSITION; float2 uv:TEXCOORD0; float2 uv1:TEXCOORD7; float2 uv2:TEXCOORD8; float2 uv3:TEXCOORD9; float3 ws:TEXCOORD1; float3 n:TEXCOORD2; float3 local:TEXCOORD3; float3 originalWs:TEXCOORD10; float3 originalLocal:TEXCOORD11; float3 tangent:TEXCOORD4; float3 bitangent:TEXCOORD5; float4 color:TEXCOORD12; float4 screenPos:TEXCOORD13; float2 sourceUV:TEXCOORD14; float3 wireBary:TEXCOORD15; float particleAlpha:TEXCOORD20; float particleAge:TEXCOORD21; float particleRandom:TEXCOORD22; LIGHTING_COORDS(16,17) UNITY_VERTEX_OUTPUT_STEREO };
 NXInput NX_Make(NXApp v){ NXInput o=(NXInput)0; o.pos=UnityObjectToClipPos(v.vertex); o.screenPos=ComputeGrabScreenPos(o.pos); o.uv=v.uv; o.uv1=v.uv1; o.uv2=v.uv2; o.uv3=v.uv3; o.local=v.vertex.xyz; o.ws=mul(unity_ObjectToWorld,v.vertex).xyz; o.originalLocal=o.local; o.originalWs=o.ws; o.color=v.color; o.n=UnityObjectToWorldNormal(v.normal); o.tangent=UnityObjectToWorldDir(v.tangent.xyz); o.bitangent=cross(o.n,o.tangent)*v.tangent.w*unity_WorldTransformParams.w; return o; }
