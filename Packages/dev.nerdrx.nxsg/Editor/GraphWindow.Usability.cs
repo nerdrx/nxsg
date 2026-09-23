@@ -54,7 +54,7 @@ namespace NXSG.Editor
 
         VisualElement CreateSidebar()
         {
-            sidebar = new VisualElement { name = "nxsg-sidebar", style = { minWidth = 240, backgroundColor = new Color(.10f,.10f,.10f) } };
+            sidebar = new VisualElement { name = "nxsg-sidebar", style = { minWidth = 240, backgroundColor = new Color(.153f,.165f,.18f) } };
             sidebar.RegisterCallback<GeometryChangedEvent>(evt => { if (evt.newRect.width > 0) sidebarWidth = evt.newRect.width; });
             var tabs = new Toolbar { style = { minHeight = 30 } };
             var inspectorTab = new ToolbarButton(() => ShowSidebarTab(0)) { text = "Inspector" };
@@ -75,7 +75,12 @@ namespace NXSG.Editor
         {
             sidebarTab = Mathf.Clamp(tab, 0, 2);
             if (sidebarTabs != null)
-                for (var i = 0; i < sidebarTabs.Length; i++) sidebarTabs[i].EnableInClassList("nxsg-tab-selected", i == sidebarTab);
+                for (var i = 0; i < sidebarTabs.Length; i++)
+                {
+                    sidebarTabs[i].EnableInClassList("nxsg-tab-selected", i == sidebarTab);
+                    sidebarTabs[i].style.borderBottomWidth = 2;
+                    sidebarTabs[i].style.borderBottomColor = i == sidebarTab ? new Color(.66f, .43f, 1f) : Color.clear;
+                }
             if (libraryPanel == null) return;
             inspector.style.display = sidebarTab == 0 ? DisplayStyle.Flex : DisplayStyle.None;
             libraryPanel.style.display = sidebarTab == 1 ? DisplayStyle.Flex : DisplayStyle.None;

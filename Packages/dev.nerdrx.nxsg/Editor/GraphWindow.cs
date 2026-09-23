@@ -113,13 +113,15 @@ namespace NXSG.Editor
             rootVisualElement.AddToClassList("nxsg-window");
             var chrome = AssetDatabase.LoadAssetAtPath<StyleSheet>("Packages/dev.nerdrx.nxsg/Editor/GraphWindow.uss");
             if (chrome != null && !rootVisualElement.styleSheets.Contains(chrome)) rootVisualElement.styleSheets.Add(chrome);
-            rootVisualElement.style.backgroundColor = new Color(.055f, .055f, .055f);
+            rootVisualElement.style.backgroundColor = new Color(.114f, .125f, .137f);
             var toolbar = new Toolbar { style = { flexWrap = Wrap.Wrap, height = StyleKeyword.Auto, minHeight = 28 } };
+            var brand = new Label("NXSG");
+            brand.AddToClassList("nxsg-brand"); toolbar.Add(brand);
             AddFileAndEditMenus(toolbar);
             toolbar.Add(new ToolbarButton(() => SaveGraph()) { text = "Save", tooltip = "Save graph (Ctrl+S)" });
             toolbar.Add(new ToolbarButton(Undo.PerformUndo) { text = "Undo" });
             toolbar.Add(new ToolbarButton(Undo.PerformRedo) { text = "Redo" });
-            toolbar.Add(new ToolbarButton(Build) { text = "Build for VRChat", tooltip = "Build and apply this graph locally. Does not upload an avatar." });
+            var buildButton = new ToolbarButton(Build) { name = "nxsg-build", text = "Build for VRChat", tooltip = "Build and apply this graph locally. Does not upload an avatar." };
             var liveToggle = new ToolbarToggle { text = "Live preview", value = livePreview,
                 tooltip = "Preview unsaved edits without changing your material. Pauses while this window is unfocused." };
             liveToggle.RegisterValueChangedCallback(evt =>
@@ -136,16 +138,20 @@ namespace NXSG.Editor
             toolbar.Add(new ToolbarButton(FocusNodeSearch) { text = "+ Add node", tooltip = "Search nodes (Space on canvas)." });
             AddPatternToolbar(toolbar);
             AddFrameToolbar(toolbar);
+            toolbar.Add(new VisualElement { style = { flexGrow = 1, minWidth = 8 } });
+            toolbar.Add(buildButton);
             rootVisualElement.Add(toolbar);
-            identity = new Label { style = { whiteSpace = WhiteSpace.Normal, paddingLeft = 10, paddingTop = 5, paddingBottom = 5 } };
+            identity = new Label { name = "nxsg-identity", style = { whiteSpace = WhiteSpace.Normal, paddingLeft = 10, paddingTop = 5, paddingBottom = 5 } };
             rootVisualElement.Add(identity);
-            sceneStatus = new Label { style = { whiteSpace = WhiteSpace.Normal, paddingLeft = 10, paddingBottom = 5 } };
+            sceneStatus = new Label { name = "nxsg-scene-status", style = { whiteSpace = WhiteSpace.Normal, paddingLeft = 10, paddingBottom = 5 } };
             rootVisualElement.Add(sceneStatus);
             var body = new TwoPaneSplitView(1, sidebarWidth, TwoPaneSplitViewOrientation.Horizontal) { style = { flexGrow = 1, minHeight = 0 } };
-            canvas = new VisualElement { focusable = true, style = { flexGrow = 1, minWidth = 240, overflow = Overflow.Hidden } };
+            canvas = new VisualElement { name = "nxsg-canvas", focusable = true, style = { flexGrow = 1, minWidth = 240, overflow = Overflow.Hidden } };
             layer = new VisualElement { style = { position = UnityEngine.UIElements.Position.Absolute, width = 4000, height = 4000 } };
             layer.style.transformOrigin = new TransformOrigin(0, 0, 0);
             layer.generateVisualContent += DrawEdges;
+            canvas.generateVisualContent += DrawCanvasGrid;
+            canvas.RegisterCallback<GeometryChangedEvent>(_ => canvas.MarkDirtyRepaint());
             canvas.Add(layer);
             marquee = new VisualElement { pickingMode = PickingMode.Ignore, style = {
                 position = UnityEngine.UIElements.Position.Absolute, display = DisplayStyle.None,
@@ -176,11 +182,11 @@ namespace NXSG.Editor
                 if (evt.actionKey && evt.keyCode == KeyCode.S) { SaveGraph(); evt.StopPropagation(); }
             });
             body.Add(canvas);
-            inspector = new ScrollView(ScrollViewMode.Vertical) { horizontalScrollerVisibility = ScrollerVisibility.Hidden, style = { flexGrow = 1, minWidth = 0, minHeight = 0, paddingLeft = 12, paddingRight = 12, paddingTop = 12, backgroundColor = new Color(.10f, .10f, .10f) } };
+            inspector = new ScrollView(ScrollViewMode.Vertical) { horizontalScrollerVisibility = ScrollerVisibility.Hidden, style = { flexGrow = 1, minWidth = 0, minHeight = 0, paddingLeft = 12, paddingRight = 12, paddingTop = 12, backgroundColor = new Color(.153f, .165f, .18f) } };
             body.Add(CreateSidebar());
             rootVisualElement.Add(body);
             status = new Label("Space: add node · Middle-drag: pan · Wheel: zoom · Home: fit graph")
-            { style = { whiteSpace = WhiteSpace.Normal, paddingLeft = 10, paddingTop = 6, paddingBottom = 6 } };
+            { name = "nxsg-status", style = { whiteSpace = WhiteSpace.Normal, paddingLeft = 10, paddingTop = 6, paddingBottom = 6 } };
             rootVisualElement.Add(status);
             rootVisualElement.RegisterCallback<KeyDownEvent>(evt =>
             {
@@ -476,8 +482,8 @@ namespace NXSG.Editor
                 foreach (var node in graph.Nodes)
                 {
                     var position = Position(node.Id);
-                    var box = new VisualElement { focusable = true, style = { position = UnityEngine.UIElements.Position.Absolute, left = position.x, top = position.y, width = 175, backgroundColor = new Color(.14f, .14f, .14f), borderLeftWidth = 2, borderRightWidth = 2, borderTopWidth = 2, borderBottomWidth = 2, borderTopLeftRadius = 8, borderTopRightRadius = 8, borderBottomLeftRadius = 8, borderBottomRightRadius = 8, paddingBottom = 8 } };
-                    var title = new Label(NodeTitle(node)) { tooltip = Title(node.Operation), style = { paddingLeft = 12, paddingTop = 10, paddingBottom = 10, unityFontStyleAndWeight = FontStyle.Bold, whiteSpace = WhiteSpace.NoWrap, overflow = Overflow.Hidden, textOverflow = TextOverflow.Ellipsis, backgroundColor = NodeColor(node.Operation) } };
+                    var box = new VisualElement { focusable = true, style = { position = UnityEngine.UIElements.Position.Absolute, left = position.x, top = position.y, width = 175, backgroundColor = new Color(.161f, .173f, .188f), borderLeftWidth = 2, borderRightWidth = 2, borderTopWidth = 2, borderBottomWidth = 2, borderTopLeftRadius = 3, borderTopRightRadius = 3, borderBottomLeftRadius = 3, borderBottomRightRadius = 3, paddingBottom = 8 } };
+                    var title = new Label(NodeTitle(node)) { tooltip = Title(node.Operation), style = { paddingLeft = 12, paddingTop = 10, paddingBottom = 10, unityFontStyleAndWeight = FontStyle.Bold, whiteSpace = WhiteSpace.NoWrap, overflow = Overflow.Hidden, textOverflow = TextOverflow.Ellipsis, backgroundColor = Color.Lerp(new Color(.07f, .08f, .10f), NodeColor(node.Operation), .48f) } };
                     var alternatives = OperationAlternatives(node.Operation);
                     if (alternatives.Length > 0)
                     {
@@ -652,7 +658,7 @@ namespace NXSG.Editor
         {
             foreach (var pair in nodes)
             {
-                var outline = selection.Contains(pair.Key) ? new Color(.94f, .94f, .94f) : Color.clear;
+                var outline = selection.Contains(pair.Key) ? new Color(.78f, .65f, 1f) : new Color(.27f, .29f, .32f);
                 pair.Value.style.borderLeftColor = outline;
                 pair.Value.style.borderRightColor = outline;
                 pair.Value.style.borderTopColor = outline;
@@ -783,27 +789,27 @@ namespace NXSG.Editor
             switch (operation)
             {
                 case "core.polarUV": case "core.uvRotate": case "core.objectUV": case "core.worldUV":
-                case "core.uvTransform": case "core.uvScroll": case "core.uv0": return new Color(.16f, .32f, .52f);
-                case "core.noise": case "core.musgrave": case "core.voronoi": case "core.checker": case "core.wave": case "core.texture2D": return new Color(.46f, .25f, .10f);
-                case "core.particleColor": case "core.constant": return new Color(.40f, .34f, .10f);
+                case "core.uvTransform": case "core.uvScroll": case "core.uv0": return new Color(.30f,.58f,.95f);
+                case "core.noise": case "core.musgrave": case "core.voronoi": case "core.checker": case "core.wave": case "core.texture2D": return new Color(.94f,.50f,.22f);
+                case "core.particleColor": case "core.constant": return new Color(.92f,.72f,.24f);
                 case "core.subtract": case "core.divide": case "core.minimum": case "core.maximum":
-                case "core.ramp": case "core.value": case "core.time": case "core.add": case "core.mix": case "core.oneMinus": case "core.clamp": case "core.multiply": return new Color(.28f, .33f, .38f);
-                case "core.emission": case "core.toonSurface": return new Color(.13f, .37f, .24f);
-                case "core.surfaceParticles": case "core.particleSurface": case "core.unlitSurface": case "core.pbrSurface": case "core.shell": return new Color(.13f,.37f,.24f);
-                case "core.gradient": case "core.posterize": case "core.fresnel": case "core.colorRamp": case "core.layer": case "core.dissolve": return new Color(.40f,.34f,.10f);
-                case "core.sticker": return new Color(.46f,.25f,.10f);
-                case "core.uvTile": case "core.flipbook": case "core.uvDistort": return new Color(.16f,.32f,.52f);
-                case "core.vertexMotion": case "core.normalMap": return new Color(.12f,.38f,.40f);
-                case "core.audioLink": return new Color(.44f,.22f,.29f);
-                case "core.output": return new Color(.39f, .19f, .20f);
+                case "core.ramp": case "core.value": case "core.time": case "core.add": case "core.mix": case "core.oneMinus": case "core.clamp": case "core.multiply": return new Color(.53f,.63f,.74f);
+                case "core.emission": case "core.toonSurface": return new Color(.28f,.77f,.51f);
+                case "core.surfaceParticles": case "core.particleSurface": case "core.unlitSurface": case "core.pbrSurface": case "core.shell": return new Color(.28f,.77f,.51f);
+                case "core.gradient": case "core.posterize": case "core.fresnel": case "core.colorRamp": case "core.layer": case "core.dissolve": return new Color(.92f,.72f,.24f);
+                case "core.sticker": return new Color(.94f,.50f,.22f);
+                case "core.uvTile": case "core.flipbook": case "core.uvDistort": return new Color(.30f,.58f,.95f);
+                case "core.vertexMotion": case "core.normalMap": return new Color(.22f,.76f,.79f);
+                case "core.audioLink": return new Color(.87f,.40f,.59f);
+                case "core.output": return new Color(.89f,.37f,.40f);
                 default:
                     switch (NodeCatalog.Category(operation))
                     {
-                        case "Math": return new Color(.28f,.33f,.38f);
-                        case "Color": return new Color(.40f,.34f,.10f);
-                        case "Coordinates": return new Color(.16f,.32f,.52f);
-                        case "Textures": return new Color(.46f,.25f,.10f);
-                        case "Inputs": return new Color(.12f,.38f,.40f);
+                        case "Math": return new Color(.53f,.63f,.74f);
+                        case "Color": return new Color(.92f,.72f,.24f);
+                        case "Coordinates": return new Color(.30f,.58f,.95f);
+                        case "Textures": return new Color(.94f,.50f,.22f);
+                        case "Inputs": return new Color(.22f,.76f,.79f);
                         default: return new Color(.28f,.28f,.28f);
                     }
             }
@@ -814,6 +820,13 @@ namespace NXSG.Editor
             return type == "surface" ? new Color(.35f, .85f, .46f)
                 : type == "float" ? new Color(.80f, .82f, .85f)
                 : type == "vector2" ? new Color(.45f, .65f, 1f) : type == "vector3" ? new Color(.25f,.85f,.85f) : new Color(1f, .78f, .25f);
+        }
+
+        void AddInspectorSection(string text)
+        {
+            var heading = new Label(text);
+            heading.AddToClassList("nxsg-section");
+            inspector.Add(heading);
         }
 
         void RebuildInspector()
@@ -869,10 +882,10 @@ namespace NXSG.Editor
             var node = selection.Count > 1 ? null : graph?.Nodes.FirstOrDefault(n => n.Id == selected);
             if (node != null)
             {
-                inspector.Add(new Label(Title(node.Operation)) { style = { marginTop = 15, unityFontStyleAndWeight = FontStyle.Bold } });
+                inspector.Add(new Label(Title(node.Operation)) { name = "nxsg-node-heading", style = { marginTop = 15, unityFontStyleAndWeight = FontStyle.Bold } });
                 if (GraphTypes.IsDynamic(node.Operation)) inspector.Add(new Label("Automatic type: " + (inferredTypes.TryGetValue(node.Id, out var inferred) && inferred == "float" ? "Number" : "Color"))
                     { style = { color = new Color(.7f, .8f, .9f), marginBottom = 4 } });
-                inspector.Add(new Label(NodeCatalog.Description(node.Operation)) { style = { whiteSpace = WhiteSpace.Normal, marginBottom = 6 } });
+                inspector.Add(new Label(NodeCatalog.Description(node.Operation)) { name = "nxsg-node-description", style = { whiteSpace = WhiteSpace.Normal, marginBottom = 6 } });
                 AddNodePreviewControls(node);
                 AddEffectHandlesInspectorHook(node);
                 if (node.Operation == "core.constant")
@@ -916,21 +929,26 @@ namespace NXSG.Editor
                     case "core.pbrSurface": AddLightingControls(node); AddAlbedoAlphaToggle(node); AddNumber(node, "opacity", "Opacity", 1, "opacity"); AddNumber(node, "cutoff", "Cutoff", .001f); AddNumber(node, "displacement", "Displacement", 0, "displacement"); AddNumber(node, "metallic", "Metallic", 0, "metallic"); AddNumber(node, "roughness", "Roughness", .5f, "roughness"); break;
                     case "core.toonSurface": AddLightingControls(node); AddAlbedoAlphaToggle(node); AddNumber(node, "opacity", "Opacity", 1, "opacity"); AddNumber(node, "cutoff", "Cutoff", .001f); AddNumber(node, "displacement", "Displacement", 0, "displacement"); break;
                     case "core.surfaceParticles":
+                        AddInspectorSection("APPEARANCE");
                         var sourceUvToggle = new Toggle("Color from mesh UVs") { value = (int?)node.Properties["sourceUV"] == 1,
                             tooltip = "On: particle Albedo and Emission sample the connected texture at the spawn point on mesh UV0. Off: each particle displays the texture using its own sprite UVs. Opacity keeps sprite UVs." };
                         sourceUvToggle.RegisterValueChangedCallback(evt => Edit("Change particle color UVs", () => node.Properties["sourceUV"] = evt.newValue ? 1 : 0));
                         inspector.Add(sourceUvToggle);
                         AddIndexedChoice(node,"blendMode","Blending",new[]{"Alpha","Additive"},1);
+                        AddInspectorSection("EMISSION");
                         AddBoundedNumber(node,"density","Triangle density",0,1,.1f,"density");
                         AddBoundedNumber(node,"emissionRate","Emission rate / triangle / sec",0,4,1 / Mathf.Max(.001f, (float?)node.Properties["lifetime"] ?? 2),"emissionRate");
+                        AddInspectorSection("SIZE & FADING");
                         AddBoundedNumber(node,"size","Particle size",.0001f,1,.03f,"size");
                         AddBoundedNumber(node,"edgeSharpness","Edge sharpness",0,1,0,"edgeSharpness");
                         inspector.Add(new Label("Edge sharpness: 0 = soft puff, 1 = crisp circle. Opacity and lifetime fading still apply.") { style = { whiteSpace = WhiteSpace.Normal } });
                         AddBoundedNumber(node,"lifetime","Lifetime (seconds)",.05f,30,2,"lifetime");
                         AddParticleCurves(node);
+                        AddInspectorSection("MOTION");
                         AddNumber(node,"speed","Outward speed",.2f,"speed");
                         AddNumber(node,"gravity","Gravity (local Y)",0,"gravity");
                         AddBoundedNumber(node,"spread","Velocity randomness",0,5,.05f,"spread");
+                        AddInspectorSection("OUTPUT");
                         AddBoundedNumber(node,"opacity","Opacity",0,1,1,"opacity");
                         AddBoundedNumber(node,"mask","Emitter mask",0,1,1,"mask");
                         inspector.Add(new Label("Connect your surface to Base, then this node to Output. Emits from the same mesh: Density selects source triangles (1 = all). Rate requests births per source triangle per second. Connected Rate and Lifetime drive adaptive tessellation up to level 64; high values cost more. Change Rate or Lifetime to retime procedural particles; there is no persistent simulation. Mask uses mesh UVs. Color from mesh UVs samples particle color at its spawn point; otherwise it uses sprite UVs. Particles follow the current pose. Expand renderer bounds if particles disappear near screen edges.") { style = { whiteSpace = WhiteSpace.Normal } });
@@ -1494,9 +1512,24 @@ namespace NXSG.Editor
             if (graph.Layout.Nodes == null) graph.Layout.Nodes = new Dictionary<string, GraphNodeLayout>();
             graph.Layout.Nodes[id] = new GraphNodeLayout { X = position.x, Y = position.y };
         }
+        void DrawCanvasGrid(MeshGenerationContext context)
+        {
+            // Screen-spaced dots stay subdued and bounded when zooming far out.
+            var step = 24f * zoom;
+            while (step < 16) step *= 2;
+            var painter = context.painter2D;
+            painter.strokeColor = new Color(.25f, .27f, .30f, .65f);
+            painter.lineWidth = 1;
+            painter.BeginPath();
+            for (var x = (pan.x % step + step) % step; x < canvas.contentRect.width; x += step)
+                for (var y = (pan.y % step + step) % step; y < canvas.contentRect.height; y += step)
+                { painter.MoveTo(new Vector2(x, y)); painter.LineTo(new Vector2(x + 1, y)); }
+            painter.Stroke();
+        }
+
         void TransformCanvas()
         {
-            layer.transform.position = pan; layer.transform.scale = new Vector3(zoom, zoom, 1); layer.MarkDirtyRepaint();
+            layer.transform.position = pan; layer.transform.scale = new Vector3(zoom, zoom, 1); layer.MarkDirtyRepaint(); canvas.MarkDirtyRepaint();
         }
         void CanvasDown(PointerDownEvent evt)
         {

@@ -1,9 +1,12 @@
-# Editor UI pass — alpha.28
+# Editor UI pass — alpha.29
 
 Reviewed the actual Unity 2022.3.22f1 Linux editor using compositor captures in headless Gamescope. Focus: dense particle controls, the minimum window size, node labels, and the connected-node picker.
 
-- Shared toolbar/button spacing and inspector field spacing.
-- Selected sidebar tab has a visible underline and background; tabs share available space.
+- Graphite panels, 3 px node corners, subtle canvas dots, and solid type-colored node headers.
+- NX violet marks Build for VRChat, active toggles, focus, and selection; node headers and sockets retain distinct, richer colors.
+- Shared toolbar/button spacing and inspector field spacing. Build stays at the right of the wrapping toolbar.
+- Particle controls have Appearance, Emission, Size & Fading, Motion, and Output section headings.
+- Selected sidebar tab has a visible underline; tabs share available space.
 - Inspector labels wrap within their column instead of displacing inputs.
 - Material preview fits available width and can collapse; its state survives inspector rebuilds.
 - Selected-node controls appear before frame controls.
