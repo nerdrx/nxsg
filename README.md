@@ -2,51 +2,58 @@
   <img src="docs/assets/nxsg-banner.svg" width="100%" alt="NX Shader Graph — a visual material editor for VRChat" />
 </p>
 
-<p align="center">
-  <strong>A shader graph for VRChat.</strong><br />
-  Create and edit materials directly in Unity.
-</p>
+NXSG is a shader graph editor for Unity's Built-In Render Pipeline, developed for PC VRChat avatars. It includes Toon, PBR and Unlit shading, procedural textures, fur, particles, and animated effects. Materials are built by connecting nodes, with controls for lighting, color, masks, and movement.
 
-<p align="center">
-  <a href="https://nerdrx.github.io/nxsg/#install"><strong>Install NXSG</strong></a> &nbsp;·&nbsp;
-  <a href="docs/QUICK_START.md">First material</a> &nbsp;·&nbsp;
-  <a href="docs/NODES.md">Node guide</a> &nbsp;·&nbsp;
-  <a href="Packages/dev.nerdrx.nxsg/Samples~/README.md">Example graphs</a> &nbsp;·&nbsp;
-  <a href="https://github.com/nerdrx/nxsg/releases">Releases</a>
-</p>
+The editor generates shaders and materials directly in Unity. Graphs remain editable as `.nxsg` files, and included examples provide starting points for common effects.
 
-<p align="center"><sub>Early alpha · Unity 2022.3.22f1 · Built-In pipeline · PC VRChat target</sub></p>
+## [📦 Install with ALCOM or Creator Companion](https://nerdrx.github.io/nxsg/#install)
 
-## NX Shader Graph
+Add the NXSG repository, enable **Show Pre-Release Packages**, and install **NX Shader Graph** in your project. NXSG is currently in early alpha; use a test project for your first installation.
 
-NXSG is a node-based material editor for PC VRChat. It supports Toon, PBR and Unlit surfaces, procedural textures, fur, particles, and AudioLink inputs.
-
-Connect nodes to define the material, preview individual outputs, and generate a shader with **Build for VRChat**. Graphs are saved as editable `.nxsg` files. Texture slots can be named to match the material inspector.
-
-[![NXSG in Unity: type-colored node headers, graphite canvas, violet controls, and a live particle preview](docs/images/editor-ui-pass.png)](docs/UI_POLISH.md)
-
-<p align="center"><sub>Actual Unity editor on Linux. The Particle Lifetime example is included.</sub></p>
-
-## Installation
-
-1. [Add the NXSG repository](https://nerdrx.github.io/nxsg/#install) to **ALCOM or Creator Companion**.
-2. Enable **Show Pre-Release Packages**, then add **NX Shader Graph** to your project.
-3. Open **Tools → NXSG → Open Graph Editor** in Unity.
-4. Create a graph, or import **Example Graphs** from NXSG's Unity Package Manager entry.
-5. Save inside **Assets**, choose **Build for VRChat**, and assign the material from **Assets/NXSGGenerated** to your mesh.
+**[Download releases](https://github.com/nerdrx/nxsg/releases) · [Installation help](docs/VPM.md)**
 
 <details>
-<summary>Adding the repository manually?</summary>
+<summary>VPM repository URL</summary>
 
 ```text
 https://nerdrx.github.io/nxsg/index.json
 ```
 
-[Installation help](docs/VPM.md) · [First material walkthrough](docs/QUICK_START.md)
-
 </details>
 
-**Start in a test project.** NXSG is an early alpha, developed and tested on Linux. Native Windows/D3D, headset and live VRChat validation remain incomplete. Quest/mobile avatars are not supported. Building creates local assets; it does not upload your avatar. [Tested behavior and remaining limits](docs/VALIDATION.md).
+### [Documentation](docs/NODES.md) · [Getting started](docs/QUICK_START.md) · [Example graphs](Packages/dev.nerdrx.nxsg/Samples~/README.md)
+
+## Features
+
+- **Surface shading:** Toon, PBR and Unlit surfaces, normal maps, matcaps, rim lighting, and configurable lighting brightness and saturation.
+- **Material effects:** Glitter, emission, iridescence, holograms, dissolve, stickers, and wireframes.
+- **Fur:** Shell fur, silhouette fins, and cards generated from mesh edges, with root/tip coloring, masks, grooming, wind, local self-shadowing, and shell distance LOD.
+- **Procedural textures:** 1D–4D noise, Voronoi, Musgrave-style fractals, checkerboards, waves, ramps, distortion, and texture bombing.
+- **Texture coordinates:** Mesh UVs, object/world projection, Polar and Panosphere coordinates, scrolling, rotation, and other UV transforms.
+- **Geometry effects:** Nested shells, parallax, parallax occlusion, tessellation, and shader-driven particles emitted from the mesh.
+- **Animation:** Flipbooks, vertex animation, AudioLink inputs, and animatable material properties.
+- **Volumes:** Raymarched distance fields and procedural volume rendering.
+- **Lighting integrations:** Additional pixel lights for Toon/PBR base surfaces and optional LTCGI support.
+
+See the [node guide](docs/NODES.md) for individual nodes, inputs, and settings.
+
+## Graph editor
+
+[![NXSG running in Unity on Linux, showing a particle graph and live material preview](docs/images/editor-ui-pass.png)](docs/UI_POLISH.md)
+
+The editor supports searching for nodes, connecting from either socket direction, and adding compatible nodes by dropping a wire on empty space. Related operations can be switched directly from node headers.
+
+Other editor features include:
+
+- Box selection, copy/paste, duplication, and reusable node groups called **Patterns**.
+- Named texture slots shared between the graph and material inspector.
+- Intermediate output previews, A/B material snapshots, and animation scrubbing.
+- Texture-set import, presets, and static texture baking.
+- Automatic scene updates for saved edits, build diagnostics, and recovery snapshots.
+
+Open **Tools → NXSG → Open Graph Editor** to begin. Save your graph inside **Assets**, then select **Build for VRChat**. The generated material is placed in **Assets/NXSGGenerated**, ready to assign to a mesh. This builds local assets; avatar uploading still uses the VRChat SDK.
+
+[Editor controls](docs/QUICK_START.md) · [Creator workflow](docs/CREATOR_WORKFLOW.md) · [Build performance](docs/BUILD_PERFORMANCE.md)
 
 ## Example materials
 
@@ -66,48 +73,18 @@ These are Unity renders from included graphs. The fur study uses **24 shells**; 
 
 This sculpture is drawn inside a cube using distance fields. The same volume tools can make drifting dust and smoke. [Explore the three volume studies](docs/VOLUMES.md)—the graphs are included. Use a closed cube proxy. These Unity renders use presentation bloom and tone mapping; raymarching is an experimental PC effect with a per-pixel cost.
 
-## Features
+## Compatibility
 
-| Feature | Includes |
-| :--- | :--- |
-| **Base materials** | Toon, PBR and Unlit surfaces. Normal maps, matcaps, rims, named texture slots, optional albedo alpha, and lighting brightness/saturation controls. |
-| **Fur** | Shells, silhouette fins, or cards generated from mesh edges. Masks, root/tip colors, grooming, wind, local self-shadowing and shell distance LOD. [Fur guide](docs/FUR_AND_PARALLAX.md) |
-| **Glitter and glow** | View-dependent glitter, emission, iridescence, additional pixel lights and optional LTCGI. [Glitter](docs/GLITTER.md) · [LTCGI](docs/LTCGI.md) |
-| **Layers and surface detail** | Nested shells, stickers, wireframes, parallax, parallax occlusion and tessellation. [Tessellation](docs/TESSELLATION.md) |
-| **Procedural patterns** | 1D–4D noise, Voronoi, Musgrave-style fractals, waves, ramps, distortion, texture bombing, Polar and Panosphere coordinates. [Node guide](docs/NODES.md) |
-| **Movement** | UV scrolling, flipbooks, dissolve, vertex animation, AudioLink inputs and shader-driven particles emitted from the mesh. [Particles](docs/PARTICLES.md) |
+NXSG currently targets **Unity 2022.3.22f1** and the **Built-In Render Pipeline** for **PC VRChat**. Development and editor testing take place on Linux. Native Windows/D3D, headset, and live VRChat validation remain incomplete. Quest/mobile avatars are not supported.
 
-## Editor
+The project is in early alpha. AudioLink and animatable properties are implemented, but live AudioLink and VRCFury integration checks are still pending. Keyboard undo can be unreliable in the Linux Unity editor; toolbar undo/redo is available.
 
-- Type-colored headers and sockets, with an outline around selected nodes.
-- Connections from either socket direction. Drop a wire on empty space to find a compatible node, or pull from a connected input to detach it.
-- Operation switching from node headers, box selection, copy/paste, duplication, and reusable **Patterns**.
-- Intermediate previews, A/B material snapshots, animation scrubbing, and a collapsible material preview.
-- Named texture slots, texture-set import, presets, and static texture baking.
-
-**Auto scene** applies saved edits after a short pause. Repeated builds avoid rewriting unchanged shader source, and saving no longer refreshes the entire project. [Build measurements](docs/BUILD_PERFORMANCE.md).
-
-[Creator workflow](docs/CREATOR_WORKFLOW.md) · [Effect handles and motion](docs/MOTION_AND_HANDLES.md) · [Editor UI notes](docs/UI_POLISH.md)
+[Compatibility details](docs/COMPATIBILITY.md) · [Validation results](docs/VALIDATION.md)
 
 <details>
-<summary><strong>Canvas shortcuts and recovery</strong></summary>
+<summary><strong>Effect limitations and performance</strong></summary>
 
-| Action | Control |
-| :--- | :--- |
-| Connect | Drag between sockets, or click both endpoints |
-| Detach | Pull from the connected input |
-| Select a group | Drag empty canvas; Shift adds to selection |
-| Pan / zoom | Middle-drag / scroll wheel |
-| Find a node | Space on the canvas |
-| Fit graph / frame selection | Home / F |
-| Copy / paste / duplicate | Toolbar or Ctrl+C / Ctrl+V / Ctrl+D |
-| Undo / redo | Toolbar buttons; keyboard undo remains unreliable on Linux/Unity |
-
-Failed builds keep the last working shader. Recovery snapshots live under `Library/NXSG/Recovery`; deleting Library removes those snapshots too.
-
-</details>
-
-## Current limitations
+### Effect limitations
 
 - **Geometry and performance.** Fur, shells, particles and tessellation can be expensive. Generated cards follow triangle edges and can overlap. Cost warnings are estimates, not GPU measurements.
 - **Lighting.** Additional pixel lights affect Toon/PBR base surfaces; fur and shell overlays have more limited lighting. Brightness limits apply per contribution, not to the sum of all lights.
@@ -116,11 +93,14 @@ Failed builds keep the last working shader. Recovery snapshots live under `Libra
 
 [Compatibility](docs/COMPATIBILITY.md) · [Validation](docs/VALIDATION.md)
 
-## Feedback
 
-[Open an issue](https://github.com/nerdrx/nxsg/issues). Include a small `.nxsg` graph, your Unity version, and a screenshot where possible. UI feedback is welcome as well.
+</details>
 
-Current priorities are testing on actual avatars and in stereo, fur performance, and editor usability. A community node SDK, Blender bridge, CLI and web viewer are longer-term plans.
+## Bugs and feedback
+
+Report bugs and request features through [GitHub Issues](https://github.com/nerdrx/nxsg/issues). Please include your NXSG version, Unity version, a screenshot, and a small example graph where possible. Check existing issues before submitting a new report.
+
+Current development priorities include avatar and stereo testing, fur performance, and editor usability. The node SDK, Blender bridge, CLI, and web viewer are planned work, not current features.
 
 <details>
 <summary><strong>For contributors</strong></summary>
