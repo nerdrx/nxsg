@@ -2,15 +2,22 @@
   <img src="docs/assets/nxsg-banner.svg" width="100%" alt="NX Shader Graph — a visual material editor for VRChat" />
 </p>
 
+<p align="center">
+  <code>Early alpha</code> &nbsp; <code>Unity 2022.3.22f1</code> &nbsp; <code>Built-In</code> &nbsp; <code>PC VRChat</code>
+</p>
+
 NXSG is a shader graph editor for Unity's Built-In Render Pipeline, developed for PC VRChat avatars. It includes Toon, PBR and Unlit shading, procedural textures, fur, particles, and animated effects. Materials are built by connecting nodes, with controls for lighting, color, masks, and movement.
 
 The editor generates shaders and materials directly in Unity. Graphs remain editable as `.nxsg` files, and included examples provide starting points for common effects.
 
-## [📦 Install with ALCOM or Creator Companion](https://nerdrx.github.io/nxsg/#install)
+<h2 align="center"><a href="https://nerdrx.github.io/nxsg/#install">Install NXSG</a></h2>
+<p align="center">
+  ALCOM / Creator Companion<br /><br />
+  <a href="https://github.com/nerdrx/nxsg/releases">Download releases</a> &nbsp;·&nbsp;
+  <a href="docs/VPM.md">Installation help</a>
+</p>
 
 Add the NXSG repository, enable **Show Pre-Release Packages**, and install **NX Shader Graph** in your project. NXSG is currently in early alpha; use a test project for your first installation.
-
-**[Download releases](https://github.com/nerdrx/nxsg/releases) · [Installation help](docs/VPM.md)**
 
 <details>
 <summary>VPM repository URL</summary>
@@ -21,19 +28,27 @@ https://nerdrx.github.io/nxsg/index.json
 
 </details>
 
-### [Documentation](docs/NODES.md) · [Getting started](docs/QUICK_START.md) · [Example graphs](Packages/dev.nerdrx.nxsg/Samples~/README.md)
+<p align="center">
+  <a href="docs/QUICK_START.md"><strong>Getting started</strong></a> &nbsp;·&nbsp;
+  <a href="docs/NODES.md"><strong>Documentation</strong></a> &nbsp;·&nbsp;
+  <a href="Packages/dev.nerdrx.nxsg/Samples~/README.md"><strong>Example graphs</strong></a>
+</p>
+
+---
 
 ## Features
 
-- **Surface shading:** Toon, PBR and Unlit surfaces, normal maps, matcaps, rim lighting, and configurable lighting brightness and saturation.
-- **Material effects:** Glitter, emission, iridescence, holograms, dissolve, stickers, and wireframes.
-- **Fur:** Shell fur, silhouette fins, and cards generated from mesh edges, with root/tip coloring, masks, grooming, wind, local self-shadowing, and shell distance LOD.
-- **Procedural textures:** 1D–4D noise, Voronoi, Musgrave-style fractals, checkerboards, waves, ramps, distortion, and texture bombing.
-- **Texture coordinates:** Mesh UVs, object/world projection, Polar and Panosphere coordinates, scrolling, rotation, and other UV transforms.
-- **Geometry effects:** Nested shells, parallax, parallax occlusion, tessellation, and shader-driven particles emitted from the mesh.
-- **Animation:** Flipbooks, vertex animation, AudioLink inputs, and animatable material properties.
-- **Volumes:** Raymarched distance fields and procedural volume rendering.
-- **Lighting integrations:** Additional pixel lights for Toon/PBR base surfaces and optional LTCGI support.
+| Feature | Includes |
+| :--- | :--- |
+| **Surface shading** | Toon, PBR and Unlit surfaces, normal maps, matcaps, rim lighting, and configurable lighting brightness and saturation. |
+| **Material effects** | Glitter, emission, iridescence, holograms, dissolve, stickers, and wireframes. |
+| **Fur** | Shell fur, silhouette fins, and cards generated from mesh edges, with root/tip coloring, masks, grooming, wind, local self-shadowing, and shell distance LOD. |
+| **Procedural textures** | 1D–4D noise, Voronoi, Musgrave-style fractals, checkerboards, waves, ramps, distortion, and texture bombing. |
+| **Texture coordinates** | Mesh UVs, object/world projection, Polar and Panosphere coordinates, scrolling, rotation, and other UV transforms. |
+| **Geometry effects** | Nested shells, parallax, parallax occlusion, tessellation, and shader-driven particles emitted from the mesh. |
+| **Animation** | Flipbooks, vertex animation, AudioLink inputs, and animatable material properties. |
+| **Volumes** | Raymarched distance fields and procedural volume rendering. |
+| **Lighting integrations** | Additional pixel lights for Toon/PBR base surfaces and optional LTCGI support. |
 
 See the [node guide](docs/NODES.md) for individual nodes, inputs, and settings.
 
@@ -51,7 +66,13 @@ Other editor features include:
 - Texture-set import, presets, and static texture baking.
 - Automatic scene updates for saved edits, build diagnostics, and recovery snapshots.
 
-Open **Tools → NXSG → Open Graph Editor** to begin. Save your graph inside **Assets**, then select **Build for VRChat**. The generated material is placed in **Assets/NXSGGenerated**, ready to assign to a mesh. This builds local assets; avatar uploading still uses the VRChat SDK.
+### Basic workflow
+
+1. Open **Tools → NXSG → Open Graph Editor**.
+2. Save your graph inside **Assets**, then select **Build for VRChat**.
+3. Assign the generated material from **Assets/NXSGGenerated** to your mesh.
+
+This builds local assets; avatar uploading still uses the VRChat SDK.
 
 [Editor controls](docs/QUICK_START.md) · [Creator workflow](docs/CREATOR_WORKFLOW.md) · [Build performance](docs/BUILD_PERFORMANCE.md)
 
@@ -59,9 +80,9 @@ Open **Tools → NXSG → Open Graph Editor** to begin. Save your graph inside *
 
 <table>
   <tr>
-    <td width="33%"><a href="Packages/dev.nerdrx.nxsg/Samples~/README.md"><img src="docs/assets/hologram-study.png" alt="Layered violet and cyan hologram rendered on a sphere and capsule" /></a><br /><strong>Layered holograms</strong><br /><sub>Emission and scanlines on offset shell layers.</sub></td>
-    <td width="33%"><a href="Packages/dev.nerdrx.nxsg/Samples~/README.md"><img src="docs/assets/pearl-study.png" alt="Iridescent pearl finish rendered on a sphere and capsule" /></a><br /><strong>Pearl and iridescence</strong><br /><sub>View-dependent color and reflections.</sub></td>
-    <td width="33%"><a href="docs/FUR_AND_PARALLAX.md"><img src="docs/assets/fur-study.png" alt="Warm short shell fur rendered on a sphere and capsule" /></a><br /><strong>Soft, short fur</strong><br /><sub>Shell fur with root and tip coloring.</sub></td>
+    <td width="33%" align="center" valign="top"><a href="Packages/dev.nerdrx.nxsg/Samples~/README.md"><img src="docs/assets/hologram-study.png" alt="Layered violet and cyan hologram rendered on a sphere and capsule" /></a><br /><strong>Layered holograms</strong><br /><sub>Emission and scanlines on offset shell layers.</sub></td>
+    <td width="33%" align="center" valign="top"><a href="Packages/dev.nerdrx.nxsg/Samples~/README.md"><img src="docs/assets/pearl-study.png" alt="Iridescent pearl finish rendered on a sphere and capsule" /></a><br /><strong>Pearl and iridescence</strong><br /><sub>View-dependent color and reflections.</sub></td>
+    <td width="33%" align="center" valign="top"><a href="docs/FUR_AND_PARALLAX.md"><img src="docs/assets/fur-study.png" alt="Warm short shell fur rendered on a sphere and capsule" /></a><br /><strong>Soft, short fur</strong><br /><sub>Shell fur with root and tip coloring.</sub></td>
   </tr>
 </table>
 
@@ -84,15 +105,12 @@ The project is in early alpha. AudioLink and animatable properties are implement
 <details>
 <summary><strong>Effect limitations and performance</strong></summary>
 
-### Effect limitations
-
 - **Geometry and performance.** Fur, shells, particles and tessellation can be expensive. Generated cards follow triangle edges and can overlap. Cost warnings are estimates, not GPU measurements.
 - **Lighting.** Additional pixel lights affect Toon/PBR base surfaces; fur and shell overlays have more limited lighting. Brightness limits apply per contribution, not to the sum of all lights.
 - **Rendering approximations.** Refraction samples the screen. Fur self-shadowing estimates a local volume. Transparent layers can sort incorrectly, and displaced effects may need larger renderer bounds.
 - **Integration testing.** AudioLink and animatable properties exist; live AudioLink and VRCFury checks remain pending. Motion inputs read avatar speed, not individual bones or PhysBones. Patterns are editable copies, not linked instances.
 
 [Compatibility](docs/COMPATIBILITY.md) · [Validation](docs/VALIDATION.md)
-
 
 </details>
 
@@ -120,6 +138,8 @@ The setup script downloads and verifies pinned VRChat Base/Avatars **3.10.5** pa
 [Development setup](docs/DEVELOPMENT.md) · [Design document](NXSG_DESIGN.md) · [Implementation plan](docs/IMPLEMENTATION_PLAN.md)
 
 </details>
+
+---
 
 ### Credits and source
 
