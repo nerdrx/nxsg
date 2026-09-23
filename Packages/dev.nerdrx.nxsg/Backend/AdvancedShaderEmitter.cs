@@ -415,7 +415,7 @@ namespace NXSG.Backend
                 case "core.colorAdjust":
                     bool Changed(string setting, double neutral) => edges.ContainsKey(Key(n.Id, setting)) || (double?)n.Properties[setting] != null && (double)n.Properties[setting] != neutral;
                     body = "float4 c=" + P("color", "float4(.5,.5,.5,1)", "color") + ";";
-                    if (Changed("hue", 0)) body += "c=NX_HueShift(c," + S("hue", 0) + ");";
+                    if (Changed("hue", 0)) body += "c=" + (IntProp(n,"hueSpace",0,0,1)==1 ? "NX_HueShiftOKLab" : "NX_HueShift") + "(c," + S("hue", 0) + ");";
                     if (Changed("saturation", 1)) body += "c.rgb=lerp(dot(c.rgb,float3(.2126,.7152,.0722)),c.rgb," + S("saturation", 1) + ");";
                     if (Changed("lift", 0)) body += "c.rgb=c.rgb+(1-c.rgb)*" + S("lift", 0) + ";";
                     if (Changed("gamma", 1)) body += "c.rgb=sign(c.rgb)*pow(abs(c.rgb),1/max(" + S("gamma", 1) + ",.0001));";
@@ -424,7 +424,7 @@ namespace NXSG.Backend
                     if (Changed("exposure", 0)) body += "c.rgb*=exp2(" + S("exposure", 0) + ");";
                     body += "return c;";
                     break;
-                case "core.hueShift": body = "NX_HueShift(" + P("color", "float4(1,0,0,1)", "color") + "," + S("hue", 0) + ")"; break;
+                case "core.hueShift": body = (IntProp(n,"hueSpace",0,0,1)==1 ? "NX_HueShiftOKLab" : "NX_HueShift") + "(" + P("color", "float4(1,0,0,1)", "color") + "," + S("hue", 0) + ")"; break;
                 case "core.saturation": body = "float4(lerp(dot((" + P("color", "float4(.5,.5,.5,1)", "color") + ").rgb,float3(.2126,.7152,.0722)),(" + P("color", "float4(.5,.5,.5,1)", "color") + ").rgb," + S("amount", 1) + "),(" + P("color", "float4(.5,.5,.5,1)", "color") + ").a)"; break;
                 case "core.splitUV": body = "(" + P("uv", uv, "vector2") + ")." + (port == "u" ? "x" : "y"); break;
                 case "core.combineUV": body = "float2(" + S("u", 0) + "," + S("v", 0) + ")"; break;
@@ -788,6 +788,34 @@ namespace NXSG.Backend
             return shader;
         }
         const string Helpers=@"
+// OKLab matrices: Bjorn Ottosson, https://bottosson.github.io/posts/oklab/ (public domain).
+float3 NX_HueLinear(float3 rgb) {
+ float3 v=abs(rgb);
+ return sign(rgb)*lerp(v/12.92,pow((v+.055)/1.055,2.4),step(.04045,v));
+}
+float3 NX_HueGamma(float3 rgb) {
+ float3 v=abs(rgb);
+ return sign(rgb)*lerp(v*12.92,1.055*pow(v,1.0/2.4)-.055,step(.0031308,v));
+}
+float4 NX_HueShiftOKLab(float4 color,float turns) {
+ float turn=frac(turns); if(turn==0)return color;
+ float3 rgb=color.rgb;
+ #if defined(UNITY_COLORSPACE_GAMMA)
+ rgb=NX_HueLinear(rgb);
+ #endif
+ float3 lms=mul(float3x3(.4122214708,.5363325363,.0514459929,.2119034982,.6806995451,.1073969566,.0883024619,.2817188376,.6299787005),rgb);
+ lms=sign(lms)*pow(abs(lms),1.0/3.0);
+ float3 lab=mul(float3x3(.2104542553,.7936177850,-.0040720468,1.9779984951,-2.4285922050,.4505937099,.0259040371,.7827717662,-.8086757660),lms);
+ float sn,cs; sincos(turn*6.28318530718,sn,cs);
+ lab.yz=float2(cs*lab.y-sn*lab.z,sn*lab.y+cs*lab.z);
+ lms=mul(float3x3(1,.3963377774,.2158037573,1,-.1055613458,-.0638541728,1,-.0894841775,-1.2914855480),lab);
+ lms=lms*lms*lms;
+ rgb=mul(float3x3(4.0767416621,-3.3077115913,.2309699292,-1.2684380046,2.6097574011,-.3413193965,-.0041960863,-.7034186147,1.7076147010),lms);
+ #if defined(UNITY_COLORSPACE_GAMMA)
+ rgb=NX_HueGamma(rgb);
+ #endif
+ return float4(rgb,color.a);
+}
 float4 NX_HueShift(float4 color, float turns) {
     float hi = max(color.r, max(color.g, color.b));
     float lo = min(color.r, min(color.g, color.b));

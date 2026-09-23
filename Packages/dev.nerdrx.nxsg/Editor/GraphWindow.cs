@@ -912,6 +912,7 @@ namespace NXSG.Editor
                     case "core.contrast": AddNumber(node,"amount","Contrast",1,"amount"); AddNumber(node,"pivot","Pivot",.5f,"pivot"); break;
                     case "core.saturation": AddNumber(node,"amount","Saturation",1,"amount"); break;
                     case "core.colorAdjust":
+                        AddIndexedChoice(node,"hueSpace","Hue space",new[]{"HSV","OKLab"});
                         AddBoundedNumber(node,"hue","Hue (turns)",0,1,0,"hue");
                         AddBoundedNumber(node,"saturation","Saturation",0,2,1,"saturation");
                         AddNumber(node,"lift","Lift",0,"lift");
@@ -920,7 +921,7 @@ namespace NXSG.Editor
                         AddNumber(node,"contrast","Contrast",1,"contrast");
                         AddNumber(node,"exposure","Exposure (stops)",0,"exposure");
                         break;
-                    case "core.hueShift": AddBoundedNumber(node,"hue","Hue (turns)",0,1,0,"hue"); break;
+                    case "core.hueShift": AddIndexedChoice(node,"hueSpace","Hue space",new[]{"HSV","OKLab"}); AddBoundedNumber(node,"hue","Hue (turns)",0,1,0,"hue"); break;
                     case "core.combineUV": AddNumber(node,"u","U / horizontal",0,"u"); AddNumber(node,"v","V / vertical",0,"v"); break;
                     case "core.ramp": AddNumber(node, "blackPoint", "Black point", 0); AddNumber(node, "whitePoint", "White point", 1); AddNumber(node, "smoothness", "Smoothing (0–1)", 0); AddRampCurve(node); break;
                     case "core.colorRamp": AddColorRamp(node); break;

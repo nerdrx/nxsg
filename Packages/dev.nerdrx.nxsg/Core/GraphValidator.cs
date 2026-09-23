@@ -268,6 +268,8 @@ namespace NXSG.Core
             if (node.Operation == "core.starMask") CheckIntegerRange(node.Properties["points"], path + ".properties.points", 3, 32, diagnostics);
             if (node.Operation == "core.radialRays") CheckIntegerRange(node.Properties["count"], path + ".properties.count", 1, 128, diagnostics);
             if (node.Operation == "core.heightMask") CheckIntegerRange(node.Properties["axis"], path + ".properties.axis", 0, 2, diagnostics);
+            if (node.Operation == "core.hueShift" || node.Operation == "core.colorAdjust")
+                CheckIntegerRange(node.Properties["hueSpace"], path + ".properties.hueSpace", 0, 1, diagnostics);
             if (node.Operation == "core.particleSurface")
             {
                 CheckIntegerRange(node.Properties["blendMode"], path + ".properties.blendMode", 0, 1, diagnostics);

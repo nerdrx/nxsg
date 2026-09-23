@@ -547,3 +547,7 @@ Portable checks and all seven packaging tests passed. Unity 2022.3.22f1 under hi
 Unity 2022.3.22f1, Linux, hidden Gamescope/OpenGL: bounded volume render checks cover density zero, SDF sphere coverage, union/subtraction, box/torus imports, outside orthographic and inside perspective cameras, opaque camera-depth clipping, solid SDF rendering and animated 4D density. The actual showcase PNGs use the shipped sample graphs. Strict Windows-target D3D11 asset-bundle compilation passed for 14 shaders including the three volume samples; this is compilation, not native Windows or VRChat runtime proof.
 
 Portable checks cover emitted bounds/alpha contracts, invalid box shapes/colors/step budgets, missing SDF distance and Ray Position outside its context. The timeout helper is tested with a disposable sleeping process group. No client/headset performance, stereo appearance, or VRChat mirror acceptance is claimed.
+
+## 1.3.0 hue spaces (2026-09-23)
+
+Portable checks cover hue-space persistence, legacy HSV fallback, invalid-mode rejection, and omission of neutral Color Adjust stages. Unity 2022.3.22f1 Linux/OpenGL render checks compare both nodes with an independent OKLab reference in Gamma and Linear projects, including gray, HDR, negative channels, negative hue and preserved alpha. Package tests pass. This does not establish native Windows or live VRChat verification.

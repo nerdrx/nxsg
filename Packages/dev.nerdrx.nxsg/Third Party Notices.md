@@ -27,3 +27,6 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+## OKLab conversion
+
+Hue rotation uses the public-domain conversion matrices published by Björn Ottosson in [A perceptual color space for image processing](https://bottosson.github.io/posts/oklab/), with matrices updated 2021-01-25. Retrieved 2026-09-23.

@@ -287,7 +287,7 @@ namespace NXSG.Core
                 case "core.contrast": return "Adjust color contrast around a pivot.";
                 case "core.saturation": return "Adjust color saturation.";
                 case "core.colorAdjust": return "Adjust hue, saturation, lift, gamma, gain, contrast and exposure together. Unconnected neutral settings compile away; connected controls remain animatable. Alpha is preserved.";
-                case "core.hueShift": return "Rotate color hue. 0 leaves it unchanged; 1 is a full turn. Negative values wrap backward. Preserves alpha and HDR range. Connect Time or AudioLink to animate.";
+                case "core.hueShift": return "Rotate color hue in HSV or OKLab. 0 leaves it unchanged; 1 is a full turn. Negative values wrap backward. Preserves alpha and HDR range. Connect Time or AudioLink to animate.";
                 case "core.splitUV": return "Read U and V components from UV coordinates.";
                 case "core.combineUV": return "Build UV coordinates from U and V values.";
                 case "core.constant": return "Choose a solid color to use on its own or combine with other nodes.";
@@ -374,7 +374,7 @@ namespace NXSG.Core
                 case "core.oneMinus": return "invert one minus"; case "core.clamp": return "saturate";
                 case "core.absolute": return "abs magnitude positive"; case "core.power": return "pow exponent raise"; case "core.sqrt": return "square root"; case "core.sine": return "sin wave"; case "core.cosine": return "cos wave"; case "core.fraction": return "frac decimal"; case "core.floor": return "round down"; case "core.ceil": return "round up"; case "core.round": return "nearest integer";
                 case "core.step": return "threshold cutoff"; case "core.smoothstep": return "smooth transition"; case "core.remap": return "range map"; case "core.pingPong": return "repeat bounce loop";
-                case "core.splitColor": return "rgba channels"; case "core.combineColor": return "rgba channels"; case "core.luminance": return "brightness grayscale"; case "core.contrast": return "color contrast"; case "core.saturation": return "color saturation"; case "core.hueShift": return "hue hsv rainbow color rotation shift"; case "core.colorAdjust": return "hue saturation lift gamma gain contrast exposure brightness hsv grading correction"; case "core.splitUV": return "uv components"; case "core.combineUV": return "uv components";
+                case "core.splitColor": return "rgba channels"; case "core.combineColor": return "rgba channels"; case "core.luminance": return "brightness grayscale"; case "core.contrast": return "color contrast"; case "core.saturation": return "color saturation"; case "core.hueShift": return "hue hsv oklab rainbow color rotation shift"; case "core.colorAdjust": return "hue saturation lift gamma gain contrast exposure brightness hsv oklab grading correction"; case "core.splitUV": return "uv components"; case "core.combineUV": return "uv components";
                 case "core.constant": return "rgb rgba colour";
                 case "core.multiply": return "tint darken blend";
                 case "core.toonSurface": return "anime cel cartoon shading";
@@ -522,8 +522,8 @@ namespace NXSG.Core
                 case "core.combineColor": node.Properties["r"] = 0.0; node.Properties["g"] = 0.0; node.Properties["b"] = 0.0; node.Properties["a"] = 1.0; break;
                 case "core.contrast": node.Properties["amount"] = 1.0; node.Properties["pivot"] = .5; break;
                 case "core.saturation": node.Properties["amount"] = 1.0; break;
-                case "core.hueShift": node.Properties["hue"] = 0.0; break;
-                case "core.colorAdjust": foreach (var key in new[] { "hue", "lift", "exposure" }) node.Properties[key] = 0.0; foreach (var key in new[] { "saturation", "gamma", "gain", "contrast" }) node.Properties[key] = 1.0; break;
+                case "core.hueShift": node.Properties["hue"] = 0.0; node.Properties["hueSpace"] = 0; break;
+                case "core.colorAdjust": node.Properties["hueSpace"] = 0; foreach (var key in new[] { "hue", "lift", "exposure" }) node.Properties[key] = 0.0; foreach (var key in new[] { "saturation", "gamma", "gain", "contrast" }) node.Properties[key] = 1.0; break;
                 case "core.combineUV": node.Properties["u"] = 0.0; node.Properties["v"] = 0.0; break;
                 case "core.position": node.Properties["space"] = 0; break;
                 case "core.normalDirection": node.Properties["space"] = 1; break;
