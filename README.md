@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <code>Early alpha</code> &nbsp; <code>Unity 2022.3.22f1</code> &nbsp; <code>Built-In</code> &nbsp; <code>PC VRChat</code>
+  <code>1.0</code> &nbsp; <code>Unity 2022.3.22f1</code> &nbsp; <code>Built-In</code> &nbsp; <code>PC VRChat</code>
 </p>
 
 NXSG is a shader graph editor for Unity's Built-In Render Pipeline, developed for PC VRChat avatars. It includes Toon, PBR and Unlit shading, procedural textures, fur, particles, and animated effects. Materials are built by connecting nodes, with controls for lighting, color, masks, and movement.
@@ -17,7 +17,7 @@ The editor generates shaders and materials directly in Unity. Graphs remain edit
   <a href="docs/VPM.md">Installation help</a>
 </p>
 
-Add the NXSG repository, enable **Show Pre-Release Packages**, and install **NX Shader Graph** in your project. NXSG is currently in early alpha; use a test project for your first installation.
+Add the NXSG repository and install **NX Shader Graph** in your project. Version **1.0.0** is available without enabling prerelease packages.
 
 <details>
 <summary>VPM repository URL</summary>
@@ -98,7 +98,7 @@ This sculpture is drawn inside a cube using distance fields. The same volume too
 
 NXSG currently targets **Unity 2022.3.22f1** and the **Built-In Render Pipeline** for **PC VRChat**. Development and editor testing take place on Linux. Native Windows/D3D, headset, and live VRChat validation remain incomplete. Quest/mobile avatars are not supported.
 
-The project is in early alpha. AudioLink and animatable properties are implemented, but live AudioLink and VRCFury integration checks are still pending. Keyboard undo can be unreliable in the Linux Unity editor; toolbar undo/redo is available.
+AudioLink and animatable properties are implemented, but live AudioLink and VRCFury integration checks are still pending. Keyboard undo can be unreliable in the Linux Unity editor; toolbar undo/redo is available.
 
 [Compatibility details](docs/COMPATIBILITY.md) · [Validation results](docs/VALIDATION.md)
 

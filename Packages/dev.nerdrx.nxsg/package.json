@@ -1,8 +1,8 @@
 {
   "name": "dev.nerdrx.nxsg",
-  "version": "0.1.0-alpha.31",
+  "version": "1.0.0",
   "displayName": "NX Shader Graph",
-  "description": "Linux-first shader graph authoring for PC VRChat Built-In. Experimental development package.",
+  "description": "Shader graph authoring for PC VRChat and Unity Built-In.",
   "unity": "2022.3",
   "unityRelease": "22f1",
   "author": {
@@ -12,7 +12,7 @@
   "dependencies": {
     "com.unity.nuget.newtonsoft-json": "3.2.1"
   },
-  "url": "https://github.com/nerdrx/nxsg/releases/download/v0.1.0-alpha.31/dev.nerdrx.nxsg-0.1.0-alpha.31.zip",
+  "url": "https://github.com/nerdrx/nxsg/releases/download/v1.0.0/dev.nerdrx.nxsg-1.0.0.zip",
   "documentationUrl": "https://github.com/nerdrx/nxsg/blob/main/docs/NODES.md",
   "changelogUrl": "https://github.com/nerdrx/nxsg/releases",
   "samples": [
