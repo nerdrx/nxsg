@@ -194,6 +194,7 @@ namespace NXSG.Core
                 case "core.contrast": numeric = new[] { "amount", "pivot" }; break;
                 case "core.saturation": numeric = new[] { "amount" }; break;
                 case "core.hueShift": numeric = new[] { "hue" }; break;
+                case "core.colorAdjust": numeric = new[] { "hue", "saturation", "lift", "gamma", "gain", "contrast", "exposure" }; break;
                 case "core.splitUV": break;
                 case "core.combineUV": numeric = new[] { "u", "v" }; break;
                 case "core.circleMask": numeric = new[] { "radius", "softness" }; break;

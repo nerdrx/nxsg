@@ -87,6 +87,7 @@ internal static class Program
         NegativeLiteralChecks.Run(Assert);
         GlitterChecks.Run(Assert);
         ColorConversionChecks.Run(Assert);
+        ColorAdjustChecks.Run(Assert);
         TextureLabelChecks.Run(Assert);
         FurCardChecks.Run(Assert);
         LightingInfluenceChecks.Run(Assert);

@@ -38,7 +38,7 @@ namespace NXSG.Backend
         public static bool IsAdvanced(ShaderGraph graph)
         {
             if (graph?.Nodes == null) return false;
-            var ops = new HashSet<string> { "core.volumeSurface", "core.rayPosition", "core.sdfSphere", "core.sdfBox", "core.sdfTorus", "core.sdfBlend", "core.unlitSurface", "core.pbrSurface", "core.particleSurface", "core.particleColor", "core.particleInfo", "core.surfaceParticles", "core.fur", "core.tessellation", "core.fresnel", "core.colorRamp", "core.layer", "core.sticker", "core.dissolve", "core.flipbook", "core.uvDistort", "core.vertexMotion", "core.audioLink", "core.ltcgi", "core.darknessGlow", "core.shell", "core.normalMap", "core.previewVector", "core.musgrave", "core.voronoi", "core.checker", "core.wave", "core.gradient", "core.uvTile", "core.posterize", "core.absolute", "core.power", "core.sqrt", "core.sine", "core.cosine", "core.fraction", "core.floor", "core.ceil", "core.round", "core.step", "core.smoothstep", "core.remap", "core.pingPong", "core.splitColor", "core.combineColor", "core.luminance", "core.contrast", "core.saturation", "core.hueShift", "core.splitUV", "core.combineUV", "core.position", "core.normalDirection", "core.viewDirection", "core.vertexColor", "core.cameraDistance", "core.screenUV", "core.circleMask", "core.boxMask", "core.polygonMask", "core.starMask", "core.radialRays", "core.spiral", "core.brick", "core.hexGrid", "core.triplanarTexture", "core.matcapTexture", "core.rimGlow", "core.heightMask", "core.slopeMask", "core.distanceFade", "core.wireframe" };
+            var ops = new HashSet<string> { "core.volumeSurface", "core.rayPosition", "core.sdfSphere", "core.sdfBox", "core.sdfTorus", "core.sdfBlend", "core.unlitSurface", "core.pbrSurface", "core.particleSurface", "core.particleColor", "core.particleInfo", "core.surfaceParticles", "core.fur", "core.tessellation", "core.fresnel", "core.colorRamp", "core.layer", "core.sticker", "core.dissolve", "core.flipbook", "core.uvDistort", "core.vertexMotion", "core.audioLink", "core.ltcgi", "core.darknessGlow", "core.shell", "core.normalMap", "core.previewVector", "core.musgrave", "core.voronoi", "core.checker", "core.wave", "core.gradient", "core.uvTile", "core.posterize", "core.absolute", "core.power", "core.sqrt", "core.sine", "core.cosine", "core.fraction", "core.floor", "core.ceil", "core.round", "core.step", "core.smoothstep", "core.remap", "core.pingPong", "core.splitColor", "core.combineColor", "core.luminance", "core.contrast", "core.saturation", "core.hueShift", "core.colorAdjust", "core.splitUV", "core.combineUV", "core.position", "core.normalDirection", "core.viewDirection", "core.vertexColor", "core.cameraDistance", "core.screenUV", "core.circleMask", "core.boxMask", "core.polygonMask", "core.starMask", "core.radialRays", "core.spiral", "core.brick", "core.hexGrid", "core.triplanarTexture", "core.matcapTexture", "core.rimGlow", "core.heightMask", "core.slopeMask", "core.distanceFade", "core.wireframe" };
             // Only reachable effects select the extended lowering; disconnected nodes never change shading.
             var connected = new HashSet<string>();
             var queue = new Queue<string>(graph.Nodes.Where(n => n?.Operation == "core.output").Select(n => n.Id));
@@ -412,6 +412,18 @@ namespace NXSG.Backend
                 case "core.combineColor": body = "float4(" + S("r", 0) + "," + S("g", 0) + "," + S("b", 0) + "," + S("a", 1) + ")"; break;
                 case "core.luminance": body = "dot((" + P("color", "float4(.5,.5,.5,1)", "color") + ").rgb,float3(.2126,.7152,.0722))"; break;
                 case "core.contrast": body = "float4 c=" + P("color", "float4(.5,.5,.5,1)", "color") + "; return float4((c.rgb-" + S("pivot", .5) + ")*" + S("amount", 1) + "+" + S("pivot", .5) + ",c.a);"; break;
+                case "core.colorAdjust":
+                    bool Changed(string setting, double neutral) => edges.ContainsKey(Key(n.Id, setting)) || (double?)n.Properties[setting] != null && (double)n.Properties[setting] != neutral;
+                    body = "float4 c=" + P("color", "float4(.5,.5,.5,1)", "color") + ";";
+                    if (Changed("hue", 0)) body += "c=NX_HueShift(c," + S("hue", 0) + ");";
+                    if (Changed("saturation", 1)) body += "c.rgb=lerp(dot(c.rgb,float3(.2126,.7152,.0722)),c.rgb," + S("saturation", 1) + ");";
+                    if (Changed("lift", 0)) body += "c.rgb=c.rgb+(1-c.rgb)*" + S("lift", 0) + ";";
+                    if (Changed("gamma", 1)) body += "c.rgb=sign(c.rgb)*pow(abs(c.rgb),1/max(" + S("gamma", 1) + ",.0001));";
+                    if (Changed("gain", 1)) body += "c.rgb*=" + S("gain", 1) + ";";
+                    if (Changed("contrast", 1)) body += "c.rgb=(c.rgb-.5)*" + S("contrast", 1) + "+.5;";
+                    if (Changed("exposure", 0)) body += "c.rgb*=exp2(" + S("exposure", 0) + ");";
+                    body += "return c;";
+                    break;
                 case "core.hueShift": body = "NX_HueShift(" + P("color", "float4(1,0,0,1)", "color") + "," + S("hue", 0) + ")"; break;
                 case "core.saturation": body = "float4(lerp(dot((" + P("color", "float4(.5,.5,.5,1)", "color") + ").rgb,float3(.2126,.7152,.0722)),(" + P("color", "float4(.5,.5,.5,1)", "color") + ").rgb," + S("amount", 1) + "),(" + P("color", "float4(.5,.5,.5,1)", "color") + ").a)"; break;
                 case "core.splitUV": body = "(" + P("uv", uv, "vector2") + ")." + (port == "u" ? "x" : "y"); break;

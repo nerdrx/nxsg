@@ -291,3 +291,9 @@ minimum. Unlit has no light response. Fur overlays retain separate lighting.
 ## Hue Shift
 
 **Color** category. Connect a color to **Color** and a number to **Hue**. Hue is measured in turns: `0` leaves the color unchanged, `1/3` shifts red to green, and `1` returns to the original hue. Negative values rotate backward; typed values outside 0–1 wrap. Alpha and RGB range are preserved, including HDR colors. Gray stays gray. Connect Time or AudioLink to Hue for animation.
+
+## Color Adjust
+
+One Color-category node for Hue, Saturation, Lift, Gamma, Gain, Contrast, and Exposure, each with a numeric socket. Neutral settings are 0 for Hue/Lift/Exposure and 1 for the others. Unconnected neutral settings emit no adjustment operations. Connected controls remain live even when their current value is neutral, so material animation and AudioLink keep working.
+
+Order: hue → saturation → lift → gamma → gain → contrast → exposure. Lift uses `color + (1 - color) * lift`; gamma uses a sign-preserving power with reciprocal gamma (minimum 0.0001); contrast pivots around 0.5; exposure is in stops. Alpha is unchanged. Gamma/gain/lift are scalar controls; use separate channel nodes for per-channel grading. The existing Hue Shift and Saturation nodes remain available for old graphs.

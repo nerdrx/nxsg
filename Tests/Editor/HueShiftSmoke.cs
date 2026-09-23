@@ -48,7 +48,20 @@ public static class HueShiftSmoke
 
             graph = CreateGraph(new JArray(.4, .4, .4, .6));
             Check(graph, target, capture, .37f, new Color(.4f, .4f, .4f, .6f), "grayscale");
-            Debug.Log("NXSG HUE SHIFT SMOKE PASSED: generated helper, parameter default, wrap, negative hue, grayscale, alpha, HDR");
+            graph = CreateGraph(new JArray(.25, .25, .25, .6));
+            var adjust = graph.Nodes.Single(n => n.Id == "shift");
+            adjust.Operation = "core.colorAdjust";
+            Check(graph, target, capture, 0, new Color(.25f,.25f,.25f,.6f), "neutral color adjust");
+            adjust.Properties["gamma"] = 2;
+            Check(graph, target, capture, 0, new Color(.5f,.5f,.5f,.6f), "gamma");
+            adjust.Properties["gain"] = 2;
+            Check(graph, target, capture, 0, new Color(1,1,1,.6f), "gamma and gain");
+            adjust.Properties["exposure"] = 1;
+            Check(graph, target, capture, 0, new Color(2,2,2,.6f), "HDR exposure");
+            graph = CreateGraph(new JArray(2,0,0,.35));
+            graph.Nodes.Single(n => n.Id == "shift").Operation = "core.colorAdjust";
+            Check(graph, target, capture, 1f/3f, new Color(0,2,0,.35f), "color adjust animated hue");
+            Debug.Log("NXSG HUE SHIFT SMOKE PASSED: generated helper, parameter default, wrap, negative hue, grayscale, alpha, HDR, Color Adjust gamma/gain/exposure");
             EditorApplication.Exit(0);
         }
         catch (Exception exception)
