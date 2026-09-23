@@ -63,10 +63,22 @@ namespace NXSG.Editor
             return preset;
         }
 
+        static bool SameShader(string saved, string current)
+        {
+            if (string.Equals(saved, current, StringComparison.Ordinal)) return true;
+            // Generated shader names may change after a graph rename. The final
+            // segment is its stable source-asset GUID, including legacy names.
+            if (saved == null || current == null || !saved.StartsWith("NXSG/", StringComparison.Ordinal)
+                || !current.StartsWith("NXSG/", StringComparison.Ordinal)) return false;
+            var oldId = saved.Substring(saved.LastIndexOf('/') + 1);
+            var newId = current.Substring(current.LastIndexOf('/') + 1);
+            return oldId.Length == 32 && oldId.All(Uri.IsHexDigit) && oldId == newId;
+        }
+
         public static bool IsCompatible(NXSGMaterialPreset preset, Material material, out string reason)
         {
             if (preset == null || material == null || material.shader == null) { reason = "Preset or material is missing."; return false; }
-            if (!string.Equals(preset.shaderName, material.shader.name, StringComparison.Ordinal))
+            if (!SameShader(preset.shaderName, material.shader.name))
             { reason = "Preset belongs to shader '" + preset.shaderName + "'."; return false; }
             foreach(var value in preset.values??new List<NXSGMaterialPresetValue>())
             {

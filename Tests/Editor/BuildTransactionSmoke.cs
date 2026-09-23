@@ -18,7 +18,15 @@ public static class BuildTransactionSmoke
             var graph=GraphJson.Parse(File.ReadAllText(Path.Combine(package,"Samples~/Animated Palette.nxsg")));
             Save(graph);
             var mat=GraphBuild.Build(graph,Path.GetFullPath(PathName));
-            var dir="Assets/NXSGGenerated/"+AssetDatabase.AssetPathToGUID(PathName);
+            var id=AssetDatabase.AssetPathToGUID(PathName);
+            Require(mat.shader.name=="NXSG/BuildTransaction/"+id,"Readable shader name missing");
+            var preset=ScriptableObject.CreateInstance<NXSGMaterialPreset>();
+            preset.shaderName="NXSG/Generated/"+id;
+            Require(NXSGMaterialPresetUtility.IsCompatible(preset,mat,out var reason),"Legacy preset rejected: "+reason);
+            preset.shaderName="NXSG/Other/00000000000000000000000000000000";
+            Require(!NXSGMaterialPresetUtility.IsCompatible(preset,mat,out reason),"Unrelated preset accepted");
+            UnityEngine.Object.DestroyImmediate(preset);
+            var dir="Assets/NXSGGenerated/"+id;
             var shader=dir+"/Material.shader";var material=dir+"/Material.mat";
             var sg=AssetDatabase.AssetPathToGUID(shader);var mg=AssetDatabase.AssetPathToGUID(material);
             var oldShader=File.ReadAllText(shader);var oldMat=File.ReadAllText(material);

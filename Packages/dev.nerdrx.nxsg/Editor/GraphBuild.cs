@@ -59,7 +59,11 @@ namespace NXSG.Editor
             Directory.CreateDirectory("Library/NXSG");
             Recover(journalPath, shaderPath, materialPath);
 
-            var result = ShaderEmitter.Emit(graph, OptionalIntegrations.Options("NXSG/Generated/" + guid));
+            // Keep the asset paths/GUIDs stable; only the shader menu name becomes readable.
+            var label = new string(Path.GetFileNameWithoutExtension(relative).Take(80)
+                .Select(c => char.IsLetterOrDigit(c) || c == '-' || c == '_' ? c : '_').ToArray());
+            if (string.IsNullOrEmpty(label)) label = "Graph";
+            var result = ShaderEmitter.Emit(graph, OptionalIntegrations.Options("NXSG/" + label + "/" + guid));
             if (!result.Succeeded)
                 throw new InvalidOperationException(string.Join("\n", result.Diagnostics.Select(d => d.Path + ": " + d.Message)));
             if (SystemInfo.graphicsDeviceType == GraphicsDeviceType.Null)

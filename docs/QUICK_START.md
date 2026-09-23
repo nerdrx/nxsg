@@ -23,3 +23,7 @@ Choose **Reads** on a selected Parameter node to change its source. A parameter 
 ## Boundaries
 
 Start in a test project and keep normal project backups. Recovery snapshots live under Library and disappear if Library is cleared. See [compatibility](COMPATIBILITY.md) for verified and unverified targets. Linux editor checks do not establish VRChat client or headset compatibility.
+
+### Generated shader names
+
+Generated shaders use `NXSG/<graph filename>/<unique ID>` in Unity’s shader selector. Rebuild existing graphs to update their display names. Spaces and punctuation become underscores; the unique ID and generated asset paths remain stable. Existing material presets still recognize the same graph after renaming.
