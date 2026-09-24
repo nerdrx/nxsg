@@ -301,3 +301,11 @@ Order: hue → saturation → lift → gamma → gain → contrast → exposure.
 ### Hue space
 
 Hue Shift and Color Adjust offer **HSV** (the existing behavior) and **OKLab** in the Hue space dropdown. Old graphs default to HSV. OKLab rotates the chromatic axes while preserving OKLab lightness and chroma; it converts Gamma project colors through linear sRGB. Alpha is unchanged. Out-of-gamut and HDR results are not clamped. This choice affects hue only; the other Color Adjust stages keep their existing behavior. Neutral, unconnected Color Adjust controls still emit no adjustment math.
+
+## Color Mask and Replace Color
+
+**Color Mask** selects pixels near a target color and outputs a 0–1 mask. Connect a texture's Color to Color, choose Target color, then use the mask for opacity, emission strength or a Mix factor. Tolerance sets the fully selected range; Softness fades beyond it. Both measure RGB distance in the graph's working space. Alpha is ignored when matching.
+
+**Replace Color** uses the same selection to blend toward Replacement. Factor is clamped to 0–1 before applying the mask. Original alpha is preserved. Target, Replacement and all numeric settings accept connections; the inspector supplies unconnected defaults. Negative tolerance and softness evaluate as zero.
+
+Hue Shift and Color Adjust can switch from their node header menu. **Reset unconnected controls** restores neutral numeric settings while keeping hue space, connections and their stored values. Hover a control for its units and neutral value; connected sliders are labeled explicitly. Reset supports Undo.

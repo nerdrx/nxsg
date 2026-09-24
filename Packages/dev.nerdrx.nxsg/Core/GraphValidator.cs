@@ -195,6 +195,7 @@ namespace NXSG.Core
                 case "core.saturation": numeric = new[] { "amount" }; break;
                 case "core.hueShift": numeric = new[] { "hue" }; break;
                 case "core.colorAdjust": numeric = new[] { "hue", "saturation", "lift", "gamma", "gain", "contrast", "exposure" }; break;
+                case "core.colorMask": case "core.replaceColor": numeric = node.Operation == "core.colorMask" ? new[] { "tolerance", "softness" } : new[] { "tolerance", "softness", "factor" }; break;
                 case "core.splitUV": break;
                 case "core.combineUV": numeric = new[] { "u", "v" }; break;
                 case "core.circleMask": numeric = new[] { "radius", "softness" }; break;
@@ -270,6 +271,11 @@ namespace NXSG.Core
             if (node.Operation == "core.heightMask") CheckIntegerRange(node.Properties["axis"], path + ".properties.axis", 0, 2, diagnostics);
             if (node.Operation == "core.hueShift" || node.Operation == "core.colorAdjust")
                 CheckIntegerRange(node.Properties["hueSpace"], path + ".properties.hueSpace", 0, 1, diagnostics);
+            if (node.Operation == "core.colorMask" || node.Operation == "core.replaceColor")
+            {
+                CheckVector4(node.Properties["target"], path + ".properties.target", diagnostics);
+                if (node.Operation == "core.replaceColor") CheckVector4(node.Properties["replacement"], path + ".properties.replacement", diagnostics);
+            }
             if (node.Operation == "core.particleSurface")
             {
                 CheckIntegerRange(node.Properties["blendMode"], path + ".properties.blendMode", 0, 1, diagnostics);

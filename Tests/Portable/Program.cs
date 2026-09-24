@@ -88,6 +88,7 @@ internal static class Program
         GlitterChecks.Run(Assert);
         ColorConversionChecks.Run(Assert);
         ColorAdjustChecks.Run(Assert);
+        ColorKeyChecks.Run(Assert);
         TextureLabelChecks.Run(Assert);
         FurCardChecks.Run(Assert);
         LightingInfluenceChecks.Run(Assert);

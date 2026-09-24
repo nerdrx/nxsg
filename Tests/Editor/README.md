@@ -24,3 +24,9 @@ Copy these files into the same disposable fixture and run each entry independent
 - `NXSG.Editor.CreatorPlaygroundSmoke.Run`: actual EditorWindow rendering, image snapshot replacement/cleanup and source isolation. Screenshot capture requires headless Gamescope.
 
 Require each explicit PASSED/passed log marker; Unity startup or a process exit alone is insufficient.
+
+## Color controls and responsiveness
+
+- `ColorControlsSmoke.Run`: stable fields while editing, invalid-number recovery, hue-space persistence, reset/Undo, header switching and a real editor capture at `/tmp/nxsg-color-controls.png`.
+- `ColorKeySmoke.Run`: GPU checks for Color Mask and Replace Color, including alpha, edited defaults and material-bound inputs.
+- `ResponsivenessSmoke.Run`: 150-node socket cache and wire insertion checks, a bounded drag-target timing sample, Undo and deferred scene checks. Timing is informational, with no machine-specific pass threshold.

@@ -16,7 +16,7 @@ namespace NXSG.Core
             "core.add", "core.subtract", "core.divide", "core.minimum", "core.maximum", "core.mix", "core.emission", "core.oneMinus", "core.clamp",
             "core.absolute", "core.power", "core.sqrt", "core.sine", "core.cosine", "core.fraction", "core.floor", "core.ceil", "core.round",
             "core.step", "core.smoothstep", "core.remap", "core.pingPong",
-            "core.splitColor", "core.combineColor", "core.luminance", "core.contrast", "core.saturation", "core.hueShift", "core.colorAdjust", "core.splitUV", "core.combineUV",
+            "core.splitColor", "core.combineColor", "core.luminance", "core.contrast", "core.saturation", "core.hueShift", "core.colorAdjust", "core.colorMask", "core.replaceColor", "core.splitUV", "core.combineUV",
             "core.position", "core.normalDirection", "core.viewDirection", "core.vertexColor", "core.cameraDistance", "core.screenUV",
             "core.circleMask", "core.boxMask", "core.polygonMask", "core.starMask", "core.radialRays", "core.spiral", "core.brick", "core.hexGrid",
             "core.triplanarTexture", "core.matcapTexture", "core.rimGlow", "core.heightMask", "core.slopeMask", "core.distanceFade",
@@ -44,7 +44,7 @@ namespace NXSG.Core
             ["core.oneMinus"] = new[] { "color" }, ["core.clamp"] = new[] { "color" },
             ["core.absolute"] = new[] { "a" }, ["core.power"] = new[] { "a", "b" }, ["core.sqrt"] = new[] { "a" }, ["core.sine"] = new[] { "a" }, ["core.cosine"] = new[] { "a" }, ["core.fraction"] = new[] { "a" }, ["core.floor"] = new[] { "a" }, ["core.ceil"] = new[] { "a" }, ["core.round"] = new[] { "a" },
             ["core.step"] = new[] { "a", "b" }, ["core.smoothstep"] = new[] { "value", "low", "high" }, ["core.remap"] = new[] { "value", "inMin", "inMax", "outMin", "outMax" }, ["core.pingPong"] = new[] { "value", "length" },
-            ["core.splitColor"] = new[] { "color" }, ["core.combineColor"] = new[] { "r", "g", "b", "a" }, ["core.luminance"] = new[] { "color" }, ["core.contrast"] = new[] { "color", "amount", "pivot" }, ["core.saturation"] = new[] { "color", "amount" }, ["core.hueShift"] = new[] { "color", "hue" }, ["core.colorAdjust"] = new[] { "color", "hue", "saturation", "lift", "gamma", "gain", "contrast", "exposure" }, ["core.splitUV"] = new[] { "uv" }, ["core.combineUV"] = new[] { "u", "v" },
+            ["core.splitColor"] = new[] { "color" }, ["core.combineColor"] = new[] { "r", "g", "b", "a" }, ["core.luminance"] = new[] { "color" }, ["core.contrast"] = new[] { "color", "amount", "pivot" }, ["core.saturation"] = new[] { "color", "amount" }, ["core.hueShift"] = new[] { "color", "hue" }, ["core.colorAdjust"] = new[] { "color", "hue", "saturation", "lift", "gamma", "gain", "contrast", "exposure" }, ["core.colorMask"] = new[] { "color", "target", "tolerance", "softness" }, ["core.replaceColor"] = new[] { "color", "target", "replacement", "tolerance", "softness", "factor" }, ["core.splitUV"] = new[] { "uv" }, ["core.combineUV"] = new[] { "u", "v" },
             ["core.position"] = new string[0], ["core.normalDirection"] = new string[0], ["core.viewDirection"] = new string[0], ["core.vertexColor"] = new string[0], ["core.cameraDistance"] = new string[0], ["core.screenUV"] = new string[0],
             ["core.circleMask"] = new[] { "uv" }, ["core.boxMask"] = new[] { "uv" }, ["core.polygonMask"] = new[] { "uv" }, ["core.starMask"] = new[] { "uv" }, ["core.radialRays"] = new[] { "uv" }, ["core.spiral"] = new[] { "uv" }, ["core.brick"] = new[] { "uv" }, ["core.hexGrid"] = new[] { "uv" },
             ["core.triplanarTexture"] = new[] { "position", "normal" }, ["core.matcapTexture"] = new[] { "normal" }, ["core.rimGlow"] = new[] { "color", "power" }, ["core.heightMask"] = new[] { "position" }, ["core.slopeMask"] = new[] { "normal" }, ["core.distanceFade"] = new string[0],
@@ -87,7 +87,7 @@ namespace NXSG.Core
             ["core.mix"] = new[] { "value" }, ["core.emission"] = new[] { "color" },
             ["core.oneMinus"] = new[] { "color" }, ["core.clamp"] = new[] { "color" },
             ["core.absolute"] = new[] { "value" }, ["core.power"] = new[] { "value" }, ["core.sqrt"] = new[] { "value" }, ["core.sine"] = new[] { "value" }, ["core.cosine"] = new[] { "value" }, ["core.fraction"] = new[] { "value" }, ["core.floor"] = new[] { "value" }, ["core.ceil"] = new[] { "value" }, ["core.round"] = new[] { "value" }, ["core.step"] = new[] { "value" }, ["core.smoothstep"] = new[] { "value" }, ["core.remap"] = new[] { "value" }, ["core.pingPong"] = new[] { "value" },
-            ["core.splitColor"] = new[] { "r", "g", "b", "a" }, ["core.combineColor"] = new[] { "color" }, ["core.luminance"] = new[] { "value" }, ["core.contrast"] = new[] { "color" }, ["core.saturation"] = new[] { "color" }, ["core.hueShift"] = new[] { "color" }, ["core.colorAdjust"] = new[] { "color" }, ["core.splitUV"] = new[] { "u", "v" }, ["core.combineUV"] = new[] { "uv" },
+            ["core.splitColor"] = new[] { "r", "g", "b", "a" }, ["core.combineColor"] = new[] { "color" }, ["core.luminance"] = new[] { "value" }, ["core.contrast"] = new[] { "color" }, ["core.saturation"] = new[] { "color" }, ["core.hueShift"] = new[] { "color" }, ["core.colorAdjust"] = new[] { "color" }, ["core.colorMask"] = new[] { "value" }, ["core.replaceColor"] = new[] { "color" }, ["core.splitUV"] = new[] { "u", "v" }, ["core.combineUV"] = new[] { "uv" },
             ["core.position"] = new[] { "position" }, ["core.normalDirection"] = new[] { "normal" }, ["core.viewDirection"] = new[] { "direction" }, ["core.vertexColor"] = new[] { "color", "alpha" }, ["core.cameraDistance"] = new[] { "value" }, ["core.screenUV"] = new[] { "uv" },
             ["core.circleMask"] = new[] { "value" }, ["core.boxMask"] = new[] { "value" }, ["core.polygonMask"] = new[] { "value" }, ["core.starMask"] = new[] { "value" }, ["core.radialRays"] = new[] { "value" }, ["core.spiral"] = new[] { "value" }, ["core.brick"] = new[] { "value" }, ["core.hexGrid"] = new[] { "value" },
             ["core.triplanarTexture"] = new[] { "color" }, ["core.matcapTexture"] = new[] { "color" }, ["core.rimGlow"] = new[] { "color" }, ["core.heightMask"] = new[] { "value" }, ["core.slopeMask"] = new[] { "value" }, ["core.distanceFade"] = new[] { "value" },
@@ -132,7 +132,7 @@ namespace NXSG.Core
                 case "core.shell": case "core.normalMap": case "core.ltcgi": case "core.darknessGlow": case "core.output": return "Surface";
                 case "core.posterize": case "core.fresnel": case "core.colorRamp": case "core.layer": case "core.sticker":
                 case "core.dissolve": return "Color";
-                case "core.splitColor": case "core.combineColor": case "core.luminance": case "core.contrast": case "core.saturation": case "core.hueShift": case "core.colorAdjust": return "Color";
+                case "core.splitColor": case "core.combineColor": case "core.luminance": case "core.contrast": case "core.saturation": case "core.hueShift": case "core.colorAdjust": case "core.colorMask": case "core.replaceColor": return "Color";
                 case "core.splitUV": case "core.combineUV": return "Coordinates";
                 case "core.position": case "core.normalDirection": case "core.viewDirection": case "core.vertexColor": case "core.cameraDistance": return "Inputs";
                 case "core.screenUV": return "Coordinates";
@@ -196,7 +196,7 @@ namespace NXSG.Core
                 case "core.clamp": return "Clamp"; case "core.constant": return "Color";
                 case "core.absolute": return "Absolute"; case "core.power": return "Power"; case "core.sqrt": return "Square Root"; case "core.sine": return "Sine"; case "core.cosine": return "Cosine"; case "core.fraction": return "Fraction"; case "core.floor": return "Round Down"; case "core.ceil": return "Round Up"; case "core.round": return "Round";
                 case "core.step": return "Step"; case "core.smoothstep": return "Smoothstep"; case "core.remap": return "Remap"; case "core.pingPong": return "Ping Pong";
-                case "core.splitColor": return "Split Color"; case "core.combineColor": return "Combine Color"; case "core.luminance": return "Luminance"; case "core.contrast": return "Contrast"; case "core.saturation": return "Saturation"; case "core.hueShift": return "Hue Shift"; case "core.colorAdjust": return "Color Adjust"; case "core.splitUV": return "Split UV"; case "core.combineUV": return "Combine UV";
+                case "core.splitColor": return "Split Color"; case "core.combineColor": return "Combine Color"; case "core.luminance": return "Luminance"; case "core.contrast": return "Contrast"; case "core.saturation": return "Saturation"; case "core.hueShift": return "Hue Shift"; case "core.colorAdjust": return "Color Adjust"; case "core.colorMask": return "Color Mask"; case "core.replaceColor": return "Replace Color"; case "core.splitUV": return "Split UV"; case "core.combineUV": return "Combine UV";
                 case "core.parameter": return "Parameter"; case "core.uv0": return "UV Coordinates";
                 case "core.texture2D": return "Texture"; case "core.multiply": return "Multiply";
                 case "core.toonSurface": return "Toon Surface"; case "core.unlitSurface": return "Unlit Surface";
@@ -288,6 +288,8 @@ namespace NXSG.Core
                 case "core.saturation": return "Adjust color saturation.";
                 case "core.colorAdjust": return "Adjust hue, saturation, lift, gamma, gain, contrast and exposure together. Unconnected neutral settings compile away; connected controls remain animatable. Alpha is preserved.";
                 case "core.hueShift": return "Rotate color hue in HSV or OKLab. 0 leaves it unchanged; 1 is a full turn. Negative values wrap backward. Preserves alpha and HDR range. Connect Time or AudioLink to animate.";
+                case "core.colorMask": return "Match RGB distance in the graph working space to a target color. Tolerance and softness use RGB distance; no color space conversion is applied.";
+                case "core.replaceColor": return "Replace pixels near a target RGB color in the graph working space, preserving input alpha. Tolerance, softness and factor control the blend.";
                 case "core.splitUV": return "Read U and V components from UV coordinates.";
                 case "core.combineUV": return "Build UV coordinates from U and V values.";
                 case "core.constant": return "Choose a solid color to use on its own or combine with other nodes.";
@@ -375,6 +377,8 @@ namespace NXSG.Core
                 case "core.absolute": return "abs magnitude positive"; case "core.power": return "pow exponent raise"; case "core.sqrt": return "square root"; case "core.sine": return "sin wave"; case "core.cosine": return "cos wave"; case "core.fraction": return "frac decimal"; case "core.floor": return "round down"; case "core.ceil": return "round up"; case "core.round": return "nearest integer";
                 case "core.step": return "threshold cutoff"; case "core.smoothstep": return "smooth transition"; case "core.remap": return "range map"; case "core.pingPong": return "repeat bounce loop";
                 case "core.splitColor": return "rgba channels"; case "core.combineColor": return "rgba channels"; case "core.luminance": return "brightness grayscale"; case "core.contrast": return "color contrast"; case "core.saturation": return "color saturation"; case "core.hueShift": return "hue hsv oklab rainbow color rotation shift"; case "core.colorAdjust": return "hue saturation lift gamma gain contrast exposure brightness hsv oklab grading correction"; case "core.splitUV": return "uv components"; case "core.combineUV": return "uv components";
+                case "core.colorMask": return "colour chroma key select isolate mask tolerance";
+                case "core.replaceColor": return "recolor recolour colour swap replace target";
                 case "core.constant": return "rgb rgba colour";
                 case "core.multiply": return "tint darken blend";
                 case "core.toonSurface": return "anime cel cartoon shading";
@@ -430,6 +434,8 @@ namespace NXSG.Core
                 case "core.saturation": return port == "color" ? "color" : port == "amount" ? "float" : null;
                 case "core.hueShift": return port == "color" ? "color" : port == "hue" ? "float" : null;
                 case "core.colorAdjust": return port == "color" ? "color" : new[] { "hue", "saturation", "lift", "gamma", "gain", "contrast", "exposure" }.Contains(port) ? "float" : null;
+                case "core.colorMask": return port == "color" || port == "target" ? "color" : port == "tolerance" || port == "softness" || port == "value" ? "float" : null;
+                case "core.replaceColor": return port == "color" || port == "target" || port == "replacement" ? "color" : port == "tolerance" || port == "softness" || port == "factor" ? "float" : null;
                 case "core.splitUV": return port == "uv" ? "vector2" : port == "u" || port == "v" ? "float" : null;
                 case "core.combineUV": return port == "u" || port == "v" ? "float" : port == "uv" ? "vector2" : null;
                 case "core.position": return port == "position" ? "vector3" : null;
@@ -524,6 +530,8 @@ namespace NXSG.Core
                 case "core.saturation": node.Properties["amount"] = 1.0; break;
                 case "core.hueShift": node.Properties["hue"] = 0.0; node.Properties["hueSpace"] = 0; break;
                 case "core.colorAdjust": node.Properties["hueSpace"] = 0; foreach (var key in new[] { "hue", "lift", "exposure" }) node.Properties[key] = 0.0; foreach (var key in new[] { "saturation", "gamma", "gain", "contrast" }) node.Properties[key] = 1.0; break;
+                case "core.colorMask": node.Properties["target"] = new JArray(1, 0, 0, 1); node.Properties["tolerance"] = .1; node.Properties["softness"] = .1; break;
+                case "core.replaceColor": node.Properties["target"] = new JArray(1, 0, 0, 1); node.Properties["replacement"] = new JArray(0, 0, 1, 1); node.Properties["tolerance"] = .1; node.Properties["softness"] = .1; node.Properties["factor"] = 1.0; break;
                 case "core.combineUV": node.Properties["u"] = 0.0; node.Properties["v"] = 0.0; break;
                 case "core.position": node.Properties["space"] = 0; break;
                 case "core.normalDirection": node.Properties["space"] = 1; break;

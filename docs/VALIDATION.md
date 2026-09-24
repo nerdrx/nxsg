@@ -551,3 +551,13 @@ Portable checks cover emitted bounds/alpha contracts, invalid box shapes/colors/
 ## 1.3.0 hue spaces (2026-09-23)
 
 Portable checks cover hue-space persistence, legacy HSV fallback, invalid-mode rejection, and omission of neutral Color Adjust stages. Unity 2022.3.22f1 Linux/OpenGL render checks compare both nodes with an independent OKLab reference in Gamma and Linear projects, including gray, HDR, negative channels, negative hue and preserved alpha. Package tests pass. This does not establish native Windows or live VRChat verification.
+
+## 1.4.0 editor responsiveness and color selection (2026-09-24)
+
+- Portable suite covers new node types, connections, persistence, defaults and invalid color/number properties. Packaging tests pass.
+- Linux Unity 2022.3.22f1/OpenGL renders exercise Color Mask distance/softness and Replace Color's factor, alpha, connected controls and edited color defaults.
+- Actual editor checks cover hue-space persistence, numeric-field identity during edits, rejection of nonfinite input, reset/Undo, header switching and inspector bounds. Screenshot: `work/color-controls.png` (local test artifact).
+- A 150-node, 148-wire editor fixture checks socket-cache rebuilding, wire insertion/Undo and deferred scene checks. 1,000 warm insertion-target updates took 138.6 ms in this run. This measures that path only, not frame time or a before/after benchmark.
+- Scene synchronization still skips layout-only changes after the deferred comparison, retains the last valid shader after errors, and respects Auto scene being off.
+
+These checks do not establish native Windows/D3D or live VRChat behavior.

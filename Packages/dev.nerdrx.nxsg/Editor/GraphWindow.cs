@@ -38,6 +38,7 @@ namespace NXSG.Editor
         Dictionary<string, string> inferredTypes = new Dictionary<string, string>();
         readonly Dictionary<string, Gradient> wireGradients = new Dictionary<string, Gradient>();
         readonly List<SocketView> sockets = new List<SocketView>();
+        readonly Dictionary<(string node, string port, bool output), SocketView> socketLookup = new Dictionary<(string, string, bool), SocketView>();
         bool wiring, wireMoved, pendingOutput;
         VisualElement spawnMenu;
         int wirePointer;
@@ -476,7 +477,7 @@ namespace NXSG.Editor
         {
             if (layer == null) return;
             CancelWire();
-            layer.Clear(); nodes.Clear(); sockets.Clear();
+            layer.Clear(); nodes.Clear(); sockets.Clear(); socketLookup.Clear(); insertionNodeId = null;
             inferredTypes = GraphTypes.Infer(graph);
             if (graph != null)
                 foreach (var node in graph.Nodes)
@@ -504,7 +505,7 @@ namespace NXSG.Editor
                         dragging = true; pointerStart = evt.position;
                         dragOrigins.Clear();
                         foreach (var id in selection) dragOrigins[id] = Position(id);
-                        title.CapturePointer(evt.pointerId); RebuildInspector(); evt.StopPropagation();
+                        title.CapturePointer(evt.pointerId); evt.StopPropagation();
                     });
                     title.RegisterCallback<PointerMoveEvent>(evt =>
                     {
@@ -546,6 +547,7 @@ namespace NXSG.Editor
                     layer.Add(box); nodes[node.Id] = box;
                 }
             DrawPatternGroups();
+            foreach (var socket in sockets) socketLookup[(socket.node, socket.port, socket.output)] = socket;
             selection.RemoveAll(id => !nodes.ContainsKey(id));
             UpdateSelectionOutline();
             TransformCanvas(); RebuildInspector(); UpdateIdentity(); QueueLivePreview();
@@ -560,6 +562,8 @@ namespace NXSG.Editor
                 case "core.absolute": case "core.sqrt": case "core.sine": case "core.cosine":
                 case "core.fraction": case "core.floor": case "core.ceil": case "core.round":
                     return new[] { "core.absolute", "core.sqrt", "core.sine", "core.cosine", "core.fraction", "core.floor", "core.ceil", "core.round" };
+                case "core.hueShift": case "core.colorAdjust":
+                    return new[] { "core.hueShift", "core.colorAdjust" };
                 case "core.oneMinus": case "core.clamp":
                     return new[] { "core.oneMinus", "core.clamp" };
                 case "core.uv0": case "core.objectUV": case "core.worldUV": case "core.uvTransform":
@@ -656,9 +660,10 @@ namespace NXSG.Editor
 
         void UpdateSelectionOutline()
         {
+            var selectedIds = new HashSet<string>(selection);
             foreach (var pair in nodes)
             {
-                var outline = selection.Contains(pair.Key) ? new Color(.78f, .65f, 1f) : new Color(.27f, .29f, .32f);
+                var outline = selectedIds.Contains(pair.Key) ? new Color(.78f, .65f, 1f) : new Color(.27f, .29f, .32f);
                 pair.Value.style.borderLeftColor = outline;
                 pair.Value.style.borderRightColor = outline;
                 pair.Value.style.borderTopColor = outline;
@@ -911,17 +916,14 @@ namespace NXSG.Editor
                     case "core.combineColor": AddNumber(node,"r","Red",0,"r"); AddNumber(node,"g","Green",0,"g"); AddNumber(node,"b","Blue",0,"b"); AddNumber(node,"a","Alpha",1,"a"); break;
                     case "core.contrast": AddNumber(node,"amount","Contrast",1,"amount"); AddNumber(node,"pivot","Pivot",.5f,"pivot"); break;
                     case "core.saturation": AddNumber(node,"amount","Saturation",1,"amount"); break;
-                    case "core.colorAdjust":
-                        AddIndexedChoice(node,"hueSpace","Hue space",new[]{"HSV","OKLab"});
-                        AddBoundedNumber(node,"hue","Hue (turns)",0,1,0,"hue");
-                        AddBoundedNumber(node,"saturation","Saturation",0,2,1,"saturation");
-                        AddNumber(node,"lift","Lift",0,"lift");
-                        AddBoundedNumber(node,"gamma","Gamma",.01f,4,1,"gamma");
-                        AddNumber(node,"gain","Gain",1,"gain");
-                        AddNumber(node,"contrast","Contrast",1,"contrast");
-                        AddNumber(node,"exposure","Exposure (stops)",0,"exposure");
+                    case "core.colorAdjust": case "core.hueShift": AddColorAdjustmentControls(node); break;
+                    case "core.colorMask": case "core.replaceColor":
+                        AddColorInput(node, "target", "Target color", Color.red);
+                        if (node.Operation == "core.replaceColor") AddColorInput(node, "replacement", "Replacement", Color.blue);
+                        AddBoundedNumber(node, "tolerance", "Tolerance", 0, 1, .1f, "tolerance", "Colors within this RGB distance fully match. Negative values act as zero.");
+                        AddBoundedNumber(node, "softness", "Softness", 0, 1, .1f, "softness", "Fades the mask beyond the tolerance. Zero gives a hard edge.");
+                        if (node.Operation == "core.replaceColor") AddBoundedNumber(node, "factor", "Factor", 0, 1, 1, "factor", "0 = original, 1 = replacement in matching areas. Evaluated between 0 and 1; input alpha is preserved.");
                         break;
-                    case "core.hueShift": AddIndexedChoice(node,"hueSpace","Hue space",new[]{"HSV","OKLab"}); AddBoundedNumber(node,"hue","Hue (turns)",0,1,0,"hue"); break;
                     case "core.combineUV": AddNumber(node,"u","U / horizontal",0,"u"); AddNumber(node,"v","V / vertical",0,"v"); break;
                     case "core.ramp": AddNumber(node, "blackPoint", "Black point", 0); AddNumber(node, "whitePoint", "White point", 1); AddNumber(node, "smoothness", "Smoothing (0–1)", 0); AddRampCurve(node); break;
                     case "core.colorRamp": AddColorRamp(node); break;
@@ -1246,19 +1248,60 @@ namespace NXSG.Editor
             inspector.Add(field);
         }
 
-        void AddNumber(GraphNode node, string property, string label, float fallback, string input = null)
+        void AddColorInput(GraphNode node, string property, string label, Color fallback)
+        {
+            var values = node.Properties[property] as JArray;
+            var field = new ColorField(label) { name = "node-property-" + property, hdr = true, showAlpha = false,
+                value = values != null && values.Count == 4 ? new Color((float)values[0], (float)values[1], (float)values[2], (float)values[3]) : fallback,
+                tooltip = "Used when the " + property + " input is unconnected. Matching uses RGB in the graph's working space; alpha is ignored." };
+            field.SetEnabled(!graph.Connections.Any(edge => edge.To.NodeId == node.Id && edge.To.PortId == property));
+            field.RegisterValueChangedCallback(evt => EditValue("Change " + label, () => node.Properties[property] = new JArray(evt.newValue.r, evt.newValue.g, evt.newValue.b, evt.newValue.a)));
+            inspector.Add(field);
+        }
+
+        void AddColorAdjustmentControls(GraphNode node)
+        {
+            AddIndexedChoice(node, "hueSpace", "Hue space", new[] { "HSV", "OKLab" }, help:
+                "HSV rotates the RGB color wheel. OKLab rotates hue while keeping perceptual lightness and chroma. This choice affects hue only; out-of-gamut colors remain unclamped.");
+            AddBoundedNumber(node, "hue", "Hue (turns)", 0, 1, 0, "hue",
+                "0 = unchanged, 0.5 = half a turn, 1 = full turn. Negative values rotate backward.");
+            if (node.Operation == "core.colorAdjust")
+            {
+                AddBoundedNumber(node, "saturation", "Saturation", 0, 2, 1, "saturation", "0 = grayscale, 1 = unchanged. Higher values intensify color.");
+                AddNumber(node, "lift", "Lift", 0, "lift", "0 = unchanged. Raises shadows toward white; negative values deepen them.");
+                AddBoundedNumber(node, "gamma", "Gamma", .01f, 4, 1, "gamma", "1 = unchanged. Higher values brighten midtones. Values below 0.0001 evaluate as 0.0001.");
+                AddNumber(node, "gain", "Gain", 1, "gain", "Multiplies RGB. 1 = unchanged, 2 = twice the value.");
+                AddNumber(node, "contrast", "Contrast", 1, "contrast", "1 = unchanged, 0 = flat 0.5 gray. Contrast pivots around 0.5.");
+                AddNumber(node, "exposure", "Exposure (stops)", 0, "exposure", "0 = unchanged. +1 doubles RGB; -1 halves it.");
+            }
+            inspector.Add(new Button(() => ResetColorAdjustment(node)) { name = "reset-color-adjustments", text = "Reset unconnected controls",
+                tooltip = "Restore neutral numeric values. Connected inputs, wires and hue space stay as they are. Undo restores your settings." });
+        }
+
+        void ResetColorAdjustment(GraphNode node)
+        {
+            var defaults = NodeCatalog.Create(node.Operation);
+            var keys = NodeCatalog.Ports(node.Operation, false).Where(key => key != "color" &&
+                !graph.Connections.Any(edge => edge.To.NodeId == node.Id && edge.To.PortId == key) &&
+                !JToken.DeepEquals(node.Properties[key], defaults.Properties[key])).ToArray();
+            if (keys.Length == 0) return;
+            Edit("Reset color adjustments", () => { foreach (var key in keys) node.Properties[key] = defaults.Properties[key].DeepClone(); });
+        }
+
+        void AddNumber(GraphNode node, string property, string label, float fallback, string input = null, string help = null)
         {
             var token = node.Properties[property];
-            var field = new FloatField(label) { isDelayed = true, value = token != null && (token.Type == JTokenType.Float || token.Type == JTokenType.Integer) ? (float)token : fallback };
+            var field = new FloatField(label) { name = "node-property-" + property, tooltip = help, isDelayed = true, value = token != null && (token.Type == JTokenType.Float || token.Type == JTokenType.Integer) ? (float)token : fallback };
             if (input != null)
             {
-                field.tooltip = "Used when the " + input + " socket is unconnected.";
+                field.tooltip = (help == null ? "" : help + "\n") + "Used when the " + input + " socket is unconnected.";
                 field.SetEnabled(!graph.Connections.Any(e => e.To.NodeId == node.Id && e.To.PortId == input));
             }
             field.RegisterValueChangedCallback(evt =>
             {
-                if (float.IsNaN(evt.newValue) || float.IsInfinity(evt.newValue)) { SetStatus("Enter a finite number."); return; }
-                Edit("Change " + label, () => node.Properties[property] = evt.newValue);
+                if (float.IsNaN(evt.newValue) || float.IsInfinity(evt.newValue)) { field.SetValueWithoutNotify((float?)node.Properties[property] ?? fallback); SetStatus("Enter a finite number."); return; }
+                if (node.Operation == "core.value" || node.Operation == "core.constant") Edit("Change " + label, () => node.Properties[property] = evt.newValue);
+                else EditValue("Change " + label, () => node.Properties[property] = evt.newValue);
             });
             inspector.Add(field);
         }
@@ -1521,7 +1564,9 @@ namespace NXSG.Editor
         {
             if (graph.Layout == null) graph.Layout = new GraphLayout();
             if (graph.Layout.Nodes == null) graph.Layout.Nodes = new Dictionary<string, GraphNodeLayout>();
-            graph.Layout.Nodes[id] = new GraphNodeLayout { X = position.x, Y = position.y };
+            if (!graph.Layout.Nodes.TryGetValue(id, out var layout) || layout == null)
+                graph.Layout.Nodes[id] = layout = new GraphNodeLayout();
+            layout.X = position.x; layout.Y = position.y;
         }
         void DrawCanvasGrid(MeshGenerationContext context)
         {
@@ -1570,8 +1615,9 @@ namespace NXSG.Editor
                 marquee.style.width = bounds.width; marquee.style.height = bounds.height;
                 selection.Clear();
                 if (boxAdditive) selection.AddRange(boxInitial);
+                var selectedIds = new HashSet<string>(selection);
                 foreach (var pair in nodes)
-                    if (bounds.Overlaps(pair.Value.worldBound) && !selection.Contains(pair.Key)) selection.Add(pair.Key);
+                    if (bounds.Overlaps(pair.Value.worldBound) && selectedIds.Add(pair.Key)) selection.Add(pair.Key);
                 UpdateSelectionOutline(); evt.StopPropagation(); return;
             }
             if (pendingNode != null && spawnMenu == null)
@@ -1613,14 +1659,14 @@ namespace NXSG.Editor
             var painter = context.painter2D; painter.lineWidth = 3;
             foreach (var edge in graph.Connections)
             {
-                var from = sockets.FirstOrDefault(s => s.output && s.node == edge.From.NodeId && s.port == edge.From.PortId);
-                var to = sockets.FirstOrDefault(s => !s.output && s.node == edge.To.NodeId && s.port == edge.To.PortId);
+                socketLookup.TryGetValue((edge.From.NodeId, edge.From.PortId, true), out var from);
+                socketLookup.TryGetValue((edge.To.NodeId, edge.To.PortId, false), out var to);
                 if (from == null || to == null) continue;
                 painter.lineWidth = edge.Id == insertionEdge ? 7 : 3;
                 painter.strokeGradient = WireGradient(from.type, to.type);
                 DrawWire(painter, layer.WorldToLocal(from.hit.worldBound.center), layer.WorldToLocal(to.hit.worldBound.center));
             }
-            var pending = sockets.FirstOrDefault(s => s.output == pendingOutput && s.node == pendingNode && s.port == pendingPort);
+            socketLookup.TryGetValue((pendingNode, pendingPort, pendingOutput), out var pending);
             if (pending != null)
             {
                 var target = sockets.FirstOrDefault(s => s.output != pendingOutput && s.hit.worldBound.Contains(layer.LocalToWorld(wirePosition)));

@@ -26,9 +26,9 @@ namespace NXSG.Editor
                 inspector.Add(new HelpBox("Polar is applied after these input coordinates. For plain Panosphere, select Panosphere from the node header menu.", HelpBoxMessageType.Info));
         }
 
-        void AddIndexedChoice(GraphNode node, string property, string label, string[] choices, int fallback = 0, int first = 0)
+        void AddIndexedChoice(GraphNode node, string property, string label, string[] choices, int fallback = 0, int first = 0, string help = null)
         {
-            var field = new PopupField<string>(label, choices.ToList(), Mathf.Clamp(((int?)node.Properties[property] ?? fallback) - first, 0, choices.Length - 1));
+            var field = new PopupField<string>(label, choices.ToList(), Mathf.Clamp(((int?)node.Properties[property] ?? fallback) - first, 0, choices.Length - 1)) { tooltip = help };
             field.RegisterValueChangedCallback(evt => Edit("Change " + label, () => node.Properties[property] = Array.IndexOf(choices, evt.newValue) + first));
             inspector.Add(field);
         }
@@ -88,14 +88,16 @@ namespace NXSG.Editor
             inspector.Add(new Label("Offset output gives the UV displacement for preview or reuse.") { style = { whiteSpace = WhiteSpace.Normal } });
         }
 
-        void AddBoundedNumber(GraphNode node, string property, string label, float min, float max, float fallback, string inputPort = null)
+        void AddBoundedNumber(GraphNode node, string property, string label, float min, float max, float fallback, string inputPort = null, string help = null)
         {
             var value = (float?)node.Properties[property] ?? fallback;
             var row = new VisualElement { style = { flexDirection = FlexDirection.Row, marginBottom = 5 } };
             var slider = new Slider(label, min, max) { value = Mathf.Clamp(value, min, max), style = { flexGrow = 1, flexShrink = 1, minWidth = 0 } };
-            var number = new FloatField { value = value, isDelayed = true, style = { width = 68, flexShrink = 0 },
-                tooltip = label + ": type beyond the slider range. Mathematical limits still apply." };
-            row.SetEnabled(inputPort == null || !graph.Connections.Any(e => e.To.NodeId == node.Id && e.To.PortId == inputPort));
+            var number = new FloatField { name = "node-property-" + property, value = value, isDelayed = true, style = { width = 68, flexShrink = 0 },
+                tooltip = (help == null ? "" : help + "\n") + label + ": type beyond the slider range. Mathematical limits still apply." };
+            var connected = inputPort != null && graph.Connections.Any(e => e.To.NodeId == node.Id && e.To.PortId == inputPort);
+            row.SetEnabled(!connected);
+            if (connected) row.tooltip = "Driven by the " + inputPort + " input. Disconnect it to edit this value.";
             slider.RegisterValueChangedCallback(evt => {
                 var next = Mathf.Clamp(evt.newValue, min, max);
                 EditValue("Change " + label, () => node.Properties[property] = next);
@@ -113,8 +115,8 @@ namespace NXSG.Editor
                 slider.SetValueWithoutNotify(Mathf.Clamp(evt.newValue, min, max));
             });
             slider.labelElement.style.display = DisplayStyle.None;
-            slider.tooltip = label + ": drag within " + min + "–" + max + ", or type a value on the right.";
-            inspector.Add(new Label(label) { tooltip = number.tooltip });
+            slider.tooltip = (help == null ? "" : help + "\n") + label + ": drag within " + min + "–" + max + ", or type a value on the right.";
+            inspector.Add(new Label(label + (connected ? " · connected" : "")) { tooltip = connected ? row.tooltip : number.tooltip });
             row.Add(slider);
             row.Add(number);
             inspector.Add(row);

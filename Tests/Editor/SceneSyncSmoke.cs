@@ -68,7 +68,9 @@ public static class SceneSyncSmoke
 
             liveGraph.Layout.Nodes[liveGraph.Nodes[0].Id].X += 10;
             Invoke(window, "QueueSceneUpdate");
-            Require(!(bool)Get(window, "scenePending"), "layout-only edit queued scene rebuild");
+            Set(window, "sceneDue", 0d);
+            Invoke(window, "UpdateScene");
+            Require(!(bool)Get(window, "scenePending") && ReadHash(shaderPath) == "// NXSG graph hash: " + expectedHash, "layout-only edit rebuilt the scene shader");
 
             var lastShader = File.ReadAllBytes(Path.Combine(Application.dataPath, "../" + shaderPath));
             constant.Properties["value"] = "invalid-color";

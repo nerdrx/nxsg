@@ -13,6 +13,7 @@ namespace NXSG.Editor
         [SerializeField] bool autoScene = true;
         Label sceneStatus;
         bool scenePending;
+        bool sceneHashPending;
         double sceneDue;
         string sceneBuiltHash, sceneQueuedHash, sceneSource;
 
@@ -36,16 +37,18 @@ namespace NXSG.Editor
             if (graph == null) return;
             if (sceneSource != sourcePath)
             {
-                sceneSource = sourcePath; sceneBuiltHash = sceneQueuedHash = null; scenePending = false;
+                sceneSource = sourcePath; sceneBuiltHash = sceneQueuedHash = null; scenePending = false; sceneHashPending = false;
             }
             if (string.IsNullOrEmpty(sourcePath))
             {
+                scenePending = sceneHashPending = false;
                 SceneStatus("Scene: save this graph inside Assets to enable automatic updates.", true);
                 return;
             }
             var assets = Path.GetFullPath(Application.dataPath) + Path.DirectorySeparatorChar;
             if (!Path.GetFullPath(sourcePath).StartsWith(assets, StringComparison.Ordinal))
             {
+                scenePending = sceneHashPending = false;
                 SceneStatus("Scene: save this graph inside Assets to update the scene.", true);
                 return;
             }
@@ -62,27 +65,32 @@ namespace NXSG.Editor
                         if (line != null && line.StartsWith(prefix, StringComparison.Ordinal)) sceneBuiltHash = line.Substring(prefix.Length);
                     }
             }
-            var hash = GraphJson.ComputeSemanticHash(graph);
-            if (hash == sceneBuiltHash)
+            sceneHashPending = true;
+            scenePending = true;
+            sceneDue = EditorApplication.timeSinceStartup + .65;
+            SceneStatus(autoScene ? "Scene: updating after your edits…" : "Scene: checking unapplied changes…", true);
+        }
+
+        void UpdateScene()
+        {
+            if (!scenePending || wiring || spawnMenu != null || graph == null || EditorApplication.timeSinceStartup < sceneDue
+                || EditorApplication.isCompiling || EditorApplication.isUpdating || EditorApplication.isPlayingOrWillChangePlaymode) return;
+            if (sceneHashPending)
             {
-                scenePending = false; sceneQueuedHash = null;
-                SceneStatus("Scene: up to date"); return;
+                sceneHashPending = false;
+                var hash = GraphJson.ComputeSemanticHash(graph);
+                if (hash == sceneBuiltHash)
+                {
+                    scenePending = false; sceneQueuedHash = null;
+                    SceneStatus("Scene: up to date"); return;
+                }
+                sceneQueuedHash = hash;
             }
             if (!autoScene)
             {
                 scenePending = false;
                 SceneStatus("Scene: changes not applied · click Build for VRChat or enable Auto scene", true); return;
             }
-            if (hash == sceneQueuedHash) return;
-            sceneQueuedHash = hash; scenePending = true;
-            sceneDue = EditorApplication.timeSinceStartup + .65;
-            SceneStatus("Scene: updating after your edits…", true);
-        }
-
-        void UpdateScene()
-        {
-            if (!autoScene || !scenePending || wiring || spawnMenu != null || graph == null || EditorApplication.timeSinceStartup < sceneDue
-                || EditorApplication.isCompiling || EditorApplication.isUpdating || EditorApplication.isPlayingOrWillChangePlaymode) return;
             scenePending = false;
             SceneStatus("Scene: building…", true);
             try
@@ -97,7 +105,7 @@ namespace NXSG.Editor
         void SceneBuildSucceeded()
         {
             sceneBuiltHash = GraphJson.ComputeSemanticHash(graph);
-            sceneQueuedHash = null; scenePending = false;
+            sceneQueuedHash = null; scenePending = sceneHashPending = false;
             SceneStatus("Scene: up to date");
             SceneView.RepaintAll();
             EditorApplication.QueuePlayerLoopUpdate();

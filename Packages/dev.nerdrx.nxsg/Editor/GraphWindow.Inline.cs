@@ -156,8 +156,10 @@ namespace NXSG.Editor
             if ((!inlinePreviewQueued && !inlineThumbnails.Values.Any(s=>s.Enabled&&s.Pending)) || EditorApplication.timeSinceStartup < inlinePreviewDue || graph == null || EditorApplication.isCompiling || EditorApplication.isUpdating) return;
             inlinePreviewDue=EditorApplication.timeSinceStartup+.25;
             inlinePreviewQueued = false;
-            foreach (var id in inlineThumbnails.Keys.ToList())
-                if (graph.Nodes.All(n => n.Id != id)) { DisposeThumbnail(inlineThumbnails[id]); inlineThumbnails.Remove(id); }
+            // One lookup set avoids rescanning the graph for every thumbnail.
+            var nodeIds = new HashSet<string>(graph.Nodes.Select(n => n.Id));
+            foreach (var stale in inlineThumbnails.Keys.Where(id => !nodeIds.Contains(id)).ToList())
+            { DisposeThumbnail(inlineThumbnails[stale]); inlineThumbnails.Remove(stale); }
             var active = inlineThumbnails.Values.Where(s => s.Enabled).Take(4).ToList();
             foreach (var state in inlineThumbnails.Values.Where(s => s.Enabled).Skip(4).ToList())
             {
@@ -165,6 +167,8 @@ namespace NXSG.Editor
                 state.Toggle?.SetValueWithoutNotify(false);
                 DisposeThumbnail(state);
             }
+            if (!active.Any(state => state.Pending)) return;
+            var graphHash = GraphJson.ComputeSemanticHash(graph);
             foreach (var state in active)
             {
                 if (!state.Pending) continue;
@@ -174,7 +178,7 @@ namespace NXSG.Editor
                 {
                     var node = graph.Nodes.FirstOrDefault(n => n.Id == state.NodeId);
                     if (node == null) continue;
-                    var hash = GraphJson.ComputeSemanticHash(graph) + ":" + state.NodeId + ":" + state.Port;
+                    var hash = graphHash + ":" + state.NodeId + ":" + state.Port;
                     if (hash == state.Hash && state.Preview != null) continue;
                     var candidate = GraphPreview.Create(BuildInlinePreviewGraph(node, state.Port), null);
                     DisposeThumbnail(state);

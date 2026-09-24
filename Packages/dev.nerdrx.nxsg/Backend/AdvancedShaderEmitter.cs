@@ -38,7 +38,7 @@ namespace NXSG.Backend
         public static bool IsAdvanced(ShaderGraph graph)
         {
             if (graph?.Nodes == null) return false;
-            var ops = new HashSet<string> { "core.volumeSurface", "core.rayPosition", "core.sdfSphere", "core.sdfBox", "core.sdfTorus", "core.sdfBlend", "core.unlitSurface", "core.pbrSurface", "core.particleSurface", "core.particleColor", "core.particleInfo", "core.surfaceParticles", "core.fur", "core.tessellation", "core.fresnel", "core.colorRamp", "core.layer", "core.sticker", "core.dissolve", "core.flipbook", "core.uvDistort", "core.vertexMotion", "core.audioLink", "core.ltcgi", "core.darknessGlow", "core.shell", "core.normalMap", "core.previewVector", "core.musgrave", "core.voronoi", "core.checker", "core.wave", "core.gradient", "core.uvTile", "core.posterize", "core.absolute", "core.power", "core.sqrt", "core.sine", "core.cosine", "core.fraction", "core.floor", "core.ceil", "core.round", "core.step", "core.smoothstep", "core.remap", "core.pingPong", "core.splitColor", "core.combineColor", "core.luminance", "core.contrast", "core.saturation", "core.hueShift", "core.colorAdjust", "core.splitUV", "core.combineUV", "core.position", "core.normalDirection", "core.viewDirection", "core.vertexColor", "core.cameraDistance", "core.screenUV", "core.circleMask", "core.boxMask", "core.polygonMask", "core.starMask", "core.radialRays", "core.spiral", "core.brick", "core.hexGrid", "core.triplanarTexture", "core.matcapTexture", "core.rimGlow", "core.heightMask", "core.slopeMask", "core.distanceFade", "core.wireframe" };
+            var ops = new HashSet<string> { "core.volumeSurface", "core.rayPosition", "core.sdfSphere", "core.sdfBox", "core.sdfTorus", "core.sdfBlend", "core.unlitSurface", "core.pbrSurface", "core.particleSurface", "core.particleColor", "core.particleInfo", "core.surfaceParticles", "core.fur", "core.tessellation", "core.fresnel", "core.colorRamp", "core.layer", "core.sticker", "core.dissolve", "core.flipbook", "core.uvDistort", "core.vertexMotion", "core.audioLink", "core.ltcgi", "core.darknessGlow", "core.shell", "core.normalMap", "core.previewVector", "core.musgrave", "core.voronoi", "core.checker", "core.wave", "core.gradient", "core.uvTile", "core.posterize", "core.absolute", "core.power", "core.sqrt", "core.sine", "core.cosine", "core.fraction", "core.floor", "core.ceil", "core.round", "core.step", "core.smoothstep", "core.remap", "core.pingPong", "core.splitColor", "core.combineColor", "core.luminance", "core.contrast", "core.saturation", "core.hueShift", "core.colorAdjust", "core.colorMask", "core.replaceColor", "core.splitUV", "core.combineUV", "core.position", "core.normalDirection", "core.viewDirection", "core.vertexColor", "core.cameraDistance", "core.screenUV", "core.circleMask", "core.boxMask", "core.polygonMask", "core.starMask", "core.radialRays", "core.spiral", "core.brick", "core.hexGrid", "core.triplanarTexture", "core.matcapTexture", "core.rimGlow", "core.heightMask", "core.slopeMask", "core.distanceFade", "core.wireframe" };
             // Only reachable effects select the extended lowering; disconnected nodes never change shading.
             var connected = new HashSet<string>();
             var queue = new Queue<string>(graph.Nodes.Where(n => n?.Operation == "core.output").Select(n => n.Id));
@@ -320,6 +320,7 @@ namespace NXSG.Backend
         string Prop(GraphNode n, string key, double fallback) { return NumberOperand(RawProp(n, key, fallback)); }
         string RawProp(GraphNode n, string key, double fallback) { var t = n.Properties[key]; if (t == null) return Num(fallback); if (t.Type != JTokenType.Integer && t.Type != JTokenType.Float) throw new InvalidOperationException("Expected a number: " + n.Id + "." + key); return Num((double)t); }
         string Vec(GraphNode n, string key, double x, double y) { var t = n.Properties[key]; return t == null ? "float2(" + Num(x) + "," + Num(y) + ")" : Literal(t, "vector2"); }
+        string ColorProp(GraphNode n, string key, double r, double g, double b, double a) { var t = n.Properties[key]; return t == null ? "float4(" + Num(r) + "," + Num(g) + "," + Num(b) + "," + Num(a) + ")" : Literal(t, "color"); }
         static string HlslType(string type) { switch (type) { case "float": return "float"; case "vector2": return "float2"; case "vector3": return "float3"; case "color": case "vector4": return "float4"; default: throw new InvalidOperationException("Unsupported value type: " + type); } }
         static string Literal(JToken token, string type)
         {
@@ -423,6 +424,12 @@ namespace NXSG.Backend
                     if (Changed("contrast", 1)) body += "c.rgb=(c.rgb-.5)*" + S("contrast", 1) + "+.5;";
                     if (Changed("exposure", 0)) body += "c.rgb*=exp2(" + S("exposure", 0) + ");";
                     body += "return c;";
+                    break;
+                case "core.colorMask":
+                    body = "NX_ColorMatch(" + P("color", "float4(0,0,0,1)", "color") + "," + P("target", ColorProp(n, "target", 1, 0, 0, 1), "color") + "," + S("tolerance", .1) + "," + S("softness", .1) + ")";
+                    break;
+                case "core.replaceColor":
+                    body = "float4 c=" + P("color", "float4(0,0,0,1)", "color") + "; float4 r=" + P("replacement", ColorProp(n, "replacement", 0, 0, 1, 1), "color") + "; float m=NX_ColorMatch(c," + P("target", ColorProp(n, "target", 1, 0, 0, 1), "color") + "," + S("tolerance", .1) + "," + S("softness", .1) + "); return float4(lerp(c.rgb,r.rgb,m*saturate(" + S("factor", 1) + ")),c.a);";
                     break;
                 case "core.hueShift": body = (IntProp(n,"hueSpace",0,0,1)==1 ? "NX_HueShiftOKLab" : "NX_HueShift") + "(" + P("color", "float4(1,0,0,1)", "color") + "," + S("hue", 0) + ")"; break;
                 case "core.saturation": body = "float4(lerp(dot((" + P("color", "float4(.5,.5,.5,1)", "color") + ").rgb,float3(.2126,.7152,.0722)),(" + P("color", "float4(.5,.5,.5,1)", "color") + ").rgb," + S("amount", 1) + "),(" + P("color", "float4(.5,.5,.5,1)", "color") + ").a)"; break;
@@ -828,6 +835,9 @@ float4 NX_HueShift(float4 color, float turns) {
     hue = frac(hue / 6 + frac(turns));
     float3 wheel = saturate(abs(frac(hue + float3(0, 2.0/3.0, 1.0/3.0)) * 6 - 3) - 1);
     return float4(lo + chroma * wheel, color.a);
+}
+float NX_ColorMatch(float4 color,float4 target,float tolerance,float softness) {
+ float d=distance(color.rgb,target.rgb); float w=max(softness,0); return 1-smoothstep(max(tolerance,0),max(tolerance,0)+max(w,.00001),d);
 }
 
 struct NXApp { float4 vertex:POSITION; float3 normal:NORMAL; float4 tangent:TANGENT; float2 uv:TEXCOORD0; float2 uv1:TEXCOORD1; float2 uv2:TEXCOORD2; float2 uv3:TEXCOORD3; float4 color:COLOR; UNITY_VERTEX_INPUT_INSTANCE_ID };

@@ -8,22 +8,44 @@ namespace NXSG.Editor
     public sealed partial class GraphWindow
     {
         string insertionEdge;
+        string insertionNodeId;
+        readonly System.Collections.Generic.List<(GraphConnection edge, SocketView from, SocketView to)> insertionCandidates = new System.Collections.Generic.List<(GraphConnection, SocketView, SocketView)>();
+
+        void PrepareInsertionCache(GraphNode node)
+        {
+            if (insertionNodeId == node.Id) return;
+            insertionNodeId = node.Id;
+            insertionCandidates.Clear();
+            var graphNodes = graph.Nodes.ToDictionary(item => item.Id);
+            var occupied = new System.Collections.Generic.HashSet<string>(graph.Connections.Where(edge => edge.To.NodeId == node.Id).Select(edge => edge.To.PortId));
+            var inputs = Ports(node.Operation, false).Where(port => !occupied.Contains(port)).ToArray();
+            var outputs = Ports(node.Operation, true);
+            foreach (var edge in graph.Connections)
+            {
+                if (edge.From.NodeId == node.Id || edge.To.NodeId == node.Id) continue;
+                if (!socketLookup.TryGetValue((edge.From.NodeId, edge.From.PortId, true), out var from) ||
+                    !socketLookup.TryGetValue((edge.To.NodeId, edge.To.PortId, false), out var to)) continue;
+                if (!graphNodes.TryGetValue(from.node, out var source) || !graphNodes.TryGetValue(to.node, out var target)) continue;
+                if (inputs.Any(port => CanOffer(source, from.port, node, port)) && outputs.Any(port => CanOffer(node, port, target, to.port)))
+                    insertionCandidates.Add((edge, from, to));
+            }
+        }
+
         void UpdateInsertionTarget(string nodeId)
         {
             insertionEdge=null;
             if(selection.Count!=1||!nodes.ContainsKey(nodeId))return;
             var node=graph.Nodes.First(n=>n.Id==nodeId);
+            PrepareInsertionCache(node);
             var center=layer.WorldToLocal(nodes[nodeId].worldBound.center);
             var best=18f/Mathf.Max(.1f,zoom);
-            foreach(var edge in graph.Connections)
+            foreach(var candidate in insertionCandidates)
             {
-                if(edge.From.NodeId==nodeId||edge.To.NodeId==nodeId)continue;
-                var from=sockets.FirstOrDefault(s=>s.output&&s.node==edge.From.NodeId&&s.port==edge.From.PortId);
-                var to=sockets.FirstOrDefault(s=>!s.output&&s.node==edge.To.NodeId&&s.port==edge.To.PortId);
-                if(from==null||to==null)continue;
-                var source=graph.Nodes.First(n=>n.Id==from.node);var target=graph.Nodes.First(n=>n.Id==to.node);
-                if(!Ports(node.Operation,false).Any(p=>!graph.Connections.Any(e=>e.To.NodeId==nodeId&&e.To.PortId==p)&&CanOffer(source,from.port,node,p))||!Ports(node.Operation,true).Any(p=>CanOffer(node,p,target,to.port)))continue;
+                var edge = candidate.edge; var from = candidate.from; var to = candidate.to;
                 var a=layer.WorldToLocal(from.hit.worldBound.center);var b=layer.WorldToLocal(to.hit.worldBound.center);var bend=Mathf.Max(45,Mathf.Abs(b.x-a.x)*.45f);
+                // A cubic stays inside the bounds of its endpoints and control points.
+                if (center.y < Mathf.Min(a.y,b.y)-best || center.y > Mathf.Max(a.y,b.y)+best ||
+                    center.x < Mathf.Min(Mathf.Min(a.x,b.x),b.x-bend)-best || center.x > Mathf.Max(Mathf.Max(a.x,b.x),a.x+bend)+best) continue;
                 var previous=a;
                 for(var i=1;i<=32;i++)
                 {
