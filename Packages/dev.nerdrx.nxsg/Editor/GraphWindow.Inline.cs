@@ -142,6 +142,14 @@ namespace NXSG.Editor
             if (state.Error.parent != nodeBox) nodeBox.Add(state.Error);
         }
 
+        // Rebuild already knows the current node IDs. Cleanup must also run while
+        // Live preview is off or this window is unfocused; it does not render.
+        void PruneInlinePreviews()
+        {
+            foreach (var stale in inlineThumbnails.Keys.Where(id => !nodes.ContainsKey(id)).ToList())
+            { DisposeThumbnail(inlineThumbnails[stale]); inlineThumbnails.Remove(stale); }
+        }
+
         void QueueInlinePreviews()
         {
             inlinePreviewQueued = true;
@@ -156,10 +164,6 @@ namespace NXSG.Editor
             if ((!inlinePreviewQueued && !inlineThumbnails.Values.Any(s=>s.Enabled&&s.Pending)) || EditorApplication.timeSinceStartup < inlinePreviewDue || graph == null || EditorApplication.isCompiling || EditorApplication.isUpdating) return;
             inlinePreviewDue=EditorApplication.timeSinceStartup+.25;
             inlinePreviewQueued = false;
-            // One lookup set avoids rescanning the graph for every thumbnail.
-            var nodeIds = new HashSet<string>(graph.Nodes.Select(n => n.Id));
-            foreach (var stale in inlineThumbnails.Keys.Where(id => !nodeIds.Contains(id)).ToList())
-            { DisposeThumbnail(inlineThumbnails[stale]); inlineThumbnails.Remove(stale); }
             var active = inlineThumbnails.Values.Where(s => s.Enabled).Take(4).ToList();
             foreach (var state in inlineThumbnails.Values.Where(s => s.Enabled).Skip(4).ToList())
             {

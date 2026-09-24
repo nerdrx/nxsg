@@ -89,6 +89,12 @@ internal static class Program
         ColorConversionChecks.Run(Assert);
         ColorAdjustChecks.Run(Assert);
         ColorKeyChecks.Run(Assert);
+        LayeredSurfaceChecks.Run(Assert);
+        PerformanceChecks.Run(Assert);
+        PerformanceChecks.CheckExamples(Assert, fixtures);
+        ParticleInputScopeChecks.Run(Assert);
+        MalformedReferenceChecks.Run(Assert);
+        LayeredExampleChecks.Run(Assert, fixtures);
         TextureLabelChecks.Run(Assert);
         FurCardChecks.Run(Assert);
         LightingInfluenceChecks.Run(Assert);

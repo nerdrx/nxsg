@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <code>1.4</code> &nbsp; <code>Unity 2022.3.22f1</code> &nbsp; <code>Built-In</code> &nbsp; <code>PC VRChat</code>
+  <code>1.5</code> &nbsp; <code>Unity 2022.3.22f1</code> &nbsp; <code>Built-In</code> &nbsp; <code>PC VRChat</code>
 </p>
 
 NXSG is a shader graph editor for Unity's Built-In Render Pipeline, developed for PC VRChat avatars. It includes Toon, PBR and Unlit shading, procedural textures, fur, particles, and animated effects. Materials are built by connecting nodes, with controls for lighting, color, masks, and movement.
@@ -17,7 +17,7 @@ The editor generates shaders and materials directly in Unity. Graphs remain edit
   <a href="docs/VPM.md">Installation help</a>
 </p>
 
-Add the NXSG repository and install **NX Shader Graph** in your project. Version **1.4.0** is available without enabling prerelease packages.
+Add the NXSG repository and install **NX Shader Graph** in your project. Version **1.5.0** is available without enabling prerelease packages.
 
 <details>
 <summary>VPM repository URL</summary>
@@ -40,7 +40,7 @@ https://nerdrx.github.io/nxsg/index.json
 
 | Feature | Includes |
 | :--- | :--- |
-| **Surface shading** | Toon, PBR and Unlit surfaces, normal maps, matcaps, rim lighting, and configurable lighting brightness and saturation. |
+| **Surface shading** | Toon, PBR and Unlit surfaces, clearcoat and velvet sheen, normal maps, matcaps, rim lighting, and configurable lighting brightness and saturation. |
 | **Material effects** | Color adjustment (hue, saturation, lift, gamma, gain, contrast, exposure), glitter, emission, iridescence, holograms, dissolve, stickers, and wireframes. |
 | **Fur** | Shell fur, silhouette fins, and cards generated from mesh edges, with root/tip coloring, masks, grooming, wind, local self-shadowing, and shell distance LOD. |
 | **Procedural textures** | 1D–4D noise, Voronoi, Musgrave-style fractals, checkerboards, waves, ramps, distortion, and texture bombing. |
@@ -65,6 +65,7 @@ Other editor features include:
 - Intermediate output previews, A/B material snapshots, and animation scrubbing.
 - Texture-set import, presets, and static texture baking.
 - Automatic scene updates for saved edits, build diagnostics, and recovery snapshots.
+- A **Cost** panel with pass budgets, costly-node explanations and click-to-focus navigation. Estimates describe generated work, not GPU timings.
 
 ### Basic workflow
 

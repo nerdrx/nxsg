@@ -1,0 +1,230 @@
+{
+  "format": "nxsg",
+  "schemaVersion": 1,
+  "graphId": "velvet-fabric-example",
+  "nodes": [
+    {
+      "id": "uv",
+      "operation": "core.uv0",
+      "version": 1,
+      "properties": {}
+    },
+    {
+      "id": "weave",
+      "operation": "core.weave",
+      "version": 1,
+      "properties": {
+        "scale": 24,
+        "width": 0.7
+      }
+    },
+    {
+      "id": "sheenWeight",
+      "operation": "core.value",
+      "version": 1,
+      "properties": {
+        "value": 0.32
+      }
+    },
+    {
+      "id": "weaveSheen",
+      "operation": "core.multiply",
+      "version": 1,
+      "properties": {
+        "valueType": "float"
+      }
+    },
+    {
+      "id": "albedo",
+      "operation": "core.constant",
+      "version": 1,
+      "properties": {
+        "valueType": "color",
+        "value": [
+          0.025,
+          0.045,
+          0.16,
+          1
+        ]
+      }
+    },
+    {
+      "id": "sheenColor",
+      "operation": "core.constant",
+      "version": 1,
+      "properties": {
+        "valueType": "color",
+        "value": [
+          0.38,
+          0.055,
+          0.095,
+          1
+        ]
+      }
+    },
+    {
+      "id": "sheenRoughness",
+      "operation": "core.value",
+      "version": 1,
+      "properties": {
+        "value": 0.68
+      }
+    },
+    {
+      "id": "surface",
+      "operation": "core.layeredPbrSurface",
+      "version": 1,
+      "properties": {
+        "roughness": 0.82,
+        "metallic": 0,
+        "coat": 0,
+        "sheen": 0.32,
+        "sheenColor": [
+          0.38,
+          0.055,
+          0.095,
+          1
+        ],
+        "sheenRoughness": 0.68
+      }
+    },
+    {
+      "id": "output",
+      "operation": "core.output",
+      "version": 1,
+      "properties": {}
+    }
+  ],
+  "connections": [
+    {
+      "id": "uv-weave",
+      "from": {
+        "nodeId": "uv",
+        "portId": "uv"
+      },
+      "to": {
+        "nodeId": "weave",
+        "portId": "uv"
+      }
+    },
+    {
+      "id": "weave-weight",
+      "from": {
+        "nodeId": "weave",
+        "portId": "value"
+      },
+      "to": {
+        "nodeId": "weaveSheen",
+        "portId": "a"
+      }
+    },
+    {
+      "id": "weight-value",
+      "from": {
+        "nodeId": "sheenWeight",
+        "portId": "value"
+      },
+      "to": {
+        "nodeId": "weaveSheen",
+        "portId": "b"
+      }
+    },
+    {
+      "id": "albedo-surface",
+      "from": {
+        "nodeId": "albedo",
+        "portId": "value"
+      },
+      "to": {
+        "nodeId": "surface",
+        "portId": "albedo"
+      }
+    },
+    {
+      "id": "sheen-weight",
+      "from": {
+        "nodeId": "weaveSheen",
+        "portId": "value"
+      },
+      "to": {
+        "nodeId": "surface",
+        "portId": "sheen"
+      }
+    },
+    {
+      "id": "sheen-color",
+      "from": {
+        "nodeId": "sheenColor",
+        "portId": "value"
+      },
+      "to": {
+        "nodeId": "surface",
+        "portId": "sheenColor"
+      }
+    },
+    {
+      "id": "sheen-roughness",
+      "from": {
+        "nodeId": "sheenRoughness",
+        "portId": "value"
+      },
+      "to": {
+        "nodeId": "surface",
+        "portId": "sheenRoughness"
+      }
+    },
+    {
+      "id": "surface-output",
+      "from": {
+        "nodeId": "surface",
+        "portId": "surface"
+      },
+      "to": {
+        "nodeId": "output",
+        "portId": "surface"
+      }
+    }
+  ],
+  "parameters": [],
+  "resources": [],
+  "layout": {
+    "nodes": {
+      "uv": {
+        "x": 20,
+        "y": 100
+      },
+      "weave": {
+        "x": 250,
+        "y": 100
+      },
+      "sheenWeight": {
+        "x": 250,
+        "y": 300
+      },
+      "weaveSheen": {
+        "x": 510,
+        "y": 160
+      },
+      "albedo": {
+        "x": 510,
+        "y": 400
+      },
+      "sheenColor": {
+        "x": 760,
+        "y": 430
+      },
+      "sheenRoughness": {
+        "x": 760,
+        "y": 610
+      },
+      "surface": {
+        "x": 1030,
+        "y": 170
+      },
+      "output": {
+        "x": 1300,
+        "y": 170
+      }
+    }
+  }
+}

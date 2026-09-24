@@ -8,12 +8,12 @@ Manual repository URL:
 https://nerdrx.github.io/nxsg/index.json
 ```
 
-**Repository added, but no package appears?** Refresh the repository and check that your project uses the supported Unity version. NXSG 1.4.0 is a stable package and does not require prereleases to be enabled.
+**Repository added, but no package appears?** Refresh the repository and check that your project uses the supported Unity version. NXSG 1.5.0 is a stable package and does not require prereleases to be enabled.
 
 ## Creator Companion
 
 1. Open **Settings → Packages → Add Repository**, paste the URL and confirm the listed repository.
-2. Refresh the repository listing. The current stable package is `1.4.0`.
+2. Refresh the repository listing. The current stable package is `1.5.0`.
 3. Manage your Unity project, locate **NX Shader Graph**, and add it.
 4. Open Unity and choose **Tools → NXSG → Open Graph Editor**.
 

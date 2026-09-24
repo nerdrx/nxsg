@@ -134,13 +134,13 @@ namespace NXSG.Core
                 }
             }
 
-            if (node.Operation == "core.constant" && node.Properties["valueType"] != null)
+            if ((node.Operation == "core.constant" || node.Operation == "core.multiply") && node.Properties["valueType"] != null)
             {
                 ParseType(node.Properties["valueType"], path + ".properties.valueType", diagnostics);
             }
             else if (node.Operation == "core.parameter")
             {
-                var parameterId = (string)node.Properties["parameterId"];
+                var parameterId = GraphTypes.StringValue(node.Properties["parameterId"]);
                 if (string.IsNullOrWhiteSpace(parameterId) || parameters.All(item => item == null || item.Id != parameterId))
                 {
                     Add(diagnostics, DiagnosticSeverity.Error, "parameter.missing", path + ".properties.parameterId",
@@ -149,7 +149,7 @@ namespace NXSG.Core
             }
             else if (node.Operation == "core.texture2D" || node.Operation == "core.triplanarTexture" || node.Operation == "core.matcapTexture" || node.Operation == "core.parallaxOcclusion" || node.Operation == "core.chromaticTexture" || node.Operation == "core.interiorMapping" || node.Operation == "core.textureBomb")
             {
-                var resourceId = (string)node.Properties["resourceId"];
+                var resourceId = GraphTypes.StringValue(node.Properties["resourceId"]);
                 if (string.IsNullOrWhiteSpace(resourceId) || resources.All(item => item == null || item.Id != resourceId))
                 {
                     Add(diagnostics, DiagnosticSeverity.Error, "resource.missing", path + ".properties.resourceId",
@@ -158,7 +158,7 @@ namespace NXSG.Core
             }
             else if (node.Operation == "core.sticker")
             {
-                var resourceId = (string)node.Properties["resourceId"];
+                var resourceId = GraphTypes.StringValue(node.Properties["resourceId"]);
                 if (string.IsNullOrWhiteSpace(resourceId) || resources.All(item => item == null || item.Id != resourceId))
                 {
                     Add(diagnostics, DiagnosticSeverity.Error, "resource.missing", path + ".properties.resourceId",
@@ -220,6 +220,7 @@ namespace NXSG.Core
                 case "core.uvScroll": vectors = new[] { "speed" }; break;
                 case "core.toonSurface": numeric = new[] { "opacity", "displacement", "cutoff", "threshold", "softness", "shadowStrength" }; break;
                 case "core.unlitSurface": numeric = new[] { "opacity", "displacement", "cutoff" }; break;
+                case "core.layeredPbrSurface": numeric = new[] { "opacity", "displacement", "metallic", "roughness", "cutoff", "coat", "coatRoughness", "sheen", "sheenRoughness" }; CheckVector4(node.Properties["sheenColor"], path + ".properties.sheenColor", diagnostics); break;
                 case "core.pbrSurface": numeric = new[] { "opacity", "displacement", "metallic", "roughness", "cutoff" }; break;
                 case "core.surfaceParticles": numeric = new[] { "density", "size", "lifetime", "speed", "gravity", "spread", "opacity", "mask", "emissionRate", "edgeSharpness" }; break;
                 case "core.particleSurface": numeric = new[] { "opacity", "softDistance" }; break;
@@ -247,9 +248,9 @@ namespace NXSG.Core
                 case "core.sdfBlend": numeric = new[] { "smoothing" }; break;
                 default: return;
             }
-            if (node.Operation == "core.toonSurface" || node.Operation == "core.unlitSurface" || node.Operation == "core.pbrSurface")
+            if (node.Operation == "core.toonSurface" || node.Operation == "core.unlitSurface" || node.Operation == "core.pbrSurface" || node.Operation == "core.layeredPbrSurface")
                 CheckIntegerRange(node.Properties["useAlbedoAlpha"], path + ".properties.useAlbedoAlpha", 0, 1, diagnostics);
-            if (node.Operation == "core.toonSurface" || node.Operation == "core.pbrSurface")
+            if (node.Operation == "core.toonSurface" || node.Operation == "core.pbrSurface" || node.Operation == "core.layeredPbrSurface")
                 foreach (var setting in new[] { "lightingMin", "lightingMax", "lightingSaturation" })
                     CheckRange(node.Properties[setting], path + ".properties." + setting, 0, 65504, diagnostics);
             if (node.Properties["coordinateSource"] != null)
@@ -750,7 +751,7 @@ namespace NXSG.Core
                     return input ? (GraphValueType?)null : ReadType(node.Properties == null ? null : node.Properties["valueType"]);
                 case "core.parameter":
                     if (input) return null;
-                    var parameterId = node.Properties == null ? null : (string)node.Properties["parameterId"];
+                    var parameterId = GraphTypes.StringValue(node.Properties == null ? null : node.Properties["parameterId"]);
                     var parameter = parameters.FirstOrDefault(item => item != null && item.Id == parameterId);
                     return parameter == null ? (GraphValueType?)null : parameter.Type;
                 case "core.uv0":
@@ -782,7 +783,7 @@ namespace NXSG.Core
 
         private static GraphValueType? ReadType(JToken token)
         {
-            var text = token == null ? null : token.Value<string>();
+            var text = GraphTypes.ReadType(token);
             if (string.IsNullOrWhiteSpace(text)) return null;
             if (Enum.TryParse(text, true, out GraphValueType type)) return type;
             return null;

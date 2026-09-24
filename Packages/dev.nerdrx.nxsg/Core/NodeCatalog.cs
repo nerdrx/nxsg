@@ -585,6 +585,6 @@ namespace NXSG.Core
         }
         private static JArray Vector(double x, double y) { return new JArray(x, y); }
         private static JArray Vector3(double x, double y, double z) { return new JArray(x, y, z); }
-        private static string TypeName(JToken token) { return token == null ? "color" : token.Value<string>(); }
+        private static string TypeName(JToken token) { return token == null ? "color" : GraphTypes.ReadType(token); }
     }
 }

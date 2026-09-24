@@ -14,13 +14,16 @@ namespace NXSG.Editor
     {
         [SerializeField] float sidebarWidth = 310;
         [SerializeField] int sidebarTab;
-        ScrollView libraryPanel, problemsPanel;
+        ScrollView libraryPanel, problemsPanel, performancePanel;
         VisualElement sidebar;
         ToolbarButton problemsButton;
         ToolbarButton[] sidebarTabs;
         string diagnosticsHash;
         double diagnosticsDue;
         bool diagnosticsPending;
+        string performanceHash;
+        double performanceDue;
+        bool performancePending;
 
         void AddFileAndEditMenus(Toolbar toolbar)
         {
@@ -49,6 +52,7 @@ namespace NXSG.Editor
             view.menu.AppendAction("Frame selection  F", _ => FrameNodes(true));
             view.menu.AppendAction("Reset view", _ => { pan = new Vector2(30, 70); zoom = 1; TransformCanvas(); });
             view.menu.AppendAction("Problems", _ => ShowSidebarTab(2));
+            view.menu.AppendAction("Performance estimates", _ => ShowSidebarTab(3));
             toolbar.Add(view);
         }
 
@@ -59,21 +63,23 @@ namespace NXSG.Editor
             var tabs = new Toolbar { style = { minHeight = 30 } };
             var inspectorTab = new ToolbarButton(() => ShowSidebarTab(0)) { text = "Inspector" };
             var nodesTab = new ToolbarButton(() => ShowSidebarTab(1)) { text = "Nodes" };
+            var performanceTab = new ToolbarButton(() => ShowSidebarTab(3)) { text = "Cost", tooltip = "Performance estimates" };
             tabs.Add(inspectorTab); tabs.Add(nodesTab);
             problemsButton = new ToolbarButton(() => ShowSidebarTab(2)) { text = "Problems" };
-            tabs.Add(problemsButton); sidebar.Add(tabs);
-            sidebarTabs = new[] { inspectorTab, nodesTab, problemsButton };
+            tabs.Add(problemsButton); tabs.Add(performanceTab); sidebar.Add(tabs);
+            sidebarTabs = new[] { inspectorTab, nodesTab, problemsButton, performanceTab };
             foreach (var button in sidebarTabs) button.AddToClassList("nxsg-tab");
             libraryPanel = new ScrollView(ScrollViewMode.Vertical) { horizontalScrollerVisibility = ScrollerVisibility.Hidden, name = "node-browser", style = { flexGrow = 1, paddingLeft = 12, paddingRight = 12 } };
             problemsPanel = new ScrollView(ScrollViewMode.Vertical) { horizontalScrollerVisibility = ScrollerVisibility.Hidden, name = "graph-problems", style = { flexGrow = 1, paddingLeft = 12, paddingRight = 12 } };
-            sidebar.Add(inspector); sidebar.Add(libraryPanel); sidebar.Add(problemsPanel);
+            performancePanel = new ScrollView(ScrollViewMode.Vertical) { horizontalScrollerVisibility = ScrollerVisibility.Hidden, name = "graph-performance", style = { flexGrow = 1, paddingLeft = 12, paddingRight = 12 } };
+            sidebar.Add(inspector); sidebar.Add(libraryPanel); sidebar.Add(problemsPanel); sidebar.Add(performancePanel);
             ShowSidebarTab(sidebarTab);
             return sidebar;
         }
 
         void ShowSidebarTab(int tab)
         {
-            sidebarTab = Mathf.Clamp(tab, 0, 2);
+            sidebarTab = Mathf.Clamp(tab, 0, 3);
             if (sidebarTabs != null)
                 for (var i = 0; i < sidebarTabs.Length; i++)
                 {
@@ -85,7 +91,9 @@ namespace NXSG.Editor
             inspector.style.display = sidebarTab == 0 ? DisplayStyle.Flex : DisplayStyle.None;
             libraryPanel.style.display = sidebarTab == 1 ? DisplayStyle.Flex : DisplayStyle.None;
             problemsPanel.style.display = sidebarTab == 2 ? DisplayStyle.Flex : DisplayStyle.None;
+            performancePanel.style.display = sidebarTab == 3 ? DisplayStyle.Flex : DisplayStyle.None;
             if (sidebarTab == 2) { diagnosticsHash = null; QueueDiagnostics(); }
+            if (sidebarTab == 3) { performanceHash = null; QueuePerformance(); }
         }
 
         // Value changes keep the active field and pointer capture alive.
@@ -98,9 +106,58 @@ namespace NXSG.Editor
             hasUnsavedChanges = true;
             EditorUtility.SetDirty(session);
             QueueLivePreview();
+            QueuePerformance();
         }
 
-        void QueueDiagnostics() { diagnosticsPending = true; diagnosticsDue = EditorApplication.timeSinceStartup + .4; }
+        void QueuePerformance() { performancePending = true; performanceDue = EditorApplication.timeSinceStartup + .25; }
+        void UpdatePerformance()
+        {
+            if (!performancePending || graph == null || performancePanel == null || sidebarTab != 3 || EditorApplication.timeSinceStartup < performanceDue || EditorApplication.isCompiling || EditorApplication.isUpdating) return;
+            performancePending = false;
+            var hash = GraphJson.ComputeSemanticHash(graph);
+            if (hash == performanceHash) return;
+            performanceHash = hash;
+            performancePanel.Clear();
+            var report = GraphPerformance.Analyze(graph);
+            performancePanel.Add(new Label("Performance estimates") { style = { unityFontStyleAndWeight = FontStyle.Bold, marginTop = 8 } });
+            performancePanel.Add(new HelpBox("These are graph and backend budgets, not GPU time or FPS. Connected runtime values, rendered coverage, lights and target hardware change actual work.", HelpBoxMessageType.Info));
+            Metric("Reachable nodes", report.ReachableNodes.Count.ToString());
+            Metric("Texture sample sites", report.TextureSampleSites.ToString());
+            Metric("Static passes", report.StaticPassBudget.ToString());
+            if (!string.IsNullOrEmpty(report.PassNote)) performancePanel.Add(new Label(report.PassNote) { style = { whiteSpace = WhiteSpace.Normal, fontSize = 10, marginBottom = 6 } });
+            if (report.LoopBudgets.Count > 0)
+            {
+                performancePanel.Add(new Label("Loop and geometry budgets") { style = { unityFontStyleAndWeight = FontStyle.Bold, marginTop = 8 } });
+                foreach (var line in report.LoopBudgets) performancePanel.Add(new HelpBox(line, HelpBoxMessageType.Warning));
+            }
+            if (report.HotSpots.Count > 0)
+            {
+                performancePanel.Add(new Label("Where cost comes from") { style = { unityFontStyleAndWeight = FontStyle.Bold, marginTop = 8 } });
+                foreach (var item in report.HotSpots)
+                {
+                    var box = new VisualElement { style = { marginTop = 5, paddingBottom = 6, borderBottomWidth = 1, borderBottomColor = new Color(.25f,.25f,.25f) } };
+                    box.Add(new Button(() => { SelectNode(item.NodeId, false); FrameNodes(true); ShowSidebarTab(0); }) { text = item.Label + " · focus", tooltip = item.Label + " · " + item.NodeId + "\nFocus this node on the graph", style = { minWidth = 0, whiteSpace = WhiteSpace.NoWrap, overflow = Overflow.Hidden, textOverflow = TextOverflow.Ellipsis } });
+                    box.Add(new Label(item.Estimate) { style = { whiteSpace = WhiteSpace.Normal, unityFontStyleAndWeight = FontStyle.Bold, fontSize = 11 } });
+                    box.Add(new Label(item.Explanation) { style = { whiteSpace = WhiteSpace.Normal, fontSize = 10 } });
+                    performancePanel.Add(box);
+                }
+            }
+            else performancePanel.Add(new HelpBox("No modeled hot spots on the connected Output path.", HelpBoxMessageType.Info));
+            if (report.DynamicUnknowns.Count > 0)
+            {
+                performancePanel.Add(new Label("Dynamic or unresolved") { style = { unityFontStyleAndWeight = FontStyle.Bold, marginTop = 8 } });
+                foreach (var line in report.DynamicUnknowns) performancePanel.Add(new HelpBox(line, HelpBoxMessageType.Info));
+            }
+        }
+        void Metric(string name, string value)
+        {
+            var row = new VisualElement { style = { flexDirection = FlexDirection.Row, justifyContent = Justify.SpaceBetween, marginTop = 4 } };
+            row.Add(new Label(name) { style = { flexGrow = 1, whiteSpace = WhiteSpace.Normal } });
+            row.Add(new Label(value) { style = { unityFontStyleAndWeight = FontStyle.Bold, minWidth = 24, unityTextAlign = TextAnchor.MiddleRight } });
+            performancePanel.Add(row);
+        }
+
+        void QueueDiagnostics() { diagnosticsPending = true; diagnosticsDue = EditorApplication.timeSinceStartup + .4; QueuePerformance(); }
         void UpdateDiagnostics()
         {
             if (!diagnosticsPending || graph == null || problemsPanel == null || EditorApplication.timeSinceStartup < diagnosticsDue

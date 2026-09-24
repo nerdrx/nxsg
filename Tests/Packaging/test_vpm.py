@@ -73,6 +73,26 @@ class VpmBuilderTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "uncommitted tracked changes"):
                 builder.build(root, Path(directory) / "output", Path(directory) / "index.json")
 
+    def test_rejects_untracked_package_file(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = repo(Path(directory))
+            (root / "Packages" / builder.PACKAGE_ID / "ForgottenNode.cs").write_text("new node\n")
+            with self.assertRaisesRegex(ValueError, "untracked files"):
+                builder.build(root, Path(directory) / "output", Path(directory) / "index.json")
+
+    def test_rejected_version_preserves_published_artifacts(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = repo(Path(directory))
+            output, listing = Path(directory) / "output", root / "vpm" / "index.json"
+            archive, _ = builder.build(root, output, listing)
+            before = archive.read_bytes(), listing.read_bytes(), (output / "package.json").read_bytes()
+            (root / "Packages" / builder.PACKAGE_ID / "Core.cs").write_text("changed\n")
+            subprocess.run(["git", "-C", str(root), "add", "-A"], check=True)
+            subprocess.run(["git", "-C", str(root), "-c", "user.name=test", "-c", "user.email=test@example.test", "commit", "-qm", "changed code"], check=True)
+            with self.assertRaisesRegex(ValueError, "refusing overwrite"):
+                builder.build(root, output, listing)
+            self.assertEqual(before, (archive.read_bytes(), listing.read_bytes(), (output / "package.json").read_bytes()))
+
     def test_deterministic_archive_and_meta_root(self) -> None:
         with __import__("tempfile").TemporaryDirectory() as directory:
             root = repo(Path(directory))

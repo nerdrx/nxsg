@@ -90,6 +90,7 @@ namespace NXSG.Editor
             EditorApplication.update += TickRecovery;
             EditorApplication.update += TickInlinePreviews;
             EditorApplication.update += UpdateDiagnostics;
+            EditorApplication.update += UpdatePerformance;
             Restore();
         }
 
@@ -102,6 +103,7 @@ namespace NXSG.Editor
             EditorApplication.update -= TickRecovery;
             EditorApplication.update -= TickInlinePreviews;
             EditorApplication.update -= UpdateDiagnostics;
+            EditorApplication.update -= UpdatePerformance;
             recoveryDue=0; TickRecovery(); DisposeInlinePreviews();
             ClearPreview();
         }
@@ -546,6 +548,7 @@ namespace NXSG.Editor
                     box.RegisterCallback<PointerDownEvent>(evt => { if (evt.button == 0) SelectNode(node.Id, evt.shiftKey || selection.Contains(node.Id)); });
                     layer.Add(box); nodes[node.Id] = box;
                 }
+            PruneInlinePreviews();
             DrawPatternGroups();
             foreach (var socket in sockets) socketLookup[(socket.node, socket.port, socket.output)] = socket;
             selection.RemoveAll(id => !nodes.ContainsKey(id));
@@ -569,8 +572,8 @@ namespace NXSG.Editor
                 case "core.uv0": case "core.objectUV": case "core.worldUV": case "core.uvTransform":
                 case "core.uvScroll": case "core.uvRotate": case "core.polarUV":
                     return new[] { "core.uv0", "core.objectUV", "core.worldUV", "core.uvTransform", "core.uvScroll", "core.uvRotate", "core.polarUV" };
-                case "core.toonSurface": case "core.unlitSurface": case "core.pbrSurface": case "core.particleSurface":
-                    return new[] { "core.toonSurface", "core.unlitSurface", "core.pbrSurface", "core.particleSurface" };
+                case "core.toonSurface": case "core.unlitSurface": case "core.pbrSurface": case "core.layeredPbrSurface": case "core.particleSurface":
+                    return new[] { "core.toonSurface", "core.unlitSurface", "core.pbrSurface", "core.layeredPbrSurface", "core.particleSurface" };
                 default: return Array.Empty<string>();
             }
         }
@@ -675,6 +678,8 @@ namespace NXSG.Editor
         {
             switch(port)
             {
+                case "coat": return "Coat weight"; case "coatRoughness": return "Coat roughness"; case "coatNormal": return "Coat normal";
+                case "sheen": return "Sheen weight"; case "sheenColor": return "Sheen color"; case "sheenRoughness": return "Sheen roughness";
                 case "uv": return "UV"; case "rootColor": return "Root color"; case "tipColor": return "Tip color";
                 case "inMin": return "Input min"; case "inMax": return "Input max";
                 case "outMin": return "Output min"; case "outMax": return "Output max";
@@ -800,7 +805,7 @@ namespace NXSG.Editor
                 case "core.subtract": case "core.divide": case "core.minimum": case "core.maximum":
                 case "core.ramp": case "core.value": case "core.time": case "core.add": case "core.mix": case "core.oneMinus": case "core.clamp": case "core.multiply": return new Color(.53f,.63f,.74f);
                 case "core.emission": case "core.toonSurface": return new Color(.28f,.77f,.51f);
-                case "core.surfaceParticles": case "core.particleSurface": case "core.unlitSurface": case "core.pbrSurface": case "core.shell": return new Color(.28f,.77f,.51f);
+                case "core.surfaceParticles": case "core.particleSurface": case "core.unlitSurface": case "core.pbrSurface": case "core.layeredPbrSurface": case "core.shell": return new Color(.28f,.77f,.51f);
                 case "core.gradient": case "core.posterize": case "core.fresnel": case "core.colorRamp": case "core.layer": case "core.dissolve": return new Color(.92f,.72f,.24f);
                 case "core.sticker": return new Color(.94f,.50f,.22f);
                 case "core.uvTile": case "core.flipbook": case "core.uvDistort": return new Color(.30f,.58f,.95f);
@@ -1248,12 +1253,12 @@ namespace NXSG.Editor
             inspector.Add(field);
         }
 
-        void AddColorInput(GraphNode node, string property, string label, Color fallback)
+        void AddColorInput(GraphNode node, string property, string label, Color fallback, string help = null)
         {
             var values = node.Properties[property] as JArray;
             var field = new ColorField(label) { name = "node-property-" + property, hdr = true, showAlpha = false,
                 value = values != null && values.Count == 4 ? new Color((float)values[0], (float)values[1], (float)values[2], (float)values[3]) : fallback,
-                tooltip = "Used when the " + property + " input is unconnected. Matching uses RGB in the graph's working space; alpha is ignored." };
+                tooltip = help ?? "Used when the " + property + " input is unconnected. Matching uses RGB in the graph's working space; alpha is ignored." };
             field.SetEnabled(!graph.Connections.Any(edge => edge.To.NodeId == node.Id && edge.To.PortId == property));
             field.RegisterValueChangedCallback(evt => EditValue("Change " + label, () => node.Properties[property] = new JArray(evt.newValue.r, evt.newValue.g, evt.newValue.b, evt.newValue.a)));
             inspector.Add(field);

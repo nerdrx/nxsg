@@ -14,6 +14,7 @@ namespace NXSG.Editor
         {
             switch (node.Operation)
             {
+                case "core.layeredPbrSurface": AddLayeredSurfaceControls(node); return true;
                 case "core.fur": AddFurControls(node); return true;
                 case "core.parallaxUV": AddCoordinateChoice(node); AddNumber(node, "height", "Height", .5f, "height"); AddNumber(node, "strength", "Depth strength", .05f); AddNumber(node, "reference", "Reference height", .5f); return true;
                 case "core.avatarMotion": FeatureNote("Create an FX motion driver from the Create menu, then merge its layers into your avatar FX controller. Reads locomotion, not individual bones. Matching properties on other materials on this renderer are animated too.");return true;
@@ -88,6 +89,28 @@ namespace NXSG.Editor
                     return true;
                 default: return false;
             }
+        }
+
+        void AddLayeredSurfaceControls(GraphNode node)
+        {
+            AddInspectorSection("BASE SURFACE");
+            AddAlbedoAlphaToggle(node);
+            AddBoundedNumber(node, "opacity", "Opacity", 0, 1, 1, "opacity");
+            AddNumber(node, "cutoff", "Cutoff", .001f);
+            AddNumber(node, "displacement", "Displacement", 0, "displacement");
+            AddBoundedNumber(node, "metallic", "Metallic", 0, 1, 0, "metallic");
+            AddBoundedNumber(node, "roughness", "Roughness", 0, 1, .5f, "roughness");
+            AddInspectorSection("CLEARCOAT");
+            AddBoundedNumber(node, "coat", "Coat weight", 0, 1, 0, "coat", "Glossy dielectric coating. 0 disables the layer; 1 gives full coverage. Connected inputs remain dynamic.");
+            AddBoundedNumber(node, "coatRoughness", "Coat roughness", 0, 1, .1f, "coatRoughness", "Independent coating roughness. Low values make a sharp reflection; high values soften it.");
+            FeatureNote("Connect a Normal Map to Coat normal for coating detail. Unconnected uses the smooth mesh normal, independent of the base normal map.");
+            AddInspectorSection("VELVET SHEEN");
+            AddBoundedNumber(node, "sheen", "Sheen weight", 0, 1, 0, "sheen", "Soft fabric reflection, strongest at grazing angles. Zero removes the layer when unconnected.");
+            AddColorInput(node, "sheenColor", "Sheen color", Color.white, "Color of the fabric sheen. Alpha is ignored; evaluated RGB stays between 0 and 1.");
+            AddBoundedNumber(node, "sheenRoughness", "Sheen roughness", 0, 1, .5f, "sheenRoughness");
+            FeatureNote("Layers share the PBR passes and respond to pixel lights. Clearcoat uses reflection probes; ambient sheen is an approximation. Zero unconnected weights compile out their layers.");
+            AddInspectorSection("LIGHTING");
+            AddLightingControls(node);
         }
 
         void AddLightingControls(GraphNode node)

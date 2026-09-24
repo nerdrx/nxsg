@@ -561,3 +561,19 @@ Portable checks cover hue-space persistence, legacy HSV fallback, invalid-mode r
 - Scene synchronization still skips layout-only changes after the deferred comparison, retains the last valid shader after errors, and respects Auto scene being off.
 
 These checks do not establish native Windows/D3D or live VRChat behavior.
+
+
+## 1.5.0 layered surfaces, cost estimates and quality pass (2026-09-24)
+
+- Portable checks pass for layer sockets, save/load, neutral PBR parity, dynamic zero weights, disabled-branch pruning and invalid inputs. Static pass estimates match emitted pass declarations for every shipped sample, with LTCGI availability explicitly enabled for its sample.
+- Hidden Gamescope, Unity 2022.3.22f1, Linux/OpenGL: `LayeredSurfaceSmoke` checks finite rendered pixels, independent coat normal/roughness, sheen roughness and black tint, emission, opacity and additional pixel lights. `LayeredControlsSmoke` checks header switching, preserved connections, field identity, connected controls and inspector bounds.
+- `PerformanceSmoke` checks the Cost panel at 240, 310 and 400 pixel sidebar widths, texture names, and pointer interaction that focuses a node and opens its Inspector. These are static estimates, not GPU timings.
+- `ThumbnailLifetimeSmoke` repeatedly deletes nodes while preview is paused and verifies that their thumbnail editors, materials and shaders are destroyed. This checks that resource lifetime, not total Unity process memory.
+- `BuildTransactionSmoke` passes unchanged/changed build, GUID preservation, corrupt output, missing material and compiler-failure rollback checks. `SceneSyncSmoke` passes scene updates, layout-only skipping, last-valid-shader preservation and Auto scene off behavior.
+- Strict Windows-target D3D11 asset-bundle compilation passes 16 shaders, including both new surface examples, tessellation, fur cards, particles, volumes and an unoptimized PBR variant.
+- Malformed parameter/resource/type references now produce diagnostics; missing legacy type defaults remain supported. Disabled layer inputs no longer demand optional packages or generated geometry. Wireframe is rejected throughout generated-particle input paths, while remaining valid on the base surface.
+- All 11 packaging tests pass, including preservation of an existing release ZIP when a conflicting same-version build is rejected, and rejection of untracked package files.
+
+Evidence logs: `work/unity/v1.5-layered3.log`, `v1.5-layered-ui.log`, `v1.5-cost-final.log`, `v1.5-thumbnail-lifetime.log`, `v1.5-build-transaction.log`, `v1.5-scene-sync.log`, `v1.5-d3d.log`; portable results in `work/v1.5-portable-final.log`.
+
+Clearcoat and sheen use documented artistic approximations; this is not a complete glTF material implementation. D3D11 cross-compilation does not establish native Windows rendering, VRChat client behavior, stereo appearance or headset performance.

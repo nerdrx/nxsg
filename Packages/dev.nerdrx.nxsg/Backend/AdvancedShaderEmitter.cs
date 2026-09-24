@@ -17,6 +17,7 @@ namespace NXSG.Backend
         readonly EmitterOptions options;
         readonly Dictionary<string, GraphNode> nodes;
         readonly Dictionary<string, GraphConnection> edges;
+        readonly ILookup<string, GraphConnection> incoming;
         readonly Dictionary<string, string> types;
         readonly List<MaterialProperty> properties = new List<MaterialProperty>();
         readonly Dictionary<string, string> textureNames = new Dictionary<string, string>();
@@ -27,6 +28,7 @@ namespace NXSG.Backend
         bool wireframeEnabled;
         bool ltcgiEnabled;
         bool lightingControlsEnabled;
+        bool coatEnabled, sheenEnabled;
         int depth;
 
         sealed class SurfacePass
@@ -43,7 +45,13 @@ namespace NXSG.Backend
             var connected = new HashSet<string>();
             var queue = new Queue<string>(graph.Nodes.Where(n => n?.Operation == "core.output").Select(n => n.Id));
             var incoming = (graph.Connections ?? new List<GraphConnection>()).Where(e => e?.From?.NodeId != null && e.To?.NodeId != null).ToLookup(e => e.To.NodeId);
-            while (queue.Count > 0) { var id = queue.Dequeue(); if (!connected.Add(id)) continue; foreach (var edge in incoming[id]) queue.Enqueue(edge.From.NodeId); }
+            var byId = graph.Nodes.Where(n => n != null).ToDictionary(n => n.Id);
+            while (queue.Count > 0)
+            {
+                var id = queue.Dequeue();
+                if (!connected.Add(id) || !byId.TryGetValue(id, out var current)) continue;
+                foreach (var edge in GraphDependencies.ActiveIncoming(current, incoming[id])) queue.Enqueue(edge.From.NodeId);
+            }
             var live = graph.Nodes.Where(n => n != null && connected.Contains(n.Id)).ToArray();
             var inferred = GraphTypes.Infer(graph);
             var liveById = live.ToDictionary(n => n.Id);
@@ -62,7 +70,7 @@ namespace NXSG.Backend
 
         static bool HasLightingControls(GraphNode node)
         {
-            if (node == null || (node.Operation != "core.toonSurface" && node.Operation != "core.pbrSurface")) return false;
+            if (node == null || (node.Operation != "core.toonSurface" && !IsPbr(node))) return false;
             return LightingValueDiffers(node, "lightingMin", 0) || LightingValueDiffers(node, "lightingMax", 0) || LightingValueDiffers(node, "lightingSaturation", 1);
         }
 
@@ -93,6 +101,7 @@ namespace NXSG.Backend
             this.graph = graph; this.options = options;
             nodes = (graph.Nodes ?? new List<GraphNode>()).ToDictionary(n => n.Id, n => new GraphNode { Id=n.Id, Operation=n.Operation, Version=n.Version, Properties=n.Properties ?? new JObject() });
             edges = (graph.Connections ?? new List<GraphConnection>()).ToDictionary(e => Key(e.To.NodeId, e.To.PortId));
+            incoming = edges.Values.ToLookup(e => e.To.NodeId);
             types = GraphTypes.Infer(graph);
         }
 
@@ -150,7 +159,7 @@ namespace NXSG.Backend
             if (wireframeEnabled && surfaceParticles)
             {
                 var particleInputs = new HashSet<string>();
-                foreach (var port in new[]{"albedo","emission","opacity","mask","time"})
+                foreach (var port in NodeCatalog.Ports(root.Operation, false).Where(port => port != "base"))
                 { var source = Source(root,port); if(source != null) Visit(source,particleInputs); }
                 if(particleInputs.Any(id=>nodes[id].Operation=="core.wireframe"))
                     throw new InvalidOperationException("Connect Wireframe to the Base surface, not the generated particle inputs.");
@@ -246,6 +255,8 @@ namespace NXSG.Backend
             if (ltcgiEnabled) b.AppendLine(LtcgiShader.Hlsl);
             if(refracts) b.AppendLine("sampler2D _NXSG_GrabTexture; float4 _NXSG_GrabTexture_TexelSize;");
             b.AppendLine(FeatureShader.Helpers);
+            if (coatEnabled) b.AppendLine(LayeredPbrShader.CoatHelpers);
+            if (sheenEnabled) b.AppendLine(LayeredPbrShader.SheenHelpers);
             if (live.Any(id => nodes[id].Operation == "core.glitter")) b.AppendLine(GlitterShader.Hlsl);
             b.AppendLine(ProceduralShader.Hlsl);
             b.AppendLine(DistortionShader.Hlsl);
@@ -274,21 +285,20 @@ namespace NXSG.Backend
             while (queue.Count > 0)
             {
                 var current = queue.Dequeue(); if (!live.Add(current.Id)) continue;
-            var ports = NodeCatalog.Ports(current.Operation, false).Concat(new[] { "x", "position", "uv", "time" });
-            foreach (var port in ports.Distinct()) { var source = Source(current, port); if (source != null) queue.Enqueue(source); }
+                foreach (var edge in GraphDependencies.ActiveIncoming(current, incoming[current.Id])) queue.Enqueue(nodes[edge.From.NodeId]);
             }
         }
         void FlattenSurfaces(GraphNode node, string inheritedOffset, int traversalDepth, List<SurfacePass> result)
         {
             if (traversalDepth > 64) throw new InvalidOperationException("Nested shell traversal exceeds depth limit.");
-            if (node == null) throw new InvalidOperationException("Connect Toon, Unlit or PBR to each surface socket.");
+            if (node == null) throw new InvalidOperationException("Connect Toon, Unlit, PBR or Layered PBR to each surface socket.");
             if (node.Operation == "core.surfaceParticles") throw new InvalidOperationException("Surface Particles must be the final surface before Output; nesting is not supported.");
             if (node.Operation != "core.shell") { CheckSurface(node); if (result.Count >= 9) throw new InvalidOperationException("Nested shells support at most 8 transparent shell layers (9 leaf surfaces)."); result.Add(new SurfacePass { Surface = node, Offset = inheritedOffset }); return; }
             FlattenSurfaces(Source(node, "base"), inheritedOffset, traversalDepth + 1, result);
             var offset = "(" + inheritedOffset + "+" + Scalar(node, "offset", .02, true) + ")";
             FlattenSurfaces(Source(node, "layer"), offset, traversalDepth + 1, result);
         }
-        static void CheckSurface(GraphNode n) { if (n == null || !new[] { "core.toonSurface", "core.unlitSurface", "core.pbrSurface" }.Contains(n.Operation)) throw new InvalidOperationException(n != null && n.Operation == "core.particleSurface" ? "Particle Surface cannot be combined with Shell or other surface passes." : "Connect Toon, Unlit or PBR to each surface socket."); }
+        static void CheckSurface(GraphNode n) { if (n == null || !new[] { "core.toonSurface", "core.unlitSurface", "core.pbrSurface", "core.layeredPbrSurface" }.Contains(n.Operation)) throw new InvalidOperationException(n != null && n.Operation == "core.particleSurface" ? "Particle Surface cannot be combined with Shell or other surface passes." : "Connect Toon, Unlit, PBR or Layered PBR to each surface socket."); }
         GraphNode Source(GraphNode n, string port) { return edges.TryGetValue(Key(n.Id, port), out var edge) ? nodes[edge.From.NodeId] : null; }
         bool ContainsScreenDependentOperation(GraphNode root, string port)
         {
@@ -635,6 +645,37 @@ namespace NXSG.Backend
 
         const string WireGeometry = "[maxvertexcount(3)] void geomWire(triangle NXInput tri[3], inout TriangleStream<NXInput> stream) { NXInput o=tri[0]; o.wireBary=float3(1,0,0); stream.Append(o); o=tri[1]; o.wireBary=float3(0,1,0); stream.Append(o); o=tri[2]; o.wireBary=float3(0,0,1); stream.Append(o); stream.RestartStrip(); }";
 
+        static bool IsPbr(GraphNode node) { return node != null && (node.Operation == "core.pbrSurface" || node.Operation == "core.layeredPbrSurface"); }
+
+        bool HasLayer(GraphNode surface, string port)
+        {
+            return GraphDependencies.IsLayerActive(surface, port, Source(surface, port) != null);
+        }
+
+        // Layer code is only emitted for active lobes; a connected weight remains dynamic even if its default is zero.
+        string SurfaceLayers(GraphNode surface, bool additionalLight)
+        {
+            var b = new StringBuilder();
+            if (HasLayer(surface, "sheen"))
+            {
+                sheenEnabled = true;
+                b.AppendLine("pbr=NX_SheenLayer(pbr,n,view,lightDir,light.color,indirect.diffuse," + Scalar(surface,"sheen",0) + ",(" + Input(surface,"sheenColor",ColorProp(surface,"sheenColor",1,1,1,1),"color") + ").rgb," + Scalar(surface,"sheenRoughness",.5) + ");");
+            }
+            if (HasLayer(surface, "coat"))
+            {
+                coatEnabled = true;
+                b.AppendLine("float3 coatTangent=" + Input(surface,"coatNormal","float3(0,0,1)","vector3") + "; float3 coatBasis=normalize(input.tangent)*coatTangent.x+normalize(input.bitangent)*coatTangent.y+normalize(input.n)*coatTangent.z; float3 coatNormal=dot(coatBasis,coatBasis)>1e-8?normalize(coatBasis):normalize(input.n); float coatRoughness=saturate(" + Scalar(surface,"coatRoughness",.1) + ");");
+                b.AppendLine("float3 coatEnvironment=0;");
+                if (!additionalLight)
+                {
+                    b.AppendLine("half4 coatProbe=UNITY_SAMPLE_TEXCUBE_LOD(unity_SpecCube0,reflect(-view,coatNormal),coatRoughness*6); coatEnvironment=DecodeHDR(coatProbe,unity_SpecCube0_HDR);");
+                    if (HasLightingControls(surface)) b.AppendLine("coatEnvironment=NX_LightingBase(NX_LightingContribution(coatEnvironment,"+Prop(surface,"lightingSaturation",1)+","+Prop(surface,"lightingMax",0)+"),"+Prop(surface,"lightingMin",0)+","+Prop(surface,"lightingMax",0)+");");
+                }
+                b.AppendLine("pbr=NX_CoatLayer(pbr,coatNormal,view,lightDir,light.color,coatEnvironment,"+Scalar(surface,"coat",0)+",coatRoughness);");
+            }
+            return b.ToString();
+        }
+
         string Pass(GraphNode surface, int passIndex, string offset, GraphNode tessellation)
         {
             var displacement = Scalar(surface,"displacement",0,true);
@@ -662,16 +703,18 @@ namespace NXSG.Backend
             else
             {
                 b.AppendLine("float3 tn="+normal+"; float3 n=normalize(normalize(input.tangent)*tn.x+normalize(input.bitangent)*tn.y+normalize(input.n)*tn.z); float3 view=normalize(_WorldSpaceCameraPos-input.ws); float3 lightDir=normalize(UnityWorldSpaceLightDir(input.ws)); UNITY_LIGHT_ATTENUATION(atten,input,input.ws);");
-                if(surface.Operation=="core.pbrSurface")
+                if(IsPbr(surface))
                 {
-                    if (!lighting) b.AppendLine("half3 spec; half reflectivity; half3 diffuse=DiffuseAndSpecularFromMetallic(c.rgb,saturate("+metallic+"),spec,reflectivity); UnityLight light; light.color=_LightColor0.rgb*atten; light.dir=lightDir; light.ndotl=saturate(dot(n,lightDir)); UnityIndirect indirect; indirect.diffuse=max(0,ShadeSH9(float4(n,1))); half rough=saturate("+roughness+"); half4 env=UNITY_SAMPLE_TEXCUBE_LOD(unity_SpecCube0,reflect(-view,n),rough*6); indirect.specular=DecodeHDR(env,unity_SpecCube0_HDR); return float4(UNITY_BRDF_PBS(diffuse,spec,reflectivity,1-rough,n,view,light,indirect).rgb+emission,alpha);");
-                    else b.AppendLine("half3 spec; half reflectivity; half3 diffuse=DiffuseAndSpecularFromMetallic(c.rgb,saturate("+metallic+"),spec,reflectivity); UnityLight light; light.color=NX_LightingContribution(_LightColor0.rgb*atten,"+lightingSaturation+","+lightingMax+"); light.dir=lightDir; light.ndotl=saturate(dot(n,lightDir)); UnityIndirect indirect; indirect.diffuse=NX_LightingBase(NX_LightingContribution(max(0,ShadeSH9(float4(n,1))),"+lightingSaturation+","+lightingMax+"),"+lightingMin+","+lightingMax+"); half rough=saturate("+roughness+"); half4 env=UNITY_SAMPLE_TEXCUBE_LOD(unity_SpecCube0,reflect(-view,n),rough*6); indirect.specular=NX_LightingBase(NX_LightingContribution(DecodeHDR(env,unity_SpecCube0_HDR),"+lightingSaturation+","+lightingMax+"),"+lightingMin+","+lightingMax+"); return float4(UNITY_BRDF_PBS(diffuse,spec,reflectivity,1-rough,n,view,light,indirect).rgb+emission,alpha);");
+                    if (!lighting) b.AppendLine("half3 spec; half reflectivity; half3 diffuse=DiffuseAndSpecularFromMetallic(c.rgb,saturate("+metallic+"),spec,reflectivity); UnityLight light; light.color=_LightColor0.rgb*atten; light.dir=lightDir; light.ndotl=saturate(dot(n,lightDir)); UnityIndirect indirect; indirect.diffuse=max(0,ShadeSH9(float4(n,1))); half rough=saturate("+roughness+"); half4 env=UNITY_SAMPLE_TEXCUBE_LOD(unity_SpecCube0,reflect(-view,n),rough*6); indirect.specular=DecodeHDR(env,unity_SpecCube0_HDR); float3 pbr=UNITY_BRDF_PBS(diffuse,spec,reflectivity,1-rough,n,view,light,indirect).rgb;");
+                    else b.AppendLine("half3 spec; half reflectivity; half3 diffuse=DiffuseAndSpecularFromMetallic(c.rgb,saturate("+metallic+"),spec,reflectivity); UnityLight light; light.color=NX_LightingContribution(_LightColor0.rgb*atten,"+lightingSaturation+","+lightingMax+"); light.dir=lightDir; light.ndotl=saturate(dot(n,lightDir)); UnityIndirect indirect; indirect.diffuse=NX_LightingBase(NX_LightingContribution(max(0,ShadeSH9(float4(n,1))),"+lightingSaturation+","+lightingMax+"),"+lightingMin+","+lightingMax+"); half rough=saturate("+roughness+"); half4 env=UNITY_SAMPLE_TEXCUBE_LOD(unity_SpecCube0,reflect(-view,n),rough*6); indirect.specular=NX_LightingBase(NX_LightingContribution(DecodeHDR(env,unity_SpecCube0_HDR),"+lightingSaturation+","+lightingMax+"),"+lightingMin+","+lightingMax+"); float3 pbr=UNITY_BRDF_PBS(diffuse,spec,reflectivity,1-rough,n,view,light,indirect).rgb;");
+                    b.AppendLine(SurfaceLayers(surface, false));
+                    b.AppendLine("return float4(pbr+emission,alpha);");
                 }
                 else if (!lighting) b.AppendLine("float lit=smoothstep("+threshold+"-max(.001,"+softness+"),"+threshold+"+max(.001,"+softness+"),dot(n,lightDir)*.5+.5); return float4(c.rgb*(max(0,ShadeSH9(float4(n,1)))+_LightColor0.rgb*atten*lerp(1-saturate("+shadow+"),1,lit))+emission,alpha);");
                 else b.AppendLine("float lit=smoothstep("+threshold+"-max(.001,"+softness+"),"+threshold+"+max(.001,"+softness+"),dot(n,lightDir)*.5+.5); float3 ambient=NX_LightingContribution(max(0,ShadeSH9(float4(n,1))),"+lightingSaturation+","+lightingMax+"); float3 direct=NX_LightingContribution(_LightColor0.rgb*atten*lerp(1-saturate("+shadow+"),1,lit),"+lightingSaturation+","+lightingMax+"); return float4(c.rgb*NX_LightingBase(ambient+direct,"+lightingMin+","+lightingMax+")+emission,alpha);");
             }
             var result = b.AppendLine("}\nENDCG\n}").ToString().Replace("#pragma target 3.5", wireframeEnabled ? "#pragma target 4.0" : "#pragma target 3.5");
-            if (!shell && (surface.Operation == "core.toonSurface" || surface.Operation == "core.pbrSurface"))
+            if (!shell && (surface.Operation == "core.toonSurface" || IsPbr(surface)))
                 result += ForwardAddPass(surface, passIndex, offset, tessellation);
             return result;
         }
@@ -694,8 +737,12 @@ namespace NXSG.Backend
             if (tess) b.AppendLine(TessellationShader.Forward(Prop(tessellation,"factor",8),Prop(tessellation,"minFactor",1),Prop(tessellation,"nearDistance",2),Prop(tessellation,"farDistance",15),Prop(tessellation,"smoothing",0)).Replace("vertTess", "vertTessAdd").Replace("hullTess", "hullTessAdd").Replace("domainTess", "domainTessAdd").Replace("return vert(a)", "return vertAdd(a)"));
             if (wireframeEnabled) b.AppendLine(WireGeometry.Replace("geomWire", "geomWireAdd"));
             b.AppendLine("float4 fragAdd(NXInput input):SV_Target { UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input); float4 c="+color+"*_Color; float alpha=saturate("+(IntProp(surface,"useAlbedoAlpha",1,0,1)==1 ? "c.a" : "_Color.a")+"*"+opacity+"); clip(alpha-"+Prop(surface,"cutoff",.001)+"); float3 tn="+normal+"; float3 n=normalize(normalize(input.tangent)*tn.x+normalize(input.bitangent)*tn.y+normalize(input.n)*tn.z); float3 view=normalize(_WorldSpaceCameraPos-input.ws); float3 lightDir=normalize(UnityWorldSpaceLightDir(input.ws)); UNITY_LIGHT_ATTENUATION(atten,input,input.ws);");
-            if (surface.Operation == "core.pbrSurface")
-                b.AppendLine(lighting ? "half3 spec; half reflectivity; half3 diffuse=DiffuseAndSpecularFromMetallic(c.rgb,saturate("+metallic+"),spec,reflectivity); UnityLight light; light.color=NX_LightingContribution(_LightColor0.rgb*atten,"+lightingSaturation+","+lightingMax+"); light.dir=lightDir; light.ndotl=saturate(dot(n,lightDir)); UnityIndirect indirect; indirect.diffuse=0; indirect.specular=0; half rough=saturate("+roughness+"); return float4(UNITY_BRDF_PBS(diffuse,spec,reflectivity,1-rough,n,view,light,indirect).rgb,0);" : "half3 spec; half reflectivity; half3 diffuse=DiffuseAndSpecularFromMetallic(c.rgb,saturate("+metallic+"),spec,reflectivity); UnityLight light; light.color=_LightColor0.rgb*atten; light.dir=lightDir; light.ndotl=saturate(dot(n,lightDir)); UnityIndirect indirect; indirect.diffuse=0; indirect.specular=0; half rough=saturate("+roughness+"); return float4(UNITY_BRDF_PBS(diffuse,spec,reflectivity,1-rough,n,view,light,indirect).rgb,0);");
+            if (IsPbr(surface))
+            {
+                b.AppendLine(lighting ? "half3 spec; half reflectivity; half3 diffuse=DiffuseAndSpecularFromMetallic(c.rgb,saturate("+metallic+"),spec,reflectivity); UnityLight light; light.color=NX_LightingContribution(_LightColor0.rgb*atten,"+lightingSaturation+","+lightingMax+"); light.dir=lightDir; light.ndotl=saturate(dot(n,lightDir)); UnityIndirect indirect; indirect.diffuse=0; indirect.specular=0; half rough=saturate("+roughness+"); float3 pbr=UNITY_BRDF_PBS(diffuse,spec,reflectivity,1-rough,n,view,light,indirect).rgb;" : "half3 spec; half reflectivity; half3 diffuse=DiffuseAndSpecularFromMetallic(c.rgb,saturate("+metallic+"),spec,reflectivity); UnityLight light; light.color=_LightColor0.rgb*atten; light.dir=lightDir; light.ndotl=saturate(dot(n,lightDir)); UnityIndirect indirect; indirect.diffuse=0; indirect.specular=0; half rough=saturate("+roughness+"); float3 pbr=UNITY_BRDF_PBS(diffuse,spec,reflectivity,1-rough,n,view,light,indirect).rgb;");
+                b.AppendLine(SurfaceLayers(surface, true));
+                b.AppendLine("return float4(pbr,0);");
+            }
             else
                 b.AppendLine(lighting ? "float lit=smoothstep("+threshold+"-max(.001,"+softness+"),"+threshold+"+max(.001,"+softness+"),dot(n,lightDir)*.5+.5); return float4(c.rgb*NX_LightingContribution(_LightColor0.rgb*atten*lerp(1-saturate("+shadow+"),1,lit),"+lightingSaturation+","+lightingMax+"),0);" : "float lit=smoothstep("+threshold+"-max(.001,"+softness+"),"+threshold+"+max(.001,"+softness+"),dot(n,lightDir)*.5+.5); return float4(c.rgb*_LightColor0.rgb*atten*lerp(1-saturate("+shadow+"),1,lit),0);");
             return b.AppendLine("}\nENDCG\n}").ToString();
@@ -705,24 +752,24 @@ namespace NXSG.Backend
             var infos = nodes.Values.Where(n => n.Operation == "core.particleInfo").ToArray();
             if (infos.Length == 0) return;
             var live = new HashSet<string>();
-            var pending = new Stack<string>(); pending.Push(root.Id);
-            while (pending.Count > 0) { var id = pending.Pop(); if (!live.Add(id)) continue; foreach (var edge in graph.Connections.Where(e => e.To.NodeId == id)) pending.Push(edge.From.NodeId); }
+            Visit(root, live);
             infos = infos.Where(info => live.Contains(info.Id)).ToArray();
             if (infos.Length == 0) return;
             if (!surfaceParticles)
                 throw new InvalidOperationException("Particle Info is only valid inside Surface Particles; particle surface has no particle lifetime context.");
+            var activeEdges = nodes.Values.SelectMany(n => GraphDependencies.ActiveIncoming(n, incoming[n.Id])).ToArray();
             var forbidden = new HashSet<string>(new[] { "base", "mask", "time", "density", "emissionRate", "lifetime" }, StringComparer.Ordinal);
             foreach (var info in infos)
             {
                 var queue = new Queue<GraphConnection>(); var seen = new HashSet<GraphConnection>();
-                foreach (var edge in graph.Connections.Where(e => e.From.NodeId == info.Id)) queue.Enqueue(edge);
+                foreach (var edge in activeEdges.Where(e => e.From.NodeId == info.Id)) queue.Enqueue(edge);
                 while (queue.Count > 0)
                 {
                     var edge = queue.Dequeue();
                     if (!seen.Add(edge)) continue;
                     if (edge.To.NodeId == root.Id && forbidden.Contains(edge.To.PortId))
                         throw new InvalidOperationException("Particle Info age/random cannot drive Surface Particles " + edge.To.PortId + "; use it for particle appearance only.");
-                    foreach (var next in graph.Connections.Where(e => e.From.NodeId == edge.To.NodeId)) queue.Enqueue(next);
+                    foreach (var next in activeEdges.Where(e => e.From.NodeId == edge.To.NodeId)) queue.Enqueue(next);
                 }
             }
         }

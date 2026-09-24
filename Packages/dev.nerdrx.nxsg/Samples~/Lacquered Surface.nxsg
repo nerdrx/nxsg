@@ -1,0 +1,224 @@
+{
+  "format": "nxsg",
+  "schemaVersion": 1,
+  "graphId": "lacquered-surface-example",
+  "nodes": [
+    {
+      "id": "uv",
+      "operation": "core.uv0",
+      "version": 1,
+      "properties": {}
+    },
+    {
+      "id": "height",
+      "operation": "core.noise",
+      "version": 1,
+      "properties": {
+        "dimensions": 2,
+        "coordinateSource": "uv0",
+        "scale": 5,
+        "speed": 0
+      }
+    },
+    {
+      "id": "baseNormal",
+      "operation": "core.normalFromHeight",
+      "version": 1,
+      "properties": {
+        "strength": 0.08
+      }
+    },
+    {
+      "id": "coatNormal",
+      "operation": "core.constant",
+      "version": 1,
+      "properties": {
+        "valueType": "vector3",
+        "value": [
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "id": "albedo",
+      "operation": "core.constant",
+      "version": 1,
+      "properties": {
+        "valueType": "color",
+        "value": [
+          0.22,
+          0.025,
+          0.035,
+          1
+        ]
+      }
+    },
+    {
+      "id": "coatWeight",
+      "operation": "core.value",
+      "version": 1,
+      "properties": {
+        "value": 0.24
+      }
+    },
+    {
+      "id": "coatRoughness",
+      "operation": "core.value",
+      "version": 1,
+      "properties": {
+        "value": 0.16
+      }
+    },
+    {
+      "id": "surface",
+      "operation": "core.layeredPbrSurface",
+      "version": 1,
+      "properties": {
+        "roughness": 0.3,
+        "coat": 0.24,
+        "coatRoughness": 0.16,
+        "sheen": 0
+      }
+    },
+    {
+      "id": "output",
+      "operation": "core.output",
+      "version": 1,
+      "properties": {}
+    }
+  ],
+  "connections": [
+    {
+      "id": "uv-height",
+      "from": {
+        "nodeId": "uv",
+        "portId": "uv"
+      },
+      "to": {
+        "nodeId": "height",
+        "portId": "uv"
+      }
+    },
+    {
+      "id": "height-base-normal",
+      "from": {
+        "nodeId": "height",
+        "portId": "value"
+      },
+      "to": {
+        "nodeId": "baseNormal",
+        "portId": "height"
+      }
+    },
+    {
+      "id": "normal-base",
+      "from": {
+        "nodeId": "baseNormal",
+        "portId": "normal"
+      },
+      "to": {
+        "nodeId": "surface",
+        "portId": "normal"
+      }
+    },
+    {
+      "id": "normal-coat",
+      "from": {
+        "nodeId": "coatNormal",
+        "portId": "value"
+      },
+      "to": {
+        "nodeId": "surface",
+        "portId": "coatNormal"
+      }
+    },
+    {
+      "id": "albedo-surface",
+      "from": {
+        "nodeId": "albedo",
+        "portId": "value"
+      },
+      "to": {
+        "nodeId": "surface",
+        "portId": "albedo"
+      }
+    },
+    {
+      "id": "coat-weight",
+      "from": {
+        "nodeId": "coatWeight",
+        "portId": "value"
+      },
+      "to": {
+        "nodeId": "surface",
+        "portId": "coat"
+      }
+    },
+    {
+      "id": "coat-roughness",
+      "from": {
+        "nodeId": "coatRoughness",
+        "portId": "value"
+      },
+      "to": {
+        "nodeId": "surface",
+        "portId": "coatRoughness"
+      }
+    },
+    {
+      "id": "surface-output",
+      "from": {
+        "nodeId": "surface",
+        "portId": "surface"
+      },
+      "to": {
+        "nodeId": "output",
+        "portId": "surface"
+      }
+    }
+  ],
+  "parameters": [],
+  "resources": [],
+  "layout": {
+    "nodes": {
+      "uv": {
+        "x": 20,
+        "y": 80
+      },
+      "height": {
+        "x": 230,
+        "y": 50
+      },
+      "baseNormal": {
+        "x": 460,
+        "y": 50
+      },
+      "coatNormal": {
+        "x": 460,
+        "y": 270
+      },
+      "albedo": {
+        "x": 230,
+        "y": 380
+      },
+      "coatWeight": {
+        "x": 700,
+        "y": 410
+      },
+      "coatRoughness": {
+        "x": 700,
+        "y": 560
+      },
+      "surface": {
+        "x": 960,
+        "y": 170
+      },
+      "output": {
+        "x": 1230,
+        "y": 170
+      }
+    }
+  }
+}

@@ -45,3 +45,10 @@ Volume Nebula, Volume Carved Orb and Volume Smoke Ring use a closed default Unit
 - **Volume Filament Ring** — glowing procedural detail inside a torus.
 
 Apply these to a closed Unity Cube. They use 128 steps for detail; reduce quality and screen coverage for practical use. The [rendered gallery](https://nerdrx.github.io/nxsg/#raymarching) uses presentation bloom and tone mapping. See the [volume guide](https://github.com/nerdrx/nxsg/blob/main/docs/VOLUMES.md) for limits.
+
+### Coated and fabric surfaces
+
+- **Lacquered Surface** uses Layered PBR with a glossy clearcoat over subtle procedural base detail. Coat roughness and its normal can be controlled independently.
+- **Velvet Fabric** combines a woven pattern with colored grazing sheen. Both examples use generated patterns and need no external texture files.
+
+Open them from **Window → NXSG → Example Gallery**. Start with a directional light; reflection probes improve the clearcoat's environment reflection.

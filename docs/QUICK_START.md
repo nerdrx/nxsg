@@ -27,3 +27,9 @@ Start in a test project and keep normal project backups. Recovery snapshots live
 ### Generated shader names
 
 Generated shaders use `NXSG/<graph filename>/<unique ID>` in Unity’s shader selector. Rebuild existing graphs to update their display names. Spaces and punctuation become underscores; the unique ID and generated asset paths remain stable. Existing material presets still recognize the same graph after renaming.
+
+## Inspect effect cost
+
+Open **View → Performance estimates** or the sidebar's **Cost** tab. It lists reachable nodes, estimated pass and texture work, and the effects that add loops or generated geometry. Click a listed node to focus it in the graph.
+
+These are static budgets, not measured GPU timings. Pixel coverage, mesh size, extra lights, mirrors and connected runtime values affect the actual cost. Disconnected nodes are excluded. Use Unity's profiling tools to measure a scene.

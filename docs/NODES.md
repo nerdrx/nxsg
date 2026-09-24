@@ -110,6 +110,7 @@ can feed a surface or another effect.
 | Node | Contract | Backend caveat |
 |---|---|---|
 | Unlit Surface | Albedo, emission, opacity, displacement → surface | Ignores scene lighting. Base opacity is cutout via Cutoff; a Shell layer uses transparency. |
+| Layered PBR Surface | PBR inputs, coat weight/roughness/normal, sheen weight/color/roughness → surface | Clearcoat and velvet sheen in the existing PBR passes. Unconnected zero weights omit their layer shading. [Details](#layered-pbr-surface). |
 | PBR Surface | Albedo, metallic, roughness, normal, emission, opacity → surface | Uses Unity Built-In BRDF with main light, spherical-harmonic ambient, and one reflection probe. Additional pixel lights use ForwardAdd on the base surface; no lightmap pass is emitted. |
 | Fresnel | Scalar output; power control | View-dependent rim factor; power is clamped by shader math. |
 | Color Ramp | Value → color | 2–8 ordered RGBA stops, linear interpolation. Native gradient editing; output holds endpoint colors outside the stop range. |
@@ -309,3 +310,19 @@ Hue Shift and Color Adjust offer **HSV** (the existing behavior) and **OKLab** i
 **Replace Color** uses the same selection to blend toward Replacement. Factor is clamped to 0–1 before applying the mask. Original alpha is preserved. Target, Replacement and all numeric settings accept connections; the inspector supplies unconnected defaults. Negative tolerance and softness evaluate as zero.
 
 Hue Shift and Color Adjust can switch from their node header menu. **Reset unconnected controls** restores neutral numeric settings while keeping hue space, connections and their stored values. Hover a control for its units and neutral value; connected sliders are labeled explicitly. Reset supports Undo.
+
+## Layered PBR Surface
+
+Use this surface for coated paint, lacquer, wet surfaces or fabric. The header dropdown can switch an existing PBR Surface while keeping its compatible connections.
+
+- **Base surface:** the existing PBR color, normal, metallic, roughness, opacity and displacement controls.
+- **Clearcoat:** weight controls coverage; roughness controls highlight width. Connect a Normal Map to **Coat normal** for independent coating detail. With no connection, the coat uses the mesh normal rather than the base normal map.
+- **Velvet sheen:** weight, RGB color and roughness control a soft grazing reflection. Color alpha is ignored. Evaluated weights, roughness and sheen RGB are limited to 0–1; a small roughness floor avoids singular highlights.
+
+All layer controls have input sockets. A zero **unconnected** weight omits that layer's helper, input evaluation and reflection sample. A connected weight remains dynamic, including when its stored default is zero. With both weights at zero, the surface uses the existing PBR response. Emission and opacity remain separate.
+
+Layers share the base surface's passes. Main and additional pixel lights affect both layers; clearcoat reads one additional reflection probe sample in ForwardBase and each shell overlay. ForwardAdd skips that probe sample. Shell overlays retain their existing main-light-only behavior. Ambient sheen and the interaction between layers are approximations, without a cloth lookup table or multiple scattering; this is not a glTF material implementation.
+
+Try **Lacquered Surface** and **Velvet Fabric** in the Example Gallery.
+
+Shading references, consulted 2026-09-24: [Filament material models](https://google.github.io/filament/main/filament.html) and [Khronos sheen model](https://github.com/KhronosGroup/glTF/tree/main/extensions/2.0/Khronos/KHR_materials_sheen). The helper implements the published equations locally; no upstream shader files or lookup tables are bundled.

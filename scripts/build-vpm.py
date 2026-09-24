@@ -9,6 +9,7 @@ import json
 from pathlib import Path, PurePosixPath
 import subprocess
 import sys
+import tempfile
 import re
 from typing import Any
 from zipfile import ZIP_DEFLATED, ZipFile, ZipInfo
@@ -39,6 +40,12 @@ def _tracked_files(repo: Path, package: Path) -> list[Path]:
             raise ValueError(f"Package has uncommitted tracked changes: {relative_root}")
         if result.returncode != 0:
             raise subprocess.CalledProcessError(result.returncode, result.args, result.stdout, result.stderr)
+    untracked = subprocess.run(
+        ["git", "-C", str(repo), "ls-files", "--others", "--exclude-standard", "-z", "--", relative_root],
+        check=True, capture_output=True,
+    ).stdout.decode().strip("\0")
+    if untracked:
+        raise ValueError("Package has untracked files; commit them before packaging: " + untracked.replace("\0", ", "))
     result = subprocess.run(
         ["git", "-C", str(repo), "ls-files", "--stage", "-z", "--", relative_root],
         check=True,
@@ -119,10 +126,6 @@ def build(
     files = _tracked_files(repo, package)
     output.mkdir(parents=True, exist_ok=True)
     archive_path = output / f"{PACKAGE_ID}-{version}.zip"
-    digest = _archive(package, files, archive_path)
-    standalone_path = output / "package.json"
-    standalone_path.write_bytes(_json_bytes(manifest))
-
     listing_path = listing_path or (repo / "vpm" / "index.json")
     listing = _load_listing(listing_path)
     packages = listing.setdefault("packages", {})
@@ -132,15 +135,30 @@ def build(
     versions = package_listing.setdefault("versions", {})
     if not isinstance(versions, dict):
         raise ValueError("VPM package versions must be an object")
-    entry = dict(manifest)
-    entry["zipSHA256"] = digest
-    existing = versions.get(version)
-    if existing is not None and existing != entry:
-        raise ValueError(f"Existing version {version} differs; refusing overwrite")
-    versions[version] = entry
-    listing.update({"name": "NXSG", "id": f"{PACKAGE_ID}.listing", "url": listing_url, "author": "nerdrx"})
-    listing_path.parent.mkdir(parents=True, exist_ok=True)
-    listing_path.write_bytes(_json_bytes(listing))
+    # Validate an existing release before promoting any new artifact. A rejected
+    # same-version build must not overwrite the ZIP that was already verified.
+    with tempfile.TemporaryDirectory(prefix=".nxsg-build-", dir=output) as staged:
+        candidate = Path(staged) / archive_path.name
+        digest = _archive(package, files, candidate)
+        entry = dict(manifest)
+        entry["zipSHA256"] = digest
+        existing = versions.get(version)
+        if existing is not None and existing != entry:
+            raise ValueError(f"Existing version {version} differs; refusing overwrite")
+        versions[version] = entry
+        listing.update({"name": "NXSG", "id": f"{PACKAGE_ID}.listing", "url": listing_url, "author": "nerdrx"})
+        candidate.replace(archive_path)
+        (output / "package.json").write_bytes(_json_bytes(manifest))
+        listing_path.parent.mkdir(parents=True, exist_ok=True)
+        # Same-directory replacement keeps readers from observing a partial JSON file.
+        with tempfile.NamedTemporaryFile(dir=listing_path.parent, prefix=".nxsg-index-", delete=False) as handle:
+            staged_listing = Path(handle.name)
+            try:
+                handle.write(_json_bytes(listing))
+                handle.close()
+                staged_listing.replace(listing_path)
+            finally:
+                staged_listing.unlink(missing_ok=True)
     return archive_path, listing_path
 
 

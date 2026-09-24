@@ -120,9 +120,10 @@ namespace NXSG.Core
                 return inferred.TryGetValue(node.Id ?? string.Empty, out var type) ? type : LegacyType(node);
             if (node.Operation == "core.parameter" && port == "value")
             {
-                var parameterId = node.Properties == null ? null : (string)node.Properties["parameterId"];
+                var parameterId = StringValue(node.Properties == null ? null : node.Properties["parameterId"]);
                 foreach (var parameter in graph == null ? new List<GraphParameter>() : graph.Parameters ?? new List<GraphParameter>())
                     if (parameter != null && parameter.Id == parameterId) return parameter.Type.ToString().ToLowerInvariant();
+                return null;
             }
             return NodeCatalog.PortType(node, port);
         }
@@ -162,16 +163,27 @@ namespace NXSG.Core
             if (node != null && (node.Operation == "core.absolute" || node.Operation == "core.power" || node.Operation == "core.sqrt" || node.Operation == "core.sine" || node.Operation == "core.cosine" || node.Operation == "core.fraction" || node.Operation == "core.floor" || node.Operation == "core.ceil" || node.Operation == "core.round")) return "float";
             if (node != null && node.Operation == "core.multiply")
             {
-                var value = node.Properties == null ? null : ReadType(node.Properties["valueType"]);
-                if (!string.IsNullOrWhiteSpace(value)) return value;
+                var token = node.Properties == null ? null : node.Properties["valueType"];
+                if (token != null) return ReadType(token);
             }
             return "color";
         }
 
-        private static string ReadType(JToken token)
+        internal static string ReadType(JToken token)
         {
             var text = token == null || token.Type != JTokenType.String ? null : token.Value<string>();
-            return string.IsNullOrWhiteSpace(text) ? null : text.ToLowerInvariant();
+            switch (text == null ? null : text.ToLowerInvariant())
+            {
+                case "float": case "vector2": case "vector3": case "vector4":
+                case "color": case "bool": case "texture2d": case "surface":
+                    return text.ToLowerInvariant();
+                default: return null;
+            }
+        }
+
+        internal static string StringValue(JToken token)
+        {
+            return token != null && token.Type == JTokenType.String ? token.Value<string>() : null;
         }
     }
 }

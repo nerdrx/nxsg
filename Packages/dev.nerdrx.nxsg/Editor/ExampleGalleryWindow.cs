@@ -19,6 +19,8 @@ namespace NXSG.Editor
             scroll.Add(new Label("Start with a working material") { style = { fontSize = 20, marginTop = 12, marginLeft = 12 } });
             scroll.Add(new Label("Each button creates your own graph in Assets/NXSGExamples. Originals stay in the package. PC Built-In; test expensive effects on your avatar.") { style = { whiteSpace = WhiteSpace.Normal, marginLeft = 12, marginRight = 12, marginBottom = 12 } });
             Add(scroll, "Showcase Warm Fur", "Fur", "Short shell fur with root/tip colors and gentle movement. 24 layers: start small and measure the cost.");
+            Add(scroll, "Lacquered Surface", "Clearcoat", "A glossy coating with independent roughness over a textured PBR base. No external textures needed.");
+            Add(scroll, "Velvet Fabric", "Sheen", "A woven fabric base with a soft colored sheen at grazing angles.");
             Add(scroll, "Glitter Fabric", "Glitter", "View-reactive sparkles across a fabric surface. Explore masks, density, and color.");
             Add(scroll, "Showcase Hologram", "Hologram", "Animated scanlines above a dark base. No external textures needed.");
             Add(scroll, "Audio Hologram", "Music", "Bass drives glow and opacity. Enable Preview AudioLink in the graph inspector to try it without music.");
