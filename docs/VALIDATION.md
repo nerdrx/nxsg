@@ -1,10 +1,14 @@
 # Validation record
 
-**Current status (2026-09-19):** Linux Unity/OpenGL checks are the current
-evidence baseline. Windows/D3D, headset stereo, and live VRChat client checks
-remain open. The dated sections below are append-only evidence records; the
-older opening sections describe the initial implementation slice and are
-historical context, not the current acceptance boundary.
+**Current status (2026-09-25):** The latest release evidence includes Linux
+Unity/OpenGL checks and strict Windows-target D3D11 asset-bundle cross-compilation
+for 16 shaders in Linux Unity. Cross-compilation does not establish native
+Windows rendering. The creator reports working VRChat mirror/headset checks
+in their setup; see the 2026-09-25 feedback below. Native Windows rendering/editor
+behavior and a reproducible client/stereo compatibility matrix remain open. The dated sections below are
+append-only evidence records; the older opening sections describe the initial
+implementation slice and are historical context, not the current acceptance
+boundary.
 
 **Initial implementation slice (historical, 2026-09-17):** This records
 implementation evidence, not completion of the full design or roadmap.
@@ -577,3 +581,12 @@ These checks do not establish native Windows/D3D or live VRChat behavior.
 Evidence logs: `work/unity/v1.5-layered3.log`, `v1.5-layered-ui.log`, `v1.5-cost-final.log`, `v1.5-thumbnail-lifetime.log`, `v1.5-build-transaction.log`, `v1.5-scene-sync.log`, `v1.5-d3d.log`; portable results in `work/v1.5-portable-final.log`.
 
 Clearcoat and sheen use documented artistic approximations; this is not a complete glTF material implementation. D3D11 cross-compilation does not establish native Windows rendering, VRChat client behavior, stereo appearance or headset performance.
+
+## 2026-09-25 - Creator feedback
+
+The creator reports that the VRChat mirror/headset checks work in their current
+setup. This records working behavior reported by the creator. Exact client,
+world, headset, graphics settings and the tested graph set were not captured
+with that feedback, so it does not establish the full reproducible compatibility
+matrix or native Windows coverage. The dated automated records above remain
+scoped to their named fixtures.

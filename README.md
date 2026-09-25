@@ -121,6 +121,12 @@ Report bugs and request features through [GitHub Issues](https://github.com/nerd
 
 Current development priorities include avatar and stereo testing, fur performance, and editor usability. The node SDK, Blender bridge, CLI, and web viewer are planned work, not current features.
 
+## Project report
+
+[Read the NXSG 1.5 report (PDF, 39 pages)](docs/reports/nxsg-1.5-state-research-validation.pdf)
+
+Current capabilities, possible future directions, test evidence, research decisions, and the complete node and example catalogs, with 22 charts and diagrams. [Report date and scope](docs/reports/README.md).
+
 <details>
 <summary><strong>For contributors</strong></summary>
 

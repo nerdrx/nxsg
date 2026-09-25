@@ -1,6 +1,6 @@
 # Built-in node pack
 
-The canvas now offers 143 visible nodes, including authored Float/Color Parameters, plus a hidden Preview Vector helper. Socket color indicates data type: yellow color, gray scalar, blue UV coordinates, cyan normals, green surface. Drag from either end; compatible-node menus and clipboard operations use the same core catalog.
+The canvas now offers 155 visible nodes, including authored Float/Color Parameters, plus a hidden Preview Vector helper. Socket color indicates data type: yellow color, gray scalar, blue UV coordinates, cyan normals, green surface. Drag from either end; compatible-node menus and clipboard operations use the same core catalog.
 
 ## Motion and placement
 
@@ -12,9 +12,9 @@ Avatar Motion provides locomotion speed and signed velocity components through a
 
 ## New feature nodes
 
-The current pack adds these 45 nodes:
+The current pack includes these 52 feature nodes:
 
-Fur, Parallax UVs, Parallax Occlusion, Fur Strand Mask, Flow Map UVs, Dither Mask, Truchet Tiles, Woven Fabric, Scale Pattern, Polka Dots, Scratches, Cracks, Wood Rings, Marble, Clouds, Sparkle Mask, Hologram Scanlines, Glitch UVs, Pixelate UVs, Kaleidoscope UVs, Swap UV Axes, Spherize UVs, Pinch UVs, Barrel Distortion, Chromatic Texture, Blend Normals, Normal Strength, Normal from Height, Reflection Direction, Object Scale, Object Origin, Object Random, Distance to Point, Sphere Volume Mask, Box Volume Mask, Capsule Mask, Volume Stripes, Snow Coverage, Wet Color, Anisotropic Highlight, Iridescence, Refraction, Interior Mapping, Texture Bomb, and Subsurface.
+Layered PBR Surface, Avatar Motion, Motion Response, Motion Sway, Motion Stretch UVs, Fur, Parallax UVs, Parallax Occlusion, Fur Strand Mask, Flow Map UVs, Dither Mask, Truchet Tiles, Woven Fabric, Scale Pattern, Polka Dots, Scratches, Cracks, Wood Rings, Marble, Clouds, Sparkle Mask, Glitter, Hologram Scanlines, Glitch UVs, Pixelate UVs, Kaleidoscope UVs, Swap UV Axes, Spherize UVs, Pinch UVs, Barrel Distortion, Chromatic Texture, Blend Normals, Normal Strength, Normal from Height, Reflection Direction, Object Scale, Object Origin, Object Random, Distance to Point, Sphere Volume Mask, Box Volume Mask, Capsule Volume Mask, Volume Stripes, Snow Coverage, Wet Color, Anisotropic Highlight, Tessellation, Iridescence, Refraction, Interior Mapping, Texture Bomb, and Subsurface.
 
 Fur uses layered shell passes with root/tip color, groom, wind, density, thickness, and LOD controls. Parallax UVs offset sampling coordinates; Parallax Occlusion ray-marches a height texture and needs mesh tangents. Parallax changes texture sampling without changing the silhouette. Fur shells and fins add geometry outside the base mesh.
 
