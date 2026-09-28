@@ -8,18 +8,18 @@ Manual repository URL:
 https://nerdrx.github.io/nxsg/index.json
 ```
 
-**Repository added, but no package appears?** Refresh the repository and check that your project uses the supported Unity version. NXSG 1.5.0 is a stable package and does not require prereleases to be enabled.
+**Repository added, but no package appears?** Refresh the repository and check that your project uses the supported Unity version. Stable NXSG releases do not require prereleases to be enabled.
 
 ## Creator Companion
 
 1. Open **Settings → Packages → Add Repository**, paste the URL and confirm the listed repository.
-2. Refresh the repository listing. The current stable package is `1.5.0`.
+2. Refresh the repository listing and select the latest stable version of NX Shader Graph.
 3. Manage your Unity project, locate **NX Shader Graph**, and add it.
 4. Open Unity and choose **Tools → NXSG → Open Graph Editor**.
 
 Linux users can add the same JSON URL in a VPM-compatible manager. The website's button uses the `vcc://vpm/addRepo` protocol and needs a registered handler; it is not a browser download button.
 
-The package targets Unity **2022.3.22f1**, PC Built-In rendering. Newtonsoft JSON **3.2.1** remains a Unity package dependency. NXSG does not depend on VRChat SDK C# APIs, so it does not force an SDK replacement, install VRCFury or install AudioLink. Start with a test project. Windows/D3D, headset stereo and VRChat client acceptance remain unverified.
+The package targets Unity **2022.3.22f1**, PC Built-In rendering. Newtonsoft JSON **3.2.1** remains a Unity package dependency. NXSG does not depend on VRChat SDK C# APIs, so it does not force an SDK replacement, install VRCFury or install AudioLink. Start with a test project. Windows-target D3D11 compilation is checked separately from native Windows rendering, headset stereo and VRChat client acceptance; see the [test record](VALIDATION.md).
 
 Import **Example Graphs** from NXSG's entry in Unity Package Manager, or copy `.nxsg` files from the package's `Samples~` directory into Assets. Build for VRChat creates local shaders/materials; avatar upload remains a separate SDK step.
 
