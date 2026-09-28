@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <code>1.5</code> &nbsp; <code>Unity 2022.3.22f1</code> &nbsp; <code>Built-In</code> &nbsp; <code>PC VRChat</code>
+  <code>1.7.0</code> &nbsp; <code>Unity 2022.3.22f1</code> &nbsp; <code>Built-In</code> &nbsp; <code>PC VRChat</code>
 </p>
 
 NXSG is a shader graph editor for Unity's Built-In Render Pipeline, developed for PC VRChat avatars. It includes Toon, PBR and Unlit shading, procedural textures, fur, particles, and animated effects. Materials are built by connecting nodes, with controls for lighting, color, masks, and movement.
@@ -17,7 +17,7 @@ The editor generates shaders and materials directly in Unity. Graphs remain edit
   <a href="docs/VPM.md">Installation help</a>
 </p>
 
-Add the NXSG repository and install **NX Shader Graph** in your project. Version **1.6.0** is available without enabling prerelease packages.
+Add the NXSG repository and install **NX Shader Graph** in your project. Version **1.7.0** is available without enabling prerelease packages.
 
 <details>
 <summary>VPM repository URL</summary>
@@ -46,13 +46,14 @@ https://nerdrx.github.io/nxsg/index.json
 | **Procedural textures** | 1D–4D noise, Voronoi, Musgrave-style fractals, checkerboards, waves, ramps, distortion, and texture bombing. |
 | **Texture coordinates** | Mesh UVs, object/world projection, Polar and Panosphere coordinates, scrolling, rotation, and other UV transforms. |
 | **Geometry effects** | Nested shells, parallax, parallax occlusion, tessellation, and shader-driven particles emitted from the mesh. |
-| **Animation** | Flipbooks, vertex animation, AudioLink inputs, and animatable material properties. |
+| **Animation and AudioLink** | Flipbooks, vertex animation, animatable properties, spectrum bars and bins, chronotensity, and world theme colors. |
+| **Rendering controls** | Multiple-band or texture-ramp Toon lighting, outlines, screen-space AO and contact shadows, and Output render-state controls. |
 | **Volumes** | Raymarched distance fields and procedural volume rendering. |
-| **Lighting integrations** | Additional pixel lights for Toon/PBR base surfaces and optional LTCGI support. |
+| **Lighting integrations** | Additional pixel lights for Toon/PBR base surfaces, optional VRC Light Volumes, and LTCGI support. |
 
 **Depth Bulge** adds camera-depth dents and bulges near other geometry. Connect its displacement output to a surface; [setup and limits](docs/DEPTH_BULGE.md).
 
-See the [node guide](docs/NODES.md) for individual nodes, inputs, and settings.
+See the [node guide](docs/NODES.md) for individual nodes, inputs, and settings, or the [rendering features guide](docs/RENDERING_FEATURES.md) for toon modes, outlines, depth effects, textures, and render state. The [AudioLink guide](docs/AUDIOLINK_DATA_NODES.md), [screen-space lighting notes](docs/SCREEN_SPACE_LIGHTING.md), and [VRC Light Volumes setup](docs/LIGHT_VOLUMES.md) cover their integration details.
 
 ## Graph editor
 
@@ -80,6 +81,10 @@ This builds local assets; avatar uploading still uses the VRChat SDK.
 [Editor controls](docs/QUICK_START.md) · [Creator workflow](docs/CREATOR_WORKFLOW.md) · [Build performance](docs/BUILD_PERFORMANCE.md)
 
 ## Example materials
+
+[![Toon bands, mesh outlines, and a comparison of screen-space AO and contact shadows, rendered in Unity](docs/images/rendering-features.png)](docs/RENDERING_FEATURES.md)
+
+Toon bands and texture ramps, an inverted-hull outline, and camera-depth lighting. The right-hand comparison shows the same scene with depth effects off and on. [Rendering controls and setup](docs/RENDERING_FEATURES.md).
 
 <table>
   <tr>

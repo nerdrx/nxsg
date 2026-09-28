@@ -1,6 +1,6 @@
 # Built-in node pack
 
-The canvas now offers 156 visible nodes, including authored Float/Color Parameters, plus a hidden Preview Vector helper. Socket color indicates data type: yellow color, gray scalar, blue UV coordinates, cyan normals, green surface. Drag from either end; compatible-node menus and clipboard operations use the same core catalog.
+The canvas offers a library of visible nodes, including authored Float/Color Parameters, plus a hidden Preview Vector helper. Socket color indicates data type: yellow color, gray scalar, blue UV coordinates, cyan normals, green surface. Drag from either end; compatible-node menus and clipboard operations use the same core catalog. For toon lighting modes, Outline, screen-depth features, texture resources and Output state, see the [rendering features guide](RENDERING_FEATURES.md).
 
 ## Motion and placement
 
@@ -12,9 +12,9 @@ Avatar Motion provides locomotion speed and signed velocity components through a
 
 ## New feature nodes
 
-The current pack includes these 53 feature nodes:
+The current pack includes these feature nodes:
 
-Depth Bulge, Layered PBR Surface, Avatar Motion, Motion Response, Motion Sway, Motion Stretch UVs, Fur, Parallax UVs, Parallax Occlusion, Fur Strand Mask, Flow Map UVs, Dither Mask, Truchet Tiles, Woven Fabric, Scale Pattern, Polka Dots, Scratches, Cracks, Wood Rings, Marble, Clouds, Sparkle Mask, Glitter, Hologram Scanlines, Glitch UVs, Pixelate UVs, Kaleidoscope UVs, Swap UV Axes, Spherize UVs, Pinch UVs, Barrel Distortion, Chromatic Texture, Blend Normals, Normal Strength, Normal from Height, Reflection Direction, Object Scale, Object Origin, Object Random, Distance to Point, Sphere Volume Mask, Box Volume Mask, Capsule Volume Mask, Volume Stripes, Snow Coverage, Wet Color, Anisotropic Highlight, Tessellation, Iridescence, Refraction, Interior Mapping, Texture Bomb, and Subsurface.
+Depth Bulge, Layered PBR Surface, Avatar Motion, Motion Response, Motion Sway, Motion Stretch UVs, Fur, Parallax UVs, Parallax Occlusion, Fur Strand Mask, Flow Map UVs, Dither Mask, Truchet Tiles, Woven Fabric, Scale Pattern, Polka Dots, Scratches, Cracks, Wood Rings, Marble, Clouds, Sparkle Mask, Glitter, Hologram Scanlines, Glitch UVs, Pixelate UVs, Kaleidoscope UVs, Swap UV Axes, Spherize UVs, Pinch UVs, Barrel Distortion, Chromatic Texture, Blend Normals, Normal Strength, Normal from Height, Reflection Direction, Object Scale, Object Origin, Object Random, Distance to Point, Sphere Volume Mask, Box Volume Mask, Capsule Volume Mask, Volume Stripes, Snow Coverage, Wet Color, Anisotropic Highlight, Tessellation, Iridescence, Refraction, Interior Mapping, Texture Bomb, Subsurface, Screen Space AO, Contact Shadows, Light Volumes, Outline, Cubemap, Texture Array, UV Tile Discard, Audio Spectrum Bars, Audio Spectrum, Audio Spectrum Bin, AudioLink Chronotensity, and AudioLink Theme Color.
 
 Fur uses layered shell passes with root/tip color, groom, wind, density, thickness, and LOD controls. Parallax UVs offset sampling coordinates; Parallax Occlusion ray-marches a height texture and needs mesh tangents. Parallax changes texture sampling without changing the silhouette. Fur shells and fins add geometry outside the base mesh.
 
@@ -110,8 +110,16 @@ can feed a surface or another effect.
 | Node | Contract | Backend caveat |
 |---|---|---|
 | Unlit Surface | Albedo, emission, opacity, displacement → surface | Ignores scene lighting. Base opacity is cutout via Cutoff; a Shell layer uses transparency. |
+| Toon Surface | Albedo, emission, opacity, displacement, Shade Map, Shadow Tint → surface | Threshold, 2–8 multiple bands, or a texture ramp. Opaque Output forces alpha to one; see [Toon lighting and Output](RENDERING_FEATURES.md#toon-lighting). |
 | Layered PBR Surface | PBR inputs, coat weight/roughness/normal, sheen weight/color/roughness → surface | Clearcoat and velvet sheen in the existing PBR passes. Unconnected zero weights omit their layer shading. [Details](#layered-pbr-surface). |
 | PBR Surface | Albedo, metallic, roughness, normal, emission, opacity → surface | Uses Unity Built-In BRDF with main light, spherical-harmonic ambient, and one reflection probe. Additional pixel lights use ForwardAdd on the base surface; no lightmap pass is emitted. |
+| Screen Space AO | Surface visibility → Occlusion | Samples camera depth inside existing surface passes; does not request depth generation. Off-screen or hidden geometry cannot contribute. See [screen-space lighting](SCREEN_SPACE_LIGHTING.md). |
+| Contact Shadows | Surface visibility → Shadow | Traces current-light direction through visible camera depth inside existing surface passes; does not request depth generation. Hidden and off-screen blockers cannot contribute. See [screen-space lighting](SCREEN_SPACE_LIGHTING.md). |
+| Light Volumes | Indirect lighting color → color/diffuse/specular | Optional VRC Light Volumes integration. See [setup and outputs](LIGHT_VOLUMES.md). |
+| Outline | Base surface, color, width, mask → surface | Adds an inverted-hull pass. See [width, mesh, and pass limits](RENDERING_FEATURES.md#outline-pass). |
+| Cubemap | Direction, mip → color | Project cubemap resource; defaults to reflected view direction. |
+| Texture Array | UV, slice, mip → color/alpha | Project `Texture2DArray` resource. |
+| UV Tile Discard | UV, enabled → visibility | Connect to surface Opacity and use a nonzero cutoff; clips pixels, not triangles. |
 | Fresnel | Scalar output; power control | View-dependent rim factor; power is clamped by shader math. |
 | Color Ramp | Value → color | 2–8 ordered RGBA stops, linear interpolation. Native gradient editing; output holds endpoint colors outside the stop range. |
 | Layer | Base, overlay, mask → color | Mask is clamped to 0–1. |
@@ -124,14 +132,21 @@ can feed a surface or another effect.
 | Posterize | Value, levels → value | Quantize a 0–1 mask to 2–256 evenly spaced levels. |
 | Vertex Motion | Time, strength → displacement | Normal displacement follows an analytic sine wave. Texture inputs evaluated in the vertex stage use explicit LOD 0. Expand renderer bounds for large offsets. |
 | AudioLink | Band, gain, smoothing, fallback → scalar | Uses the official `_AudioTexture` layout when available. Smoothing is normalized 0–1: 0 is least smoothed/raw and 1 is most smoothed. `_NXSG_AudioLinkPreview` and `_NXSG_AudioLinkValue` provide editor preview data. |
+| Audio Spectrum Bars, Audio Spectrum, Audio Spectrum Bin | UV/frequency/bin → mask or magnitude | DFT bins support raw, EQ, and ColorChord-filtered magnitude. See [AudioLink data nodes](AUDIOLINK_DATA_NODES.md). |
+| AudioLink Chronotensity | Motion mode, band, speed → accumulated/wrapped time | Eight AudioLink-defined motion modes and four frequency bands. See [mode meanings](AUDIOLINK_DATA_NODES.md#chronotensity-mode-labels-follow-audiolinks-documented-modes). |
+| AudioLink Theme Color | Theme index → color | Reads one of four world-selected theme colors. See [AudioLink data nodes](AUDIOLINK_DATA_NODES.md). |
 | Surface Particles | Base surface, albedo, emission, opacity, mask, time → surface | GPU geometry pass emits looping particles from the mesh wearing the material; no separate mesh. Density is per triangle, motion follows current pose, bounds remain unchanged. |
 | Particle Surface | Albedo, emission, opacity → surface | Particle-facing surface. Blend mode 1 is additive; opacity defaults to 1 and soft distance to 0 (off). Optional soft intersection uses camera depth. Renderer COLOR multiplies particle color and alpha automatically. |
 | Particle Color | Renderer COLOR → color and alpha | Reads Unity's per-particle RGBA stream, including Color over Lifetime. Do not multiply it into albedo or opacity again. |
 | Shell | Base surface, layer surface, offset → surface | Accepts nested Shells in Base or Layer, up to 8 transparent passes. Base chains keep each offset relative to the original mesh; nesting in Layer adds ancestor offsets. Layers render in graph order, base first. Each leaf retains its own surface settings; only the first base surface casts shadows. Extra passes increase draw calls and overdraw; bounds and transparent sorting need review on each mesh. |
+| Output | Surface → built shader | Rendering mode, culling, depth write/test, queue offset and stencil. Opaque forces alpha to one and ignores opacity/albedo alpha; see [Output render state](RENDERING_FEATURES.md#output-render-state). |
 
 AudioLink support does not install or require the AudioLink package. Missing or
 too-small textures return the node fallback. A correctly sized but stale
 texture can still read zero; live runtime data requires an AudioLink provider.
+The extended data nodes also include spectrum bins, chronotensity, theme colors,
+and a spectrum-bars mask; their contracts and preview behavior are documented in
+the [AudioLink data guide](AUDIOLINK_DATA_NODES.md).
 
 PBR uses Unity's Built-In BRDF with the main light, spherical-harmonic ambient,
 and one reflection probe. The base surface adds per-pixel lights with ForwardAdd, but does not add lightmap

@@ -1,8 +1,9 @@
 # Validation record
 
-**Current status (2026-09-25):** The latest release evidence includes Linux
-Unity/OpenGL checks and strict Windows-target D3D11 asset-bundle cross-compilation
-for 16 shaders in Linux Unity. Cross-compilation does not establish native
+**Current status (2026-09-28):** The latest release evidence includes Linux
+Unity/OpenGL rendering and editor checks for lighting, outlines, typed textures
+and AudioLink data, plus strict Windows-target D3D11 asset-bundle cross-compilation
+for 35 shaders in Linux Unity. Cross-compilation does not establish native
 Windows rendering. The creator reports working VRChat mirror/headset checks
 in their setup; see the 2026-09-25 feedback below. Native Windows rendering/editor
 behavior and a reproducible client/stereo compatibility matrix remain open. The dated sections below are
@@ -718,3 +719,70 @@ Local evidence: `work/bughunt-portable.log`, `work/bughunt-groups-before.log`,
   not collision detection; mirrors are intentionally disabled. No avatar
   helper or light was added, and the user's running Unity session was left
   untouched.
+
+
+## 2026-09-28 — Lighting, render state, typed textures and AudioLink data
+
+Validated on Linux Unity **2022.3.22f1**, OpenGL Core, in the isolated
+`work/socket-check` project under hidden Gamescope. Optional Light Volumes was
+installed only in that fixture, at `3.0.0-dev.20` (upstream commit
+`da8ca8b0a3fbb99aa60cd62ee3f36189e94bd42e`). It is not bundled with NXSG.
+
+- **Portable graph/compiler suite:** passed with coverage for new node
+  roundtrips, wrong property types, disconnected-feature elimination, toon
+  modes, Output states, typed resources, depth-stage restrictions and opaque
+  shadow retention. Log: `work/rendering-portable-final3.log`.
+- **Audio data contract:** `Tests/AudioDataContract` passed using the same
+  Core/Backend sources and Newtonsoft.Json 13.0.3. Nine packaging tests passed.
+  Package metadata was checked for duplicate GUIDs and missing source metadata.
+- **Depth lighting and outline draws:** `RenderingFeaturesSmoke` passed.
+  Missing depth, flat depth and a tilted plane returned neutral AO (1).
+  A visible occluder reduced AO outside its projected silhouette to mean
+  0.8871774. A light-directed depth trace reduced the corresponding contact
+  visibility to mean 0.8458076; open depth returned 1. The outline pass changed
+  silhouette pixels against a nonblack background. These are controlled scene
+  checks, not claims about every mirror or world depth buffer. Log:
+  `work/unity/rendering-features4.log`.
+- **Texture resources and toon ramps:** `RenderingResourcesSmoke` passed known
+  cubemap colors and a two-layer Texture2DArray with slices -2, 0, 1 and 9,
+  including clamping and persistent Build bindings. Array vertex sampling
+  compiled; incorrect texture dimensions were rejected. Red/green lighting
+  ramps reproduced their supplied colors under controlled direct lighting.
+  The installed Light Volumes include compiled and its no-provider fallback
+  produced finite pixels; a populated live volume was not tested. Log:
+  `work/unity/rendering-resources7.log`.
+- **AudioLink shader draws:** `AudioDataRenderSmoke` passed using a synthetic
+  128×64 provider texture: DFT interpolation and channels, theme colors,
+  chronotensity decoding, absent-provider fallbacks, preview overrides,
+  horizontal/radial bars, and frequency/gap edge values. This is not a live
+  AudioLink world test. Log: `work/unity/audio-data2.log`.
+- **Editor controls:** `RenderingControlsSmoke` passed control labels/types,
+  connected-input disabling, typed texture pickers, Output/Toon modes,
+  texture-ramp resource creation, and Undo. The test invokes editor controls
+  programmatically; native popup interaction and general usability were not
+  measured. Log: `work/unity/rendering-controls3.log`.
+- **Depth Bulge regression:** `DepthBulgeSmoke` passed after the shared camera
+  depth declaration changes. Log: `work/unity/rendering-depth-regression.log`.
+- **Windows-target compilation:** `D3DCompileSmoke` passed a strict D3D11
+  asset-bundle build for **35 shaders**: the 19-shader regression set plus
+  16 rendering/resource/example graphs. This includes regular vertex,
+  tessellation, surface particle, screen-depth, Light Volumes, typed texture,
+  toon ramp, outline and spectrum-bar paths. Log:
+  `work/unity/rendering-d3d.log`.
+- **Showcase:** `RenderingShowcase` rendered the
+  [lighting and outline contact sheet](images/rendering-features.png),
+  exporting its graph and generated shader sources locally. It also checked
+  that the palette resource was bound to the emitted texture property. Log:
+  `work/unity/rendering-showcase-final.log`.
+
+The texture-array render check caught an unreliable layer-count query on the
+OpenGL target. Array layer counts now come from the assigned Unity asset and
+are synchronized in preview, persistent builds and material-inspector edits.
+The checks also cover consistent automatic refraction blend/depth state and
+explicit Opaque ignoring alpha while retaining shadow casting. Stencil state
+has source-contract checks; pixel-level stencil interaction was not tested.
+
+These results do not establish **native Windows rendering, live VRChat,
+headset/stereo behavior, populated Light Volumes, or live AudioLink** for the
+new features. Camera-depth nodes require an existing depth provider and only
+see geometry represented in that buffer. No user avatar/project was modified.
