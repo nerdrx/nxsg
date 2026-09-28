@@ -1,0 +1,20 @@
+{
+  "format":"nxsg",
+  "schemaVersion":1,
+  "graphId":"layered-toon-outline-study-v1",
+  "nodes":[
+    {"id":"baseColor","operation":"core.constant","version":1,"properties":{"valueType":"color","value":[0.56,0.72,0.88,1]}},
+    {"id":"toon","operation":"core.toonSurface","version":1,"properties":{"lightingMode":3,"shadowLayers":3,"threshold":0.5,"softness":0.05,"shadowStrength":1,"shadeMap":0.5,"normalStrength":1,"shadeColor":[0.07,0.025,0.18,1],"threshold2":0.35,"softness2":0.05,"shadowStrength2":1,"shadeMap2":0.5,"normalStrength2":1,"shadeColor2":[0.36,0.06,0.58,1],"threshold3":0.2,"softness3":0.05,"shadowStrength3":1,"shadeMap3":0.5,"normalStrength3":1,"shadeColor3":[0.025,0.34,0.42,1]}},
+    {"id":"outline","operation":"core.outline","version":1,"properties":{"widthMode":1,"pixelWidth":3,"mask":1,"color":[0.008,0.012,0.04,1],"directionStrength":1,"depthBias":0,"lighting":0,"emission":[0,0,0,1]}},
+    {"id":"output","operation":"core.output","version":1,"properties":{}}
+  ],
+  "connections":[
+    {"id":"base-to-toon","from":{"nodeId":"baseColor","portId":"value"},"to":{"nodeId":"toon","portId":"albedo"}},
+    {"id":"toon-to-outline","from":{"nodeId":"toon","portId":"surface"},"to":{"nodeId":"outline","portId":"base"}},
+    {"id":"outline-to-output","from":{"nodeId":"outline","portId":"surface"},"to":{"nodeId":"output","portId":"surface"}}
+  ],
+  "parameters":[],
+  "resources":[],
+  "patterns":[],
+  "layout":{"nodes":{"baseColor":{"x":0,"y":80},"toon":{"x":360,"y":100},"outline":{"x":720,"y":150},"output":{"x":1040,"y":160}}}
+}

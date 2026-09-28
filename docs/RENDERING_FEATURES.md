@@ -25,6 +25,7 @@ Select a **Toon Surface** and choose **Shading**:
 | Threshold | A soft transition controlled by threshold, softness, and shadow strength. |
 | Multiple bands | Quantizes direct lighting into 2–8 bands. Connected Shade Map shifts the band boundaries; connected Shadow Tint supplies the dark-side color. |
 | Texture ramp | Samples the assigned 2D texture from shadow at X=0 to light at X=1. Ramp Row selects Y. Shade Map shifts the sample coordinate. |
+| Layered shadows | Blends up to three shadow tints in order. Each layer has its own border, blur, strength mask, Shade Map, and normal influence. |
 
 The **Shade Map** socket accepts a scalar. `0.5` leaves the light coordinate
 unchanged; darker values move the boundary toward lit areas, while brighter
@@ -38,18 +39,46 @@ node texture picker before building if a color response is required. The
 demonstrates multiple lighting bands and a connected Shade Map; it does not use
 Texture ramp mode.
 
+Layered shadows is mode 3. **Shadow layers** sets the active count from one to
+three; later layers are omitted from the shader. Connections on inactive layers
+are kept so you can switch back without rewiring. Layer 1 uses the existing
+Shadow Tint, Shade Map, threshold, softness, and shadow-strength sockets and
+properties. Layers 2 and 3 use matching suffixed controls. Their defaults are
+purple and deep violet tints, borders at 0.35 and 0.2, 0.05 blur, full strength,
+neutral Shade Map (0.5), and full normal influence. A static zero strength on
+an unconnected second or third layer removes that layer's shading code; a wire
+keeps the layer live even when its current value is zero.
+
+Each border uses a separate half-Lambert lighting value and smooth threshold.
+Shade Map 0.5 leaves that value unchanged. Normal influence blends the mesh
+normal toward the Toon Surface's mapped normal: 0 uses mesh normals, 1 uses the
+mapped surface normal. These mode 3 values come from the graph and its input
+wires; the legacy Toon material sliders for threshold, softness, and shadow
+strength apply to modes 0–2. This keeps each layered setting attached to its
+own layer in the graph.
+
 ## Outline pass
 
 **Outline** takes a completed mesh surface through **Base**, then outputs a
-surface for **Output**. NXSG emits one additional inverted-hull pass. Width is
-in world metres; Width Mask scales it per vertex; Outline Color supplies the
+surface for **Output**. NXSG emits one additional inverted-hull pass. Width can
+use world metres or an approximate screen-pixel offset. Pixel width stays
+roughly constant with distance, subject to projection, depth, and viewport
+resolution. Width Mask scales expansion per vertex; Outline Color supplies the
 hull color. Smooth mesh normals make continuous contours. Split or hard normals
 can produce discontinuities or visible thickness changes.
 
+An optional world-space Direction input can steer expansion. Direction
+Influence blends mesh normals toward that vector; a zero vector falls back to
+mesh normals. Signed Depth Bias offsets the hull in normalized depth: positive
+values move it away from the camera and negative values move it toward the
+camera. Keep the bias small. Lighting Influence blends in ambient and the main
+light with its available shadow attenuation; it does not add additional lights.
+Emission adds unlit color independently. The outline pass does not create hulls
+for fur shells, fur fins, particles, or surface particles.
+
 The pass adds draw and vertex work for the rendered mesh. It expands the base
-surface hull; it does not expand fur shells, fur fins, particle geometry, or
-surface particles. Check mesh bounds and the target camera/mirror views when
-using wide outlines.
+surface hull. Check mesh bounds and the target camera/mirror views when using
+wide outlines.
 
 ## Camera-depth lighting
 
@@ -123,6 +152,8 @@ mode when those values should affect visibility.
 - [Toon Outline](../Packages/dev.nerdrx.nxsg/Samples~/Toon%20Outline.nxsg):
   multiple-band Toon lighting, connected Shade Map, and an outline pass; it
   does not demonstrate Texture ramp mode.
+- [Layered Toon Outline](../Packages/dev.nerdrx.nxsg/Samples~/Layered%20Toon%20Outline.nxsg):
+  three independent shadow tints and a pixel-width unlit outline.
 - [Depth Lighting](../Packages/dev.nerdrx.nxsg/Samples~/Depth%20Lighting.nxsg):
   screen-space AO and Contact Shadows connected to a PBR surface.
 - [Audio Spectrum Bars](../Packages/dev.nerdrx.nxsg/Samples~/Audio%20Spectrum%20Bars.nxsg):

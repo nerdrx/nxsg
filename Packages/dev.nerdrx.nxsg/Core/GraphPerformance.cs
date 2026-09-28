@@ -242,7 +242,7 @@ namespace NXSG.Core
             {
                 case "core.texture2D": case "core.sticker": case "core.matcapTexture": case "core.interiorMapping": case "core.depthBulge": case "core.cubemap": case "core.textureArray": case "core.ssao": case "core.contactShadow": case "core.audioThemeColor": case "core.audioChronotensity": return 1;
                 case "core.audioSpectrum": case "core.audioSpectrumBin": case "core.audioVisualizer": return 2;
-                case "core.toonSurface": return Int(n,"lightingMode",0,0,2)==2 ? 1 : 0;
+                case "core.toonSurface": return Int(n,"lightingMode",0,0,3)==2 ? 1 : 0;
                 case "core.chromaticTexture": return 3;
                 case "core.triplanarTexture": return 3;
                 case "core.parallaxOcclusion": return 1; // one sample site inside the loop; iteration budget is reported separately

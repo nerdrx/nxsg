@@ -558,7 +558,7 @@ namespace NXSG.Editor
                         session.json = GraphJson.Serialize(graph, true); hasUnsavedChanges = true; EditorUtility.SetDirty(session);
                         canvas.Focus(); evt.StopPropagation();
                     });
-                    foreach (var port in Ports(node.Operation, false)) AddSocket(box, node, port, false);
+                    foreach (var port in VisibleInputPorts(node)) AddSocket(box, node, port, false);
                     foreach (var port in Ports(node.Operation, true)) AddSocket(box, node, port, true);
                     AddInlineControls(node, box);
                     box.RegisterCallback<FocusInEvent>(_ => { if (!selection.Contains(node.Id)) SelectNode(node.Id); });
@@ -691,10 +691,48 @@ namespace NXSG.Editor
             }
         }
 
+        IEnumerable<string> VisibleInputPorts(GraphNode node)
+        {
+            var connected=new HashSet<string>(graph.Connections.Where(e=>e.To.NodeId==node.Id).Select(e=>e.To.PortId));
+            foreach(var port in Ports(node.Operation,false))
+            {
+                if(!connected.Contains(port))
+                {
+                    if(node.Operation=="core.toonSurface")
+                    {
+                        var mode=(int?)node.Properties["lightingMode"]??0;
+                        var layer=port.EndsWith("2",StringComparison.Ordinal)?2:port.EndsWith("3",StringComparison.Ordinal)?3:1;
+                        if(layer>1 && (mode!=3 || layer>Mathf.Clamp((int?)node.Properties["shadowLayers"]??3,1,3))) continue;
+                        if(port=="normalStrength" && mode!=3) continue;
+                        if(port=="threshold" && mode!=0 && mode!=3) continue;
+                        if((port=="shadeColor" || port=="softness") && mode==2) continue;
+                    }
+                    if(node.Operation=="core.outline" && (port=="width" || port=="pixelWidth"))
+                    {
+                        var pixel=((int?)node.Properties["widthMode"]??0)==1;
+                        if(pixel!=(port=="pixelWidth")) continue;
+                    }
+                }
+                yield return port;
+            }
+        }
+
         static string PortLabel(string port)
         {
+            if(port.EndsWith("2",StringComparison.Ordinal) || port.EndsWith("3",StringComparison.Ordinal))
+            {
+                var key=port.Substring(0,port.Length-1); var layer=port.Substring(port.Length-1);
+                switch(key) {
+                    case "shadeColor": return "Shadow "+layer+" tint"; case "shadeMap": return "Shadow "+layer+" map";
+                    case "threshold": return "Shadow "+layer+" border"; case "softness": return "Shadow "+layer+" blur";
+                    case "shadowStrength": return "Shadow "+layer+" strength"; case "normalStrength": return "Shadow "+layer+" normal";
+                }
+            }
             switch(port)
             {
+                case "shadeColor": return "Shadow tint"; case "shadeMap": return "Shade map";
+                case "shadowStrength": return "Shadow strength"; case "normalStrength": return "Normal influence";
+                case "pixelWidth": return "Pixel width"; case "depthBias": return "Depth bias"; case "directionStrength": return "Direction influence";
                 case "coat": return "Coat weight"; case "coatRoughness": return "Coat roughness"; case "coatNormal": return "Coat normal";
                 case "sheen": return "Sheen weight"; case "sheenColor": return "Sheen color"; case "sheenRoughness": return "Sheen roughness";
                 case "uv": return "UV"; case "rootColor": return "Root color"; case "tipColor": return "Tip color";

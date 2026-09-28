@@ -18,6 +18,11 @@ Noise currently animates by moving through a smooth noise field. It is not true 
 
 `Toon Outline.nxsg` connects a Shade Map and Shadow Tint to a three-band Toon Surface, then adds a separate outline pass. It uses colors defined in the graph and needs no external texture.
 
+`Layered Toon Outline.nxsg` stacks three shadow tints with separate borders,
+blur, strength masks, Shade Maps, and normal influence. Its outline uses an
+approximate three-pixel screen width and stays unlit. See the [toon and outline
+controls](../../../docs/RENDERING_FEATURES.md#toon-lighting).
+
 `Depth Lighting.nxsg` connects screen-space AO and Contact Shadows to a PBR surface. The camera must provide depth; only camera-visible geometry contributes. See [rendering feature limits](../../../docs/RENDERING_FEATURES.md) and [screen-space lighting details](../../../docs/SCREEN_SPACE_LIGHTING.md).
 
 `Audio Spectrum Bars.nxsg` uses the AudioLink DFT to make horizontal bars drive emission. Select its Audio Spectrum Bars node and enable **Preview audio data** to preview a uniform magnitude without an AudioLink provider. A live AudioLink texture supplies frequency-specific levels. See [AudioLink nodes and modes](../../../docs/AUDIOLINK_DATA_NODES.md).

@@ -78,7 +78,7 @@ namespace NXSG.Editor
         void AddToonLightingControls(GraphNode node)
         {
             AddInspectorSection("TOON SHADING");
-            var choice = new PopupField<string>("Shading",new List<string>{"Threshold","Multiple bands","Texture ramp"},Mathf.Clamp((int?)node.Properties["lightingMode"]??0,0,2));
+            var choice = new PopupField<string>("Shading",new List<string>{"Threshold","Multiple bands","Texture ramp","Layered shadows"},Mathf.Clamp((int?)node.Properties["lightingMode"]??0,0,3));
             choice.RegisterValueChangedCallback(e=>Edit("Change toon shading",()=>
             {
                 node.Properties["lightingMode"]=choice.index;
@@ -90,10 +90,36 @@ namespace NXSG.Editor
             }));
             inspector.Add(choice);
             var mode=(int?)node.Properties["lightingMode"]??0;
-            if(mode==1) AddIntegerField(node,"bands","Light bands",2,8,3);
-            if(mode==2) { AddTexturePicker(node,"Lighting ramp"); AddBoundedNumber(node,"rampRow","Ramp row",0,1,.5f); FeatureNote("Ramp X runs from shadow to light. Set the texture's wrap mode to Clamp. RGB colors the direct lighting; ambient and emission remain separate."); }
-            else AddColorField(node,"shadeColor","Shadow tint",Color.black,"shadeColor");
-            AddBoundedNumber(node,"shadeMap","Shade map",0,1,.5f,"shadeMap","0.5 leaves lighting unchanged. Dark values move the shadow boundary toward light; bright values move it toward shadow.");
+            if(mode==3)
+            {
+                AddIntegerField(node,"shadowLayers","Shadow layers",1,3,3);
+                var layers=Mathf.Clamp((int?)node.Properties["shadowLayers"]??3,1,3);
+                for(var i=1;i<=layers;i++)
+                {
+                    var layer=i; FurSection("Shadow layer "+layer,()=>AddToonShadowLayerControls(node,layer));
+                }
+                FeatureNote("Layers blend in order: 1, then 2, then 3. Lower borders place later layers in deeper shadow. Strength also works as a mask. Wires on inactive layers are kept but ignored. Normal influence: 0 uses mesh normals, 1 uses the connected surface normal.");
+            }
+            else
+            {
+                if(mode==1) AddIntegerField(node,"bands","Light bands",2,8,3);
+                if(mode==2) { AddTexturePicker(node,"Lighting ramp"); AddBoundedNumber(node,"rampRow","Ramp row",0,1,.5f); FeatureNote("Ramp X runs from shadow to light. Set the texture's wrap mode to Clamp. RGB colors the direct lighting; ambient and emission remain separate."); }
+                else AddColorField(node,"shadeColor","Shadow tint",Color.black,"shadeColor");
+                AddBoundedNumber(node,"shadeMap","Shade map",0,1,.5f,"shadeMap","0.5 leaves lighting unchanged. Dark values move the shadow boundary toward light; bright values move it toward shadow.");
+                FeatureNote("Border, blur and shadow strength use the material's Toon controls. Connect their sockets to drive them from the graph. Layered shadows keeps each layer's settings here.");
+            }
+        }
+
+        void AddToonShadowLayerControls(GraphNode node,int layer)
+        {
+            var suffix=layer==1?"":layer.ToString();
+            var color=layer==1?Color.black:layer==2?new Color(.35f,.25f,.5f,1):new Color(.08f,.04f,.15f,1);
+            AddColorField(node,"shadeColor"+suffix,"Shadow tint",color,"shadeColor"+suffix);
+            AddBoundedNumber(node,"threshold"+suffix,"Border",0,1,layer==1?.5f:layer==2?.35f:.2f,"threshold"+suffix);
+            AddBoundedNumber(node,"softness"+suffix,"Blur",0,1,.05f,"softness"+suffix);
+            AddBoundedNumber(node,"shadowStrength"+suffix,"Strength / mask",0,1,1,"shadowStrength"+suffix);
+            AddBoundedNumber(node,"shadeMap"+suffix,"Shade map",0,1,.5f,"shadeMap"+suffix);
+            AddBoundedNumber(node,"normalStrength"+suffix,"Normal influence",0,1,1,"normalStrength"+suffix);
         }
 
         bool AddRenderingFeatureControls(GraphNode node)
@@ -117,10 +143,19 @@ namespace NXSG.Editor
                     AddNumber(node,"bias","Bias (m)",ao?.02f:.015f,"bias");
                     FeatureNote(ao?"Connect Visibility to surface Occlusion. Requires camera depth. Hidden or off-screen geometry cannot contribute.":"Connect Visibility to surface Shadow. Direction defaults to each light; an optional direction input uses world space. Screen depth cannot detect hidden or off-screen blockers."); return true;
                 case "core.outline":
-                    AddNumber(node,"width","Width (m)",.003f,"width");
+                    AddIndexedChoice(node,"widthMode","Width units",new[]{"World metres","Screen pixels"});
+                    if(((int?)node.Properties["widthMode"]??0)==0) AddNumber(node,"width","Width (m)",.003f,"width");
+                    else AddNumber(node,"pixelWidth","Width (px)",2,"pixelWidth");
                     AddBoundedNumber(node,"mask","Width mask",0,1,1,"mask");
                     AddColorField(node,"color","Outline color",Color.black,"color");
-                    FeatureNote("Connect the finished mesh surface to Base, then Outline to Output. Smooth normals give a continuous hull. Width does not expand fur or particle geometry."); return true;
+                    FurSection("Lighting and shape",()=>
+                    {
+                        AddBoundedNumber(node,"lighting","Lighting influence",0,1,0,"lighting","0 keeps the outline unlit. 1 uses ambient and the main light, including its available shadow map.");
+                        AddColorField(node,"emission","Emission",Color.black,"emission");
+                        AddBoundedNumber(node,"directionStrength","Direction influence",0,1,1,"directionStrength","Blend mesh normals toward the optional Direction input. Direction uses world space; a zero vector falls back to mesh normals.");
+                        AddNumber(node,"depthBias","Depth bias",0,"depthBias","Normalized depth offset. Positive pushes away from the camera; negative pulls toward it. Use small values such as 0.0001.");
+                    });
+                    FeatureNote("Connect the finished mesh surface to Base, then Outline to Output. Pixel width stays approximately constant with distance; world width follows perspective. Only the selected width unit is used; other width wires are kept. Hard normals can split the hull. Fur and particle geometry are not outlined."); return true;
                 case "core.uvTileDiscard":
                     AddNumber(node,"tileX","Tile X",0,"tileX"); AddNumber(node,"tileY","Tile Y",0,"tileY");
                     AddBoundedNumber(node,"enabled","Discard amount",0,1,1,"enabled");

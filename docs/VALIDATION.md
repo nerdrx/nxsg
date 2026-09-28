@@ -786,3 +786,38 @@ These results do not establish **native Windows rendering, live VRChat,
 headset/stereo behavior, populated Light Volumes, or live AudioLink** for the
 new features. Camera-depth nodes require an existing depth provider and only
 see geometry represented in that buffer. No user avatar/project was modified.
+
+
+## Layered Toon and outline controls — 2026-09-28
+
+Validated for version 1.8.0 in the isolated Unity 2022.3.22f1 fixture, using
+headless Gamescope and OpenGL on Linux.
+
+- **Portable suite:** passed, including layer-count pruning, static zero
+  secondary strengths, connected strengths, invalid modes, world/pixel outline
+  generation, stereo viewport guards and optional outline lighting.
+  Log: `work/detail-portable-final.log`.
+- **Rendered checks:** `ToonOutlineDetailSmoke` passed distinct layer colors at
+  controlled light angles, zero strengths and mapped-normal influence. World
+  width shrank in screen space with camera distance; pixel width stayed within
+  the test tolerance. Zero custom direction fell back to the mesh normal;
+  outline lighting and emission changed the rendered hull pixels as expected.
+  Log: `work/unity/toon-outline-detail.log`.
+- **Editor controls:** `RenderingControlsSmoke` passed layer grouping, active
+  layer fields, preservation of connected inactive sockets, width-mode fields,
+  connected-input disabling, existing mode controls and Undo.
+  Log: `work/unity/detail-controls.log`.
+- **Regression:** `RenderingResourcesSmoke` passed, including texture-ramp
+  rendering and typed resource/build bindings. Log:
+  `work/unity/detail-resources.log`.
+- **Windows-target compilation:** the strict D3D11 asset-bundle build passed
+  for **42 shaders**, including layered Toon, shells, world/pixel outlines,
+  lit/emissive outlines and an outline around a tessellated surface.
+  Log: `work/unity/detail-d3d.log`.
+- **Packaging:** nine packaging tests passed; package source metadata and GUID
+  uniqueness were checked.
+
+These are Linux render tests and Windows-target cross-compilation. Native
+Windows, VRChat mirrors and headset/stereo rendering still require client
+checks. Inverted-hull outlines retain their mesh-normal and renderer-bounds
+limitations; extra lights are not added to the outline pass.

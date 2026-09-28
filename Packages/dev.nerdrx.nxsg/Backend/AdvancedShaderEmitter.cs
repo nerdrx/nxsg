@@ -65,7 +65,7 @@ namespace NXSG.Backend
             var hasTextureAlphaEdge = (graph.Connections ?? new List<GraphConnection>()).Any(edge =>
                 edge?.From != null && edge.To != null && connected.Contains(edge.From.NodeId) &&
                 liveById.TryGetValue(edge.From.NodeId, out var textureNode) && textureNode.Operation == "core.texture2D" && edge.From.PortId == "alpha");
-            return live.Any(n => n.Operation == "core.output" && n.Properties != null && n.Properties.Count > 0 || n.Operation == "core.toonSurface" && (new[]{"lightingMode","shadeMap","shadeColor","occlusion","shadow"}.Any(key=>n.Properties?[key]!=null) || incoming[n.Id].Any(e => e.To.PortId == "shadeMap" || e.To.PortId == "shadeColor" || e.To.PortId == "occlusion" || e.To.PortId == "shadow"))) || live.Any(n => ops.Contains(n.Operation) || FeatureNodes.IsKnown(n.Operation)) || live.Any(n => (n.Operation == "core.noise" || n.Operation == "core.uv0" || n.Operation == "core.polarUV" || n.Operation == "core.texture2D") && IsAdvancedCoordinates(n, incoming[n.Id])) || live.Count(n => n.Operation == "core.texture2D") > 1 ||
+            return live.Any(n => n.Operation == "core.output" && n.Properties != null && n.Properties.Count > 0 || n.Operation == "core.toonSurface" && (new[]{"lightingMode","shadeMap","shadeColor","occlusion","shadow"}.Any(key=>n.Properties?[key]!=null) || incoming[n.Id].Any(e => !new[]{"albedo","normal","emission","opacity","displacement"}.Contains(e.To.PortId)))) || live.Any(n => ops.Contains(n.Operation) || FeatureNodes.IsKnown(n.Operation)) || live.Any(n => (n.Operation == "core.noise" || n.Operation == "core.uv0" || n.Operation == "core.polarUV" || n.Operation == "core.texture2D") && IsAdvancedCoordinates(n, incoming[n.Id])) || live.Count(n => n.Operation == "core.texture2D") > 1 ||
                 hasColorScalarEdge ||
                 hasTextureAlphaEdge ||
                 live.Any(n => n.Operation == "core.toonSurface" && (n.Properties?["useAlbedoAlpha"] != null || n.Properties?["opacity"] != null || n.Properties?["displacement"] != null || incoming[n.Id].Any(e => e.To.PortId == "opacity" || e.To.PortId == "displacement" || e.To.PortId == "normal") || HasLightingControls(n)));
@@ -217,7 +217,7 @@ namespace NXSG.Backend
             foreach (var node in live.Select(id => nodes[id]).OrderBy(n => n.Id, StringComparer.Ordinal))
             {
                 if (node.Version != 1) throw new InvalidOperationException("Unsupported node version: " + node.Id);
-                if (node.Operation != "core.texture2D" && node.Operation != "core.sticker" && node.Operation != "core.triplanarTexture" && node.Operation != "core.matcapTexture" && node.Operation != "core.parallaxOcclusion" && node.Operation != "core.chromaticTexture" && node.Operation != "core.interiorMapping" && node.Operation != "core.textureBomb" && node.Operation != "core.cubemap" && node.Operation != "core.textureArray" && !(node.Operation == "core.toonSurface" && IntProp(node,"lightingMode",0,0,2)==2)) continue;
+                if (node.Operation != "core.texture2D" && node.Operation != "core.sticker" && node.Operation != "core.triplanarTexture" && node.Operation != "core.matcapTexture" && node.Operation != "core.parallaxOcclusion" && node.Operation != "core.chromaticTexture" && node.Operation != "core.interiorMapping" && node.Operation != "core.textureBomb" && node.Operation != "core.cubemap" && node.Operation != "core.textureArray" && !(node.Operation == "core.toonSurface" && IntProp(node,"lightingMode",0,0,3)==2)) continue;
                 var id = (string)node.Properties["resourceId"];
                 var resource = (graph.Resources ?? new List<GraphResource>()).FirstOrDefault(r => r.Id == id);
                 if (resource == null || resource.Kind != (node.Operation == "core.cubemap" ? "cubemap" : node.Operation == "core.textureArray" ? "texture2DArray" : "texture2D")) throw new InvalidOperationException("Missing texture resource: " + id);
@@ -706,11 +706,11 @@ namespace NXSG.Backend
 
         void AddToonProperties(StringBuilder b, GraphNode surface, int passIndex)
         {
-            if (surface.Operation != "core.toonSurface") return;
+            if (surface.Operation != "core.toonSurface" || IntProp(surface,"lightingMode",0,0,3)==3) return;
             var shell = passIndex > 0;
             foreach (var setting in new[] { "threshold", "softness", "shadowStrength" })
             {
-                if (surface.Properties[setting + "ParameterId"] != null) continue;
+                if (surface.Properties[setting + "ParameterId"] != null || edges.ContainsKey(Key(surface.Id, setting))) continue;
                 var symbol = ToonSymbol(setting, passIndex);
                 b.AppendLine(symbol + " (\"" + (shell ? "Shell" + (passIndex == 1 ? "" : passIndex.ToString(CultureInfo.InvariantCulture)) + " " : "") + setting + "\", Range(0,1)) = " + RawProp(surface,setting,setting == "threshold" ? .5 : setting == "softness" ? .05 : 1));
                 properties.Add(new MaterialProperty { Name=symbol, DisplayName=setting, Type=GraphValueType.Float, Binding=GraphBindingKind.Material });
@@ -723,8 +723,9 @@ namespace NXSG.Backend
         string ToonSetting(GraphNode surface,string setting,int passIndex)
         {
             if (surface.Operation != "core.toonSurface") return "0";
+            if (edges.ContainsKey(Key(surface.Id,setting))) return Input(surface,setting,"0","float");
             var id=(string)surface.Properties[setting+"ParameterId"];
-            if(id==null) return ToonSymbol(setting,passIndex);
+            if(id==null) return IntProp(surface,"lightingMode",0,0,3)==3 ? Prop(surface,setting,setting=="threshold"?.5:setting=="softness"?.05:1) : ToonSymbol(setting,passIndex);
             var parameter=graph.Parameters.FirstOrDefault(p=>p.Id==id);
             if(parameter==null || parameter.Type!=GraphValueType.Float) throw new InvalidOperationException("Missing scalar Toon parameter: "+id);
             return parameter.Binding==GraphBindingKind.Constant ? Literal(parameter.DefaultValue,"float") : ParameterName(id);

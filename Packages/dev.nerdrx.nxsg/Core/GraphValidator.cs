@@ -107,7 +107,13 @@ namespace NXSG.Core
             }
             if (node.Operation == "core.toonSurface")
             {
-                CheckIntegerRange(node.Properties["lightingMode"], path + ".properties.lightingMode", 0, 2, diagnostics);
+                CheckIntegerRange(node.Properties["lightingMode"], path + ".properties.lightingMode", 0, 3, diagnostics);
+                CheckIntegerRange(node.Properties["shadowLayers"], path + ".properties.shadowLayers", 1, 3, diagnostics);
+                foreach (var suffix in new[] { "", "2", "3" })
+                {
+                    CheckVector4(node.Properties["shadeColor" + suffix], path + ".properties.shadeColor" + suffix, diagnostics);
+                    foreach (var key in new[] { "shadeMap", "threshold", "softness", "shadowStrength", "normalStrength" }) CheckNumber(node.Properties[key + suffix], path + ".properties." + key + suffix, diagnostics);
+                }
                 CheckIntegerRange(node.Properties["bands"], path + ".properties.bands", 2, 8, diagnostics);
                 foreach (var key in new[] { "shadeMap", "rampRow", "occlusion", "shadow" }) CheckNumber(node.Properties[key], path + ".properties." + key, diagnostics);
                 if (IsNumber(node.Properties["lightingMode"]) && (double)node.Properties["lightingMode"] == 2 && !resources.Any(r => r != null && r.Id == GraphTypes.StringValue(node.Properties["resourceId"]) && r.Kind == "texture2D"))
@@ -115,8 +121,12 @@ namespace NXSG.Core
             }
             if (node.Operation == "core.toonSurface" || node.Operation == "core.pbrSurface" || node.Operation == "core.layeredPbrSurface")
             { CheckNumber(node.Properties["occlusion"],path+".properties.occlusion",diagnostics); CheckNumber(node.Properties["shadow"],path+".properties.shadow",diagnostics); }
-            if(node.Operation=="core.outline") CheckVector4(node.Properties["color"],path+".properties.color",diagnostics);
-            if(node.Operation=="core.toonSurface") CheckVector4(node.Properties["shadeColor"],path+".properties.shadeColor",diagnostics);
+            if(node.Operation=="core.outline")
+            {
+                CheckVector4(node.Properties["color"],path+".properties.color",diagnostics);
+                CheckVector4(node.Properties["emission"],path+".properties.emission",diagnostics);
+                CheckIntegerRange(node.Properties["widthMode"],path+".properties.widthMode",0,1,diagnostics);
+            }
             if (AudioDataNodes.IsKnown(node.Operation))
             {
                 CheckIntegerRange(node.Properties["bars"],path+".properties.bars",4,128,diagnostics);

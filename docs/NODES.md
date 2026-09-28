@@ -110,13 +110,13 @@ can feed a surface or another effect.
 | Node | Contract | Backend caveat |
 |---|---|---|
 | Unlit Surface | Albedo, emission, opacity, displacement → surface | Ignores scene lighting. Base opacity is cutout via Cutoff; a Shell layer uses transparency. |
-| Toon Surface | Albedo, emission, opacity, displacement, Shade Map, Shadow Tint → surface | Threshold, 2–8 multiple bands, or a texture ramp. Opaque Output forces alpha to one; see [Toon lighting and Output](RENDERING_FEATURES.md#toon-lighting). |
+| Toon Surface | Albedo, emission, opacity, displacement, and Toon lighting controls → surface | Threshold, 2–8 multiple bands, texture ramp, or up to three independently controlled shadow layers. Opaque Output forces alpha to one; see [Toon lighting and Output](RENDERING_FEATURES.md#toon-lighting). |
 | Layered PBR Surface | PBR inputs, coat weight/roughness/normal, sheen weight/color/roughness → surface | Clearcoat and velvet sheen in the existing PBR passes. Unconnected zero weights omit their layer shading. [Details](#layered-pbr-surface). |
 | PBR Surface | Albedo, metallic, roughness, normal, emission, opacity → surface | Uses Unity Built-In BRDF with main light, spherical-harmonic ambient, and one reflection probe. Additional pixel lights use ForwardAdd on the base surface; no lightmap pass is emitted. |
 | Screen Space AO | Surface visibility → Occlusion | Samples camera depth inside existing surface passes; does not request depth generation. Off-screen or hidden geometry cannot contribute. See [screen-space lighting](SCREEN_SPACE_LIGHTING.md). |
 | Contact Shadows | Surface visibility → Shadow | Traces current-light direction through visible camera depth inside existing surface passes; does not request depth generation. Hidden and off-screen blockers cannot contribute. See [screen-space lighting](SCREEN_SPACE_LIGHTING.md). |
 | Light Volumes | Indirect lighting color → color/diffuse/specular | Optional VRC Light Volumes integration. See [setup and outputs](LIGHT_VOLUMES.md). |
-| Outline | Base surface, color, width, mask → surface | Adds an inverted-hull pass. See [width, mesh, and pass limits](RENDERING_FEATURES.md#outline-pass). |
+| Outline | Base surface, color, world/pixel width, mask, optional world direction → surface | Adds an inverted-hull pass with optional ambient/main-light shading, emission, and signed depth bias. See [width, mesh, and pass limits](RENDERING_FEATURES.md#outline-pass). |
 | Cubemap | Direction, mip → color | Project cubemap resource; defaults to reflected view direction. |
 | Texture Array | UV, slice, mip → color/alpha | Project `Texture2DArray` resource. |
 | UV Tile Discard | UV, enabled → visibility | Connect to surface Opacity and use a nonzero cutoff; clips pixels, not triangles. |

@@ -1,4 +1,5 @@
 using System.Text;
+using System.Globalization;
 using NXSG.Core;
 
 namespace NXSG.Backend
@@ -18,19 +19,26 @@ return float4((outputMode==1?diffuse:outputMode==2?specular:diffuse+specular)*ma
         string ToonLighting(GraphNode surface, int passIndex, bool additional)
         {
             var b = new StringBuilder();
-            var mode = IntProp(surface,"lightingMode",0,0,2);
+            var mode = IntProp(surface,"lightingMode",0,0,3);
             var strength = ToonSetting(surface,"shadowStrength",passIndex);
             var threshold = ToonSetting(surface,"threshold",passIndex);
             var softness = ToonSetting(surface,"softness",passIndex);
-            b.AppendLine("float lightCoordinate=saturate(dot(n,lightDir)*.5+.5+"+Scalar(surface,"shadeMap",.5)+"-.5);");
-            if (mode == 2)
-                b.AppendLine("float3 toonResponse=lerp(float3(1,1,1),tex2D("+textureNames[(string)surface.Properties["resourceId"]]+",float2(lightCoordinate,saturate("+Prop(surface,"rampRow",.5)+"))).rgb,saturate("+strength+"));");
+            if (mode == 3)
+            {
+                AppendLayeredToonResponse(b, surface, passIndex);
+            }
             else
             {
-                if (mode == 1)
-                    b.AppendLine("float bands="+IntProp(surface,"bands",3,2,8)+"-1; float scaled=lightCoordinate*bands; float lit=saturate((floor(scaled)+smoothstep(.5-max(.001,"+softness+"),.5+max(.001,"+softness+"),frac(scaled)))/bands);");
-                else b.AppendLine("float lit=smoothstep("+threshold+"-max(.001,"+softness+"),"+threshold+"+max(.001,"+softness+"),lightCoordinate);");
-                b.AppendLine("float3 toonResponse=lerp(lerp(float3(1,1,1),("+Input(surface,"shadeColor",ColorProp(surface,"shadeColor",0,0,0,1),"color")+").rgb,saturate("+strength+")),float3(1,1,1),lit);");
+                b.AppendLine("float lightCoordinate=saturate(dot(n,lightDir)*.5+.5+"+Scalar(surface,"shadeMap",.5)+"-.5);");
+                if (mode == 2)
+                    b.AppendLine("float3 toonResponse=lerp(float3(1,1,1),tex2D("+textureNames[(string)surface.Properties["resourceId"]]+",float2(lightCoordinate,saturate("+Prop(surface,"rampRow",.5)+"))).rgb,saturate("+strength+"));");
+                else
+                {
+                    if (mode == 1)
+                        b.AppendLine("float bands="+IntProp(surface,"bands",3,2,8)+"-1; float scaled=lightCoordinate*bands; float lit=saturate((floor(scaled)+smoothstep(.5-max(.001,"+softness+"),.5+max(.001,"+softness+"),frac(scaled)))/bands);");
+                    else b.AppendLine("float lit=smoothstep("+threshold+"-max(.001,"+softness+"),"+threshold+"+max(.001,"+softness+"),lightCoordinate);");
+                    b.AppendLine("float3 toonResponse=lerp(lerp(float3(1,1,1),("+Input(surface,"shadeColor",ColorProp(surface,"shadeColor",0,0,0,1),"color")+").rgb,saturate("+strength+")),float3(1,1,1),lit);");
+                }
             }
             b.AppendLine("float3 direct=_LightColor0.rgb*atten*toonResponse;");
             if (HasLightingControls(surface)) b.AppendLine("direct=NX_LightingContribution(direct,"+Prop(surface,"lightingSaturation",1)+","+Prop(surface,"lightingMax",0)+");");
@@ -45,23 +53,35 @@ return float4((outputMode==1?diffuse:outputMode==2?specular:diffuse+specular)*ma
             return b.ToString();
         }
 
-        string OutlinePass(GraphNode outline, SurfacePass basePass, GraphNode tessellation)
+        void AppendLayeredToonResponse(StringBuilder b, GraphNode surface, int passIndex)
         {
-            var surface = basePass.Surface;
-            var width = Scalar(outline,"width",.003,true);
-            var mask = Scalar(outline,"mask",1,true);
-            var color = Input(outline,"color",ColorProp(outline,"color",0,0,0,1),"color");
-            var opacity = Scalar(surface,"opacity",1);
-            var alpha = renderState.ForceOpaque ? "1" : IntProp(surface,"useAlbedoAlpha",1,0,1)==1 ? "("+Input(surface,"albedo","float4(1,1,1,1)","color")+").a*_Color.a" : "_Color.a";
-            var displacement = Scalar(surface,"displacement",0,true)+"+"+basePass.Offset;
-            if (tessellation != null) displacement += "+("+Scalar(tessellation,"height",.5,true)+"-"+Prop(tessellation,"reference",.5)+")*"+Prop(tessellation,"strength",.1);
-            var b = new StringBuilder("Pass {\nName \"Outline\"\nTags { \"LightMode\"=\"Always\" }\nCull Front\nZWrite Off\nZTest "+renderState.DepthTest+"\nBlend SrcAlpha OneMinusSrcAlpha\nCGPROGRAM\n#pragma target "+(tessellation==null?"3.5":"4.6")+"\n#pragma vertex "+(tessellation==null?"vertOutline":"vertTessOutline")+"\n#pragma fragment fragOutline\n#pragma multi_compile_instancing\n");
-            if (tessellation != null) b.AppendLine("#pragma hull hullTessOutline\n#pragma domain domainTessOutline");
-            b.AppendLine("NXInput vertOutline(NXApp v) { UNITY_SETUP_INSTANCE_ID(v); NXInput input=NX_Make(v); v.vertex.xyz+=v.normal*("+displacement+"); float3 world=mul(unity_ObjectToWorld,v.vertex).xyz+normalize(UnityObjectToWorldNormal(v.normal))*max(0,"+width+")*saturate("+mask+"); v.vertex=mul(unity_WorldToObject,float4(world,1)); NXInput o=NX_Make(v); o.originalLocal=input.originalLocal; o.originalWs=input.originalWs; UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o); TRANSFER_VERTEX_TO_FRAGMENT(o); return o; }");
-            if (tessellation != null) b.AppendLine(TessellationShader.Forward(Prop(tessellation,"factor",8),Prop(tessellation,"minFactor",1),Prop(tessellation,"nearDistance",2),Prop(tessellation,"farDistance",15),Prop(tessellation,"smoothing",0)).Replace("vertTess","vertTessOutline").Replace("hullTess","hullTessOutline").Replace("domainTess","domainTessOutline").Replace("return vert(a)","return vertOutline(a)"));
-            b.AppendLine("float4 fragOutline(NXInput input):SV_Target { UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input); float alpha="+(renderState.ForceOpaque ? "1" : "saturate("+alpha+"*"+opacity+")")+"; "+(renderState.ForceOpaque ? "" : "clip(alpha-"+Prop(surface,"cutoff",.001)+"); ")+"float4 color="+color+"; return float4(color.rgb,color.a*alpha); }\nENDCG\n}");
-            diagnostics.Add(new Diagnostic(DiagnosticSeverity.Warning,"cost.outline",outline.Id,"Outline adds one expanded hull pass. Hard normals can separate the hull; expand renderer bounds for its world-space width. It does not outline generated fur or particle geometry."));
-            return b.ToString();
+            var layerCount = IntProp(surface, "shadowLayers", 3, 1, 3);
+            b.AppendLine("float3 toonResponse=float3(1,1,1);");
+            for (var layer = 1; layer <= layerCount; layer++)
+            {
+                var suffix = layer == 1 ? string.Empty : layer.ToString(CultureInfo.InvariantCulture);
+                var strengthPort = "shadowStrength" + suffix;
+                var authoredStrength = surface.Properties[strengthPort];
+                if (layer > 1 && Source(surface, strengthPort) == null && authoredStrength != null && (double)authoredStrength == 0)
+                    continue;
+
+                var layerNormalStrength = Scalar(surface, "normalStrength" + suffix, 1);
+                var normal = "toonLayerNormal" + layer;
+                var normalCandidate = "toonLayerNormalCandidate" + layer;
+                b.AppendLine("float3 toonGeomRaw" + layer + "=input.n; float toonGeomLengthSq" + layer + "=dot(toonGeomRaw" + layer + ",toonGeomRaw" + layer + "); float3 toonGeomNormal" + layer + "=toonGeomLengthSq" + layer + ">1e-8?toonGeomRaw" + layer + "*rsqrt(toonGeomLengthSq" + layer + "):float3(0,0,1); float3 toonMappedRaw" + layer + "=n; float toonMappedLengthSq" + layer + "=dot(toonMappedRaw" + layer + ",toonMappedRaw" + layer + "); float3 toonMappedNormal" + layer + "=toonMappedLengthSq" + layer + ">1e-8?toonMappedRaw" + layer + "*rsqrt(toonMappedLengthSq" + layer + "):toonGeomNormal" + layer + "; float3 " + normalCandidate + "=lerp(toonGeomNormal" + layer + ",toonMappedNormal" + layer + ",saturate(" + layerNormalStrength + ")); float " + normal + "LengthSq=dot(" + normalCandidate + "," + normalCandidate + "); float3 " + normal + "=" + normal + "LengthSq>1e-8?" + normalCandidate + "*rsqrt(" + normal + "LengthSq):toonGeomNormal" + layer + ";");
+
+                var shadeMap = Scalar(surface, "shadeMap" + suffix, .5);
+                var threshold = layer == 1 ? ToonSetting(surface, "threshold", passIndex) : Scalar(surface, "threshold" + suffix, layer == 2 ? .35 : .2);
+                var softness = layer == 1 ? ToonSetting(surface, "softness", passIndex) : Scalar(surface, "softness" + suffix, .05);
+                b.AppendLine("float toonLayer" + layer + "Coordinate=saturate(dot(" + normal + ",lightDir)*.5+.5+" + shadeMap + "-.5); float toonLayer" + layer + "Lit=smoothstep(" + threshold + "-max(.001," + softness + ")," + threshold + "+max(.001," + softness + "),toonLayer" + layer + "Coordinate);");
+                var red = layer == 1 ? 0 : layer == 2 ? .35 : .08;
+                var green = layer == 1 ? 0 : layer == 2 ? .25 : .04;
+                var blue = layer == 1 ? 0 : layer == 2 ? .5 : .15;
+                var shadeColor = Input(surface, "shadeColor" + suffix, ColorProp(surface, "shadeColor" + suffix, red, green, blue, 1), "color");
+                var strength = layer == 1 ? ToonSetting(surface, "shadowStrength", passIndex) : Scalar(surface, strengthPort, 1);
+                b.AppendLine("toonResponse=lerp(toonResponse,(" + shadeColor + ").rgb,(1-toonLayer" + layer + "Lit)*saturate(" + strength + ")); ");
+            }
         }
+
     }
 }

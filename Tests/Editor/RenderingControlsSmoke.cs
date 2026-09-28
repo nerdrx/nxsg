@@ -177,7 +177,7 @@ public static class RenderingControlsSmoke
 
         Select("toon");
         var shading = Inspector.Query<PopupField<string>>().ToList().Single(field => field.label == "Shading");
-        Require(shading.choices.SequenceEqual(new[] { "Threshold", "Multiple bands", "Texture ramp" }), "Toon shading modes have missing labels.");
+        Require(shading.choices.SequenceEqual(new[] { "Threshold", "Multiple bands", "Texture ramp", "Layered shadows" }), "Toon shading modes have missing labels.");
         shading.value = "Multiple bands";
         Require((int?)Node("toon").Properties["lightingMode"] == 1 && Inspector.Query<IntegerField>().ToList().Any(field => field.label == "Light bands"), "Multiple-band mode did not set toon properties or expose band count.");
         Select("toon");
@@ -200,6 +200,25 @@ public static class RenderingControlsSmoke
         Require(Graph.Resources.All(resource => resource.Name != "Lighting ramp"), "Undo did not remove the ramp resource created by the control.");
     }
 
+    static void CheckDetailedControls()
+    {
+        Select("toon");
+        Inspector.Query<PopupField<string>>().ToList().Single(f=>f.label=="Shading").value="Layered shadows";
+        Require(Field<FloatField>("node-property-threshold3")!=null && Field<FloatField>("node-property-normalStrength2")!=null,"Independent shadow layer fields missing.");
+        Require(Inspector.Query<Foldout>().ToList().Count(f=>f.text.StartsWith("Shadow layer "))==3,"Layer controls are not grouped.");
+        Inspector.Query<IntegerField>().ToList().Single(f=>f.label=="Shadow layers").value=1;
+        Require(Field<FloatField>("node-property-threshold2")==null,"Inactive layer controls remain visible.");
+        Wire("source","value","toon","threshold3","detail-border"); Invoke("Rebuild"); Select("toon");
+        var ports=(IEnumerable<string>)typeof(GraphWindow).GetMethod("VisibleInputPorts",Private).Invoke(Window,new object[]{Node("toon")});
+        Require(ports.Contains("threshold3") && !ports.Contains("shadeColor3"),"Mode changes must retain connected sockets and hide unused ones.");
+        Select("outline");
+        Inspector.Query<PopupField<string>>().ToList().Single(f=>f.label=="Width units").value="Screen pixels";
+        Require(Field<FloatField>("node-property-pixelWidth")!=null && Field<FloatField>("node-property-width")==null,"Pixel-width control did not replace world width.");
+        Require(Field<FloatField>("node-property-depthBias")!=null && Field<FloatField>("node-property-lighting")!=null,"Outline detail controls missing.");
+        Wire("source","value","outline","lighting","detail-lighting"); Invoke("Rebuild"); Select("outline");
+        Require(!Field<FloatField>("node-property-lighting").enabledInHierarchy,"Connected lighting input remains editable.");
+    }
+
     static void Tick()
     {
         if (++ticks % 20 != 0) return;
@@ -210,6 +229,7 @@ public static class RenderingControlsSmoke
             else
             {
                 CheckToonUndo();
+                CheckDetailedControls();
                 Debug.Log("NXSG RENDERING CONTROLS SMOKE PASSED: feature controls, connected-input disablement, output/toon modes, ramp resource, and Undo");
                 EditorApplication.update -= Tick; Window.DiscardChanges(); Window.Close(); EditorApplication.Exit(0);
             }
