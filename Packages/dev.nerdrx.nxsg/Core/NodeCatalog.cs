@@ -277,7 +277,7 @@ namespace NXSG.Core
                 case "core.floor": return "Round a number or color down to the nearest whole value.";
                 case "core.ceil": return "Round a number or color up to the nearest whole value.";
                 case "core.round": return "Round a number or color to the nearest whole value.";
-                case "core.step": return "Output zero below threshold A and one at or above it using signal B.";
+                case "core.step": return "Compare signal B with threshold A. Output 0 when B is below A; otherwise output 1.";
                 case "core.smoothstep": return "Make a smooth 0 to 1 transition between low and high.";
                 case "core.remap": return "Map a value from one range into another range.";
                 case "core.pingPong": return "Repeat a value back and forth between zero and length.";
@@ -300,10 +300,10 @@ namespace NXSG.Core
                 case "core.toonSurface": return "Cartoon lighting with a threshold, bands, a texture ramp, or up to three shadow layers. Includes per-layer cast-shadow response and integrated light-aware rim shading.";
                 case "core.unlitSurface": return "Build a surface with color and emission without lighting.";
                 case "core.pbrSurface": return "Build a physically based surface with color, normal, metallic, and roughness controls.";
-                case "core.surfaceParticles": return "Emit shader-driven particles from the mesh wearing this material. Connect your surface to Base. PC geometry pass; particles follow the current mesh pose.";
+                case "core.surfaceParticles": return "Emit particles from the mesh using this material. Connect a surface to Base. PC only; particles follow the current pose.";
                 case "core.particleSurface": return "Transparent unlit particles with alpha or additive blending. Automatically applies particle color and lifetime alpha. Optional soft intersections need camera depth.";
                 case "core.particleColor": return "Read particle or mesh vertex color and alpha. Particle Surface already applies these automatically; use this node for other effects.";
-                case "core.fresnel": return "Compute an edge mask from a value and power.";
+                case "core.fresnel": return "Compute an edge mask from the view angle and surface normal. Power controls how tightly the mask follows the silhouette.";
                 case "core.colorRamp": return "Map a scalar value through a bounded color ramp.";
                 case "core.layer": return "Blend an overlay color over a base color with a mask.";
                 case "core.sticker": return "Project a texture onto UVs with optional masking and transform controls.";
@@ -388,6 +388,7 @@ namespace NXSG.Core
                 case "core.particleSurface": return "sparkles embers smoke fluff transparent additive billboard shuriken";
                 case "core.particleColor": return "vertex colour lifetime fade alpha shuriken";
                 case "core.particleInfo": return "age lifetime random seed particle birth death";
+                case "core.uv0": return "uv uv0 uv1 uv2 uv3 mesh coordinates texture coordinates mapping";
                 case "core.fresnel": return "edge rim grazing angle"; case "core.colorRamp": return "gradient palette lookup";
                 case "core.layer": return "overlay composite blend"; case "core.sticker": return "decal projected texture";
                 case "core.dissolve": return "cutout burn edge mask"; case "core.flipbook": return "texture atlas animation";

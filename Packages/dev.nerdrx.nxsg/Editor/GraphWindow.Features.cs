@@ -53,15 +53,18 @@ namespace NXSG.Editor
                     AddBoundedNumber(node, "reflection", "Probe reflection", 0, 1, .8f, "reflection");
                     AddBoundedNumber(node, "dispersion", "Chromatic dispersion", 0, .1f, .015f, "dispersion");
                     AddBoundedNumber(node, "roughness", "Reflection roughness", 0, 1, .15f, "roughness");
-                    AddColorField(node, "sparkleColor", "Interior sparkle color", Color.white, "sparkleColor");
-                    AddBoundedNumber(node, "sparkleStrength", "Interior sparkle strength", 0, 8, 0, "sparkleStrength");
-                    AddBoundedNumber(node, "sparkleDensity", "Interior sparkle density", 0, 1, .35f, "sparkleDensity");
-                    AddBoundedNumber(node, "sparkleSize", "Interior sparkle size", 0, .5f, .2f, "sparkleSize");
-                    AddBoundedNumber(node, "sparkleDepth", "Interior path depth", 0, 2, .35f, "sparkleDepth");
+                    InspectorSection(node, "interior-sparkles", "Interior sparkles", () =>
+                    {
+                        AddColorField(node, "sparkleColor", "Interior sparkle color", Color.white, "sparkleColor");
+                        AddBoundedNumber(node, "sparkleStrength", "Interior sparkle strength", 0, 8, 0, "sparkleStrength");
+                        AddBoundedNumber(node, "sparkleDensity", "Interior sparkle density", 0, 1, .35f, "sparkleDensity");
+                        AddBoundedNumber(node, "sparkleSize", "Interior sparkle size", 0, .5f, .2f, "sparkleSize");
+                        AddBoundedNumber(node, "sparkleDepth", "Interior path depth", 0, 2, .35f, "sparkleDepth");
+                    });
                     FeatureNote("Screen refraction and first-probe reflection remain approximations. Optional sparkles sample four points along the refracted object-space view path; they do not trace geometry or internal bounces.");
                     return true;
                 case "core.parallaxUV": AddCoordinateChoice(node); AddNumber(node, "height", "Height", .5f, "height"); AddNumber(node, "strength", "Depth strength", .05f); AddNumber(node, "reference", "Reference height", .5f); return true;
-                case "core.avatarMotion": FeatureNote("Create an FX motion driver from the Create menu, then merge its layers into your avatar FX controller. Reads locomotion, not individual bones. Matching properties on other materials on this renderer are animated too.");return true;
+                case "core.avatarMotion": FeatureNote("Create an FX motion driver from Tools → Scene, then merge its layers into your avatar FX controller. Reads locomotion, not individual bones. Matching properties on other materials on this renderer are animated too.");return true;
                 case "core.motionResponse": AddNumber(node,"startSpeed","Start speed (m/s)",.1f);AddNumber(node,"fullSpeed","Full speed (m/s)",4);AddNumber(node,"curve","Response curve",1);return true;
                 case "core.motionSway": AddNumber(node,"strength","Maximum displacement",.02f);AddNumber(node,"frequency","Frequency (Hz)",2);AddNumber(node,"spatialScale","Spatial scale",3);AddNumber(node,"fullSpeed","Full speed (m/s)",4);FeatureNote("Connect Speed and send Value to a surface Displacement input. Mask zero or speed zero removes motion. Expand renderer bounds for large displacement.");return true;
                 case "core.motionStretchUV": AddNumber(node,"strength","Stretch per m/s",.25f);AddNumber(node,"maxStretch","Maximum stretch",3);AddIndexedChoice(node,"axis","Axis",new[]{"Horizontal","Vertical"});return true;
@@ -85,9 +88,12 @@ namespace NXSG.Editor
                     AddBoundedNumber(node, "density", "Flake density", 0, 1, .6f);
                     AddBoundedNumber(node, "size", "Flake size", 0, 1, .16f);
                     AddBoundedNumber(node, "sharpness", "Sparkle sharpness", 1, 512, 32);
-                    AddBoundedNumber(node, "viewStrength", "View angle strength", 0, 1, 1);
-                    AddNumber(node, "speed", "Sparkle speed", 1);
-                    AddBoundedNumber(node, "twinkle", "Twinkle amount", 0, 1, .3f);
+                    InspectorSection(node, "glitter-animation", "Sparkle response", () =>
+                    {
+                        AddBoundedNumber(node, "viewStrength", "View angle strength", 0, 1, 1);
+                        AddNumber(node, "speed", "Sparkle speed", 1);
+                        AddBoundedNumber(node, "twinkle", "Twinkle amount", 0, 1, .3f);
+                    });
                     AddBoundedNumber(node, "brightness", "HDR brightness", 0, 10, 2);
                     AddNumber(node, "seed", "Flake seed", 0);
                     AddBoundedNumber(node, "mask", "Flake mask", 0, 1, 1, "mask");
@@ -116,19 +122,25 @@ namespace NXSG.Editor
                 case "core.wetnessColor": AddBoundedNumber(node, "strength", "Wet strength", 0, 1, .5f); AddBoundedNumber(node, "mask", "Wetness mask", 0, 1, 1, "mask"); return true;
                 case "core.anisotropicHighlight":
                     AddBoundedNumber(node, "roughness", "Primary roughness", 0, 1, .3f, "roughness");
-                    AddBoundedNumber(node, "dualLobe", "Second lobe", 0, 1, 0, "dualLobe");
-                    AddBoundedNumber(node, "secondaryRoughness", "Second roughness", 0, 1, .6f, "secondaryRoughness");
-                    AddColorField(node, "secondaryTint", "Second tint", Color.white, "secondaryTint");
                     AddBoundedNumber(node, "shift", "Primary tangent shift", -1, 1, 0, "shift");
-                    AddBoundedNumber(node, "secondaryShift", "Second lobe shift", -1, 1, 0, "secondaryShift");
                     AddBoundedNumber(node, "tangentStrength", "Tangent strength", 0, 1, 1, "tangentStrength");
                     AddBoundedNumber(node, "shiftNoise", "Primary shift noise", -1, 1, 0, "shiftNoise");
-                    AddBoundedNumber(node, "secondaryShiftNoise", "Second shift noise", -1, 1, 0, "secondaryShiftNoise");
                     AddNumber(node, "longitudinalWidth", "Longitudinal width", 1, "longitudinalWidth", "Width scale; 1 preserves current lobe.");
                     AddNumber(node, "azimuthalWidth", "Azimuthal width", 1, "azimuthalWidth", "Width scale; 1 uses full width; values below 1 narrow around the strand.");
-                    AddBoundedNumber(node, "reflectionStrength", "Probe reflection", 0, 1, 0, "reflectionStrength");
-                    AddNumber(node, "reflectionStretch", "Probe stretch", 0, "reflectionStretch");
-                    AddBoundedNumber(node, "reflectionRoughness", "Probe roughness", 0, 1, .3f, "reflectionRoughness");
+                    InspectorSection(node, "secondary-highlight", "Secondary highlight", () =>
+                    {
+                        AddBoundedNumber(node, "dualLobe", "Second lobe", 0, 1, 0, "dualLobe");
+                        AddBoundedNumber(node, "secondaryRoughness", "Second roughness", 0, 1, .6f, "secondaryRoughness");
+                        AddColorField(node, "secondaryTint", "Second tint", Color.white, "secondaryTint");
+                        AddBoundedNumber(node, "secondaryShift", "Second lobe shift", -1, 1, 0, "secondaryShift");
+                        AddBoundedNumber(node, "secondaryShiftNoise", "Second shift noise", -1, 1, 0, "secondaryShiftNoise");
+                    });
+                    InspectorSection(node, "probe-reflection", "Probe reflection", () =>
+                    {
+                        AddBoundedNumber(node, "reflectionStrength", "Probe reflection", 0, 1, 0, "reflectionStrength");
+                        AddNumber(node, "reflectionStretch", "Probe stretch", 0, "reflectionStretch");
+                        AddBoundedNumber(node, "reflectionRoughness", "Probe roughness", 0, 1, .3f, "reflectionRoughness");
+                    });
                     return true;
                 case "core.iridescence": AddBoundedNumber(node, "thickness", "Film thickness", 0, 1, .5f, "thickness"); AddBoundedNumber(node, "strength", "Color strength", 0, 2, 1); AddNumber(node, "phase", "Phase", 0); return true;
                 case "core.refraction": AddBoundedNumber(node, "strength", "Refraction strength", 0, 1, .05f, "strength"); AddBoundedNumber(node, "ior", "Index of refraction", 1, 4, 1.33f, "ior"); FeatureNote("Uses a screen GrabPass. Refraction bends the captured screen and does not trace scene geometry."); return true;
@@ -138,11 +150,14 @@ namespace NXSG.Editor
                     AddBoundedNumber(node, "thickness", "Thickness", 0, 1, .5f, "thickness");
                     AddBoundedNumber(node, "strength", "Scatter strength", 0, 2, .7f, "strength");
                     AddColorField(node, "tint", "Scatter tint", new Color(1f, .35f, .2f, 1f), "tint");
-                    AddBoundedNumber(node, "spread", "Additional spread", 0, 2, 0, "spread");
-                    AddBoundedNumber(node, "distortion", "Light distortion", -1, 1, 0, "distortion");
-                    AddBoundedNumber(node, "viewResponse", "View response", 0, 1, 0, "viewResponse");
-                    AddBoundedNumber(node, "attenuation", "Thickness attenuation", 0, 1, 0, "attenuation");
-                    AddBoundedNumber(node, "shadowResponse", "Scene shadow response", 0, 1, 0, "shadowResponse");
+                    InspectorSection(node, "scatter-response", "Scattering response", () =>
+                    {
+                        AddBoundedNumber(node, "spread", "Additional spread", 0, 2, 0, "spread");
+                        AddBoundedNumber(node, "distortion", "Light distortion", -1, 1, 0, "distortion");
+                        AddBoundedNumber(node, "viewResponse", "View response", 0, 1, 0, "viewResponse");
+                        AddBoundedNumber(node, "attenuation", "Thickness attenuation", 0, 1, 0, "attenuation");
+                        AddBoundedNumber(node, "shadowResponse", "Scene shadow response", 0, 1, 0, "shadowResponse");
+                    });
                     FeatureNote("Additional spread widens the wrapped light without changing thickness. Distortion bends the scattering light toward the normal. Scene shadow response affects the added scattering only; it needs a shadow-casting scene light. These controls default to 0 to preserve existing materials."); return true;
                 case "core.tessellation":
                     AddIntegerField(node, "factor", "Tessellation factor", 1, 63, 8);
@@ -153,7 +168,7 @@ namespace NXSG.Editor
                     AddNumber(node, "strength", "Displacement strength", .1f);
                     AddNumber(node, "reference", "Reference height", .5f);
                     AddBoundedNumber(node, "smoothing", "Smoothing", 0, 1, 0);
-                    FeatureNote("PC GPU tessellation. Connect a surface to Base, then this node to Output. Height texture: Texture → Split Color R → Height. Expand renderer bounds for displacement; UV seams can remain visible.");
+                    FeatureNote("PC GPU tessellation. Connect a surface to Base, then this node to Output. Connect a height texture or mask to Height. Expand renderer bounds for displacement; UV seams can remain visible.");
                     return true;
                 default: return false;
             }
@@ -161,37 +176,37 @@ namespace NXSG.Editor
 
         void AddLayeredSurfaceControls(GraphNode node)
         {
-            AddInspectorSection("BASE SURFACE");
-            AddAlbedoAlphaToggle(node);
-            AddBoundedNumber(node, "opacity", "Opacity", 0, 1, 1, "opacity");
-            AddNumber(node, "cutoff", "Cutoff", .001f);
-            AddNumber(node, "displacement", "Displacement", 0, "displacement");
-            AddBoundedNumber(node, "metallic", "Metallic", 0, 1, 0, "metallic");
-            AddBoundedNumber(node, "roughness", "Roughness", 0, 1, .5f, "roughness");
-            AddBoundedNumber(node, "specularAa", "Specular anti-aliasing", 0, 1, 0, "specularAa", "Uses fragment normal derivatives to soften roughness where the normal changes rapidly. Zero leaves roughness unchanged.");
-            AddInspectorSection("CLEARCOAT");
-            AddBoundedNumber(node, "coat", "Coat weight", 0, 1, 0, "coat", "Glossy dielectric coating. 0 disables the layer; 1 gives full coverage. Connected inputs remain dynamic.");
-            AddBoundedNumber(node, "coatRoughness", "Coat roughness", 0, 1, .1f, "coatRoughness", "Independent coating roughness. Low values make a sharp reflection; high values soften it.");
-            FeatureNote("Connect a Normal Map to Coat normal for coating detail. Unconnected uses the smooth mesh normal, independent of the base normal map.");
-            AddInspectorSection("VELVET SHEEN");
-            AddBoundedNumber(node, "sheen", "Sheen weight", 0, 1, 0, "sheen", "Soft fabric reflection, strongest at grazing angles. Zero removes the layer when unconnected.");
-            AddColorInput(node, "sheenColor", "Sheen color", Color.white, "Color of the fabric sheen. Alpha is ignored; evaluated RGB stays between 0 and 1.");
-            AddBoundedNumber(node, "sheenRoughness", "Sheen roughness", 0, 1, .5f, "sheenRoughness");
-            FeatureNote("Layers share the PBR passes and respond to pixel lights. Clearcoat uses reflection probes; ambient sheen is an approximation. Zero unconnected weights compile out their layers.");
-            AddInspectorSection("LIGHTING");
+            AddSurfaceBasics(node, true);
+            InspectorSection(node, "clearcoat", "Clearcoat", () =>
+            {
+                AddBoundedNumber(node, "coat", "Weight", 0, 1, 0, "coat", "Glossy coating. 0 disables it; 1 gives full coverage.");
+                AddBoundedNumber(node, "coatRoughness", "Roughness", 0, 1, .1f, "coatRoughness", "Low values give sharp reflections; high values soften them.");
+                FeatureNote("Coat normal accepts a Normal Map. Unconnected uses the mesh normal independently of the base normal map.");
+            });
+            InspectorSection(node, "sheen", "Velvet sheen", () =>
+            {
+                AddBoundedNumber(node, "sheen", "Weight", 0, 1, 0, "sheen", "Soft fabric reflection at grazing angles. 0 disables it.");
+                AddColorInput(node, "sheenColor", "Color", Color.white, "Fabric sheen color. Alpha is ignored.");
+                AddBoundedNumber(node, "sheenRoughness", "Roughness", 0, 1, .5f, "sheenRoughness");
+            });
             AddLightingControls(node);
         }
 
         void AddLightingControls(GraphNode node)
         {
-            AddBoundedNumber(node,"occlusion","Ambient occlusion",0,1,1,"occlusion","Visibility of ambient lighting and reflection probes. 1 is unoccluded; 0 blocks indirect light.");
-            AddBoundedNumber(node,"shadow","Direct light visibility",0,1,1,"shadow","Multiplies direct-light attenuation. Connect Contact Shadows here. Emission remains unchanged.");
+            InspectorSection(node, "light-visibility", "Light visibility", () =>
+            {
+                AddBoundedNumber(node,"occlusion","Ambient visibility",0,1,1,"occlusion","1 receives full ambient light and reflection probes. 0 blocks them. Connect an ambient-occlusion mask here.");
+                AddBoundedNumber(node,"shadow","Direct light visibility",0,1,1,"shadow","1 receives direct light; 0 blocks it. Connect Contact Shadows here. Emission is unchanged.");
+            });
+            InspectorSection(node, "lighting-influence", "Lighting influence", () =>
+            {
+                AddNumber(node, "lightingMin", "Minimum brightness", 0, help: "Minimum lighting contribution. Does not change albedo or emission.");
+                AddNumber(node, "lightingMax", "Maximum brightness", 0, help: "0 means unlimited. Applied per light contribution, so several lights can add above this maximum.");
+                AddNumber(node, "lightingSaturation", "Saturation", 1, help: "0 = neutral light, 1 = original color, above 1 = stronger color. Does not change albedo or emission.");
+                FeatureNote("Maximum 0 = unlimited. Limits apply per light contribution.");
+            });
             AddIndirectLightingControls(node);
-            inspector.Add(new Label("Lighting influence") { style = { unityFontStyleAndWeight = FontStyle.Bold } });
-            AddNumber(node, "lightingMin", "Minimum brightness", 0);
-            AddNumber(node, "lightingMax", "Maximum brightness", 0);
-            AddNumber(node, "lightingSaturation", "Lighting saturation", 1);
-            FeatureNote("Maximum 0 = unlimited. Saturation: 0 = neutral light, 1 = original, above 1 = stronger color. Affects lighting, not albedo or emission. Brightness limits apply per lighting contribution; multiple lights can add above the maximum.");
         }
 
         void AddAlbedoAlphaToggle(GraphNode node)
@@ -202,6 +217,7 @@ namespace NXSG.Editor
                 tooltip = "Use transparency from the Albedo color or texture. Off: only Opacity and material Tint alpha control transparency."
             };
             field.RegisterValueChangedCallback(evt => Edit("Toggle albedo alpha", () => node.Properties["useAlbedoAlpha"] = evt.newValue ? 1 : 0));
+            TrackProperty(node, "useAlbedoAlpha", field, 1);
             inspector.Add(field);
         }
 
@@ -209,65 +225,64 @@ namespace NXSG.Editor
         {
             var cardsOnly = (int?)node.Properties["cardsOnly"] == 1;
             AddIndexedChoice(node, "cardsOnly", "Fur geometry", new[] { "Shells", "Cards only" });
-            if (cardsOnly) FeatureNote("Generate cards from mesh triangle edges. No shell layers. Shared edges can overlap; denser meshes produce more cards. Expand renderer bounds for fur length.");
-            var fins = new Toggle("Fur fins") { value = (int?)node.Properties["fins"] == 1, tooltip = "Add grazing edge strips to fill the fur silhouette. Extra geometry pass; triangle edges are approximated." };
-            fins.RegisterValueChangedCallback(e => Edit("Toggle fur fins", () => node.Properties["fins"] = e.newValue ? 1 : 0));
-            if (!cardsOnly) inspector.Add(fins);
-            AddBoundedNumber(node, "finOpacity", cardsOnly ? "Card opacity" : "Fin opacity", 0, 1, .7f);
-
-            FurSection(cardsOnly ? "Cards" : "Shells", () =>
+            InspectorSection(node, "fur-geometry", cardsOnly ? "Cards" : "Shells", () =>
             {
                 if (!cardsOnly) AddIntegerField(node, "layers", "Shell layers", 4, 32, 16);
-                AddNumber(node, "length", "Fur length (m)", .04f, "length");
-                AddNumber(node, "density", cardsOnly ? "Card coverage / strands (100 = all triangles)" : "Strands / m²", 100, "density");
+                AddNumber(node, "length", "Length (m)", .04f, "length");
+                AddNumber(node, "density", cardsOnly ? "Card density" : "Strands / m²", 100, "density",
+                    cardsOnly ? "100 covers all source triangles. Cards follow mesh edges; shared edges can overlap." : null);
                 AddBoundedNumber(node, "thickness", "Strand thickness", 0, 1, .35f, "thickness");
                 AddBoundedNumber(node, "taper", "Tip taper", 0, 1, 1);
+                if (cardsOnly) AddBoundedNumber(node, "finOpacity", "Card opacity", 0, 1, .7f);
+            }, true);
+            if (!cardsOnly) InspectorSection(node, "fur-fins", "Silhouette fins", () =>
+            {
+                var fins = new Toggle("Enable fins") { value = (int?)node.Properties["fins"] == 1,
+                    tooltip = "Adds grazing edge strips to fill the silhouette, using an extra geometry pass." };
+                fins.RegisterValueChangedCallback(e => Edit("Toggle fur fins", () => node.Properties["fins"] = e.newValue ? 1 : 0));
+                TrackProperty(node, "fins", fins, 0); inspector.Add(fins);
+                AddBoundedNumber(node, "finOpacity", "Fin opacity", 0, 1, .7f, help: "Used when fins are enabled.");
             });
-            FurSection("Strands", () =>
+            InspectorSection(node, "fur-motion", "Grooming and wind", () =>
             {
                 AddNumber(node, "gravity", "Gravity", .1f);
-                AddBoundedNumber(node, "rimStrength", "Rim strength", 0, 2, .25f);
-                if (!cardsOnly) AddIntegerField(node, "minLayers", "Minimum LOD layers", 1, 32, 4);
-            });
-            FurSection("Grooming & wind", () =>
-            {
                 AddBoundedNumber(node, "windStrength", "Wind strength", 0, 5, .1f);
                 AddNumber(node, "windSpeed", "Wind speed", 1);
                 AddNumber(node, "windScale", "Wind scale", 2);
-                FeatureNote("Connect Groom to a 3D vector to control strand direction in object space.");
+                FeatureNote("Connect a 3D vector to Groom to set strand direction in object space. Expand renderer bounds for fur length and motion.");
             });
-            FurSection("Shadows", () =>
+            InspectorSection(node, "fur-lighting", "Lighting and shadows", () =>
             {
+                AddBoundedNumber(node, "rimStrength", "Rim strength", 0, 2, .25f);
                 var receive = new Toggle("Receive scene shadows") { value = ((int?)node.Properties["receiveShadows"] ?? 1) == 1,
-                    tooltip = "Receive shadows from the main directional light on fur shells and fins." };
+                    tooltip = "Receive shadows from the main directional light on shells and fins." };
                 receive.RegisterValueChangedCallback(e => Edit("Toggle fur scene shadows", () => node.Properties["receiveShadows"] = e.newValue ? 1 : 0));
-                inspector.Add(receive);
+                TrackProperty(node, "receiveShadows", receive, 1); inspector.Add(receive);
                 AddIndexedChoice(node, "selfShadowQuality", "Self-shadow samples", new[] { "Off", "Low · 4", "Medium · 8", "High · 16" });
                 AddBoundedNumber(node, "selfShadowStrength", "Self-shadow strength", 0, 4, 1);
                 AddBoundedNumber(node, "selfShadowBias", "Self-shadow bias", 0, .25f, .03f);
-                FeatureNote(cardsOnly ? "Approximates local fur volume, not exact card-to-card occlusion. Main light only." : "Samples through local fur volume using the main light only. Ambient and rim lighting stay unchanged. Cost steps multiply by shell count.");
+                FeatureNote(cardsOnly ? "Approximates local fur volume, not exact card-to-card occlusion. Main light only." : "Samples local fur volume using the main light. More samples and shells increase cost. Ambient and rim are unaffected.");
             });
-            if (!cardsOnly) FurSection("Distance LOD", () =>
+            if (!cardsOnly) InspectorSection(node, "fur-lod", "Distance detail", () =>
             {
+                AddIntegerField(node, "minLayers", "Minimum shell layers", 1, 32, 4);
                 AddNumber(node, "lodNear", "Full detail distance (m)", 5);
                 AddNumber(node, "lodFar", "Fade out distance (m)", 15);
-                FeatureNote("Fur adds shell draw calls. More layers increase mesh passes and cost.");
+                FeatureNote("Distance reduces active shell coverage; it does not remove draw calls.");
             });
         }
 
         void FurSection(string title, Action controls)
         {
-            var section = new Foldout { text = title, value = true };
-            inspector.Add(section);
-            var previous = inspector;
-            inspector = section;
-            controls();
-            inspector = previous;
+            var node = graph?.Nodes.FirstOrDefault(n => n.Id == selected);
+            if (node == null) { controls(); return; }
+            InspectorSection(node, title.ToLowerInvariant().Replace(" ", "-"), title, controls, title == "Shells" || title == "Cards");
         }
 
         void FeatureNote(string text)
         {
-            inspector.Add(new Label(text) { style = { whiteSpace = WhiteSpace.Normal, marginTop = 4, marginBottom = 4 } });
+            var note = new Label(text) { style = { whiteSpace = WhiteSpace.Normal, marginTop = 4, marginBottom = 4 } };
+            note.AddToClassList("nxsg-help"); inspector.Add(note);
         }
 
         void AddDirectionField(GraphNode node, string property, string label, Vector3 fallback)
@@ -275,7 +290,15 @@ namespace NXSG.Editor
             var values = node.Properties[property] as JArray;
             var field = new Vector3Field(label) { value = values != null && values.Count == 3 ? new Vector3((float)values[0], (float)values[1], (float)values[2]) : fallback };
             field.SetEnabled(!graph.Connections.Any(edge => edge.To.NodeId == node.Id && edge.To.PortId == property));
-            field.RegisterValueChangedCallback(evt => Edit("Change " + label, () => node.Properties[property] = new JArray(evt.newValue.x, evt.newValue.y, evt.newValue.z)));
+            field.RegisterValueChangedCallback(evt =>
+            {
+                var v = evt.newValue;
+                if (new[] { v.x, v.y, v.z }.Any(x => float.IsNaN(x) || float.IsInfinity(x)))
+                { field.SetValueWithoutNotify(evt.previousValue); SetStatus("Enter finite vector values."); return; }
+                EditValue("Change " + label, () => node.Properties[property] = new JArray(v.x, v.y, v.z));
+            });
+            TrackProperty(node, property, field, new JArray(fallback.x, fallback.y, fallback.z));
+            StackVectorField(field);
             inspector.Add(field);
         }
 
@@ -285,16 +308,18 @@ namespace NXSG.Editor
             var value = values != null && values.Count == 4 ? new Color((float)values[0], (float)values[1], (float)values[2], (float)values[3]) : fallback;
             var field = new ColorField(label) { value = value };
             if (inputPort != null) field.SetEnabled(!graph.Connections.Any(e => e.To.NodeId == node.Id && e.To.PortId == inputPort));
-            field.RegisterValueChangedCallback(evt => Edit("Change " + label, () => node.Properties[property] = new JArray(evt.newValue.r, evt.newValue.g, evt.newValue.b, evt.newValue.a)));
+            field.RegisterValueChangedCallback(evt => EditValue("Change " + label, () => node.Properties[property] = new JArray(evt.newValue.r, evt.newValue.g, evt.newValue.b, evt.newValue.a)));
+            TrackProperty(node, property, field, new JArray(fallback.r, fallback.g, fallback.b, fallback.a));
             inspector.Add(field);
         }
 
         void AddIntegerField(GraphNode node, string property, string label, int min, int max, int fallback, string inputPort = null)
         {
-            var field = new IntegerField(label) { value = Mathf.Clamp((int?)node.Properties[property] ?? fallback, min, max) };
+            var field = new IntegerField(label) { isDelayed = true, value = Mathf.Clamp((int?)node.Properties[property] ?? fallback, min, max) };
             field.SetEnabled(inputPort == null || !graph.Connections.Any(edge => edge.To.NodeId == node.Id && edge.To.PortId == inputPort));
             field.tooltip = label + ": " + min + "–" + max + ".";
             field.RegisterValueChangedCallback(evt => Edit("Change " + label, () => node.Properties[property] = Mathf.Clamp(evt.newValue, min, max)));
+            TrackProperty(node, property, field, fallback);
             inspector.Add(field);
         }
     }

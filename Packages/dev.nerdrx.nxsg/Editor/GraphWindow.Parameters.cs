@@ -13,33 +13,50 @@ namespace NXSG.Editor
     public sealed partial class GraphWindow
     {
         [SerializeField] string selectedParameterId;
+        [SerializeField] bool parameterLibraryExpanded;
+        [SerializeField] bool parameterLibraryStateSet;
 
         void AddParameterControls()
         {
             if (graph == null) return;
             if (graph.Parameters == null) graph.Parameters = new List<GraphParameter>();
-            var section = new Foldout { text = "PARAMETERS", value = true };
+            var node = selected == null ? null : graph.Nodes.FirstOrDefault(n => n.Id == selected && n.Operation == "core.parameter");
+            if (node != null) selectedParameterId = (string)node.Properties["parameterId"];
+            var selectedParameter = graph.Parameters.FirstOrDefault(p => p != null && p.Id == selectedParameterId);
+            var section = new Foldout { text = "Parameters", value = parameterLibraryStateSet
+                ? parameterLibraryExpanded : node != null || selectedParameter != null };
+            section.RegisterValueChangedCallback(e =>
+            {
+                if (e.target != section) return;
+                parameterLibraryExpanded = e.newValue; parameterLibraryStateSet = true;
+            });
             section.Add(new Button(() => AddParameter(GraphValueType.Float)) { text = "+ Float parameter" });
             section.Add(new Button(() => AddParameter(GraphValueType.Color)) { text = "+ Color parameter" });
             foreach (var parameter in graph.Parameters.Where(p => p != null).ToList()) AddParameterRow(section, parameter);
+            if (selectedParameter != null)
+            {
+                var editor = new Foldout { text = "Edit parameter · " + selectedParameter.Name, value = true };
+                AddParameterEditor(editor, selectedParameter);
+                section.Add(editor);
+            }
             inspector.Add(section);
-            var node = selected == null ? null : graph.Nodes.FirstOrDefault(n => n.Id == selected && n.Operation == "core.parameter");
-            if (node != null)
+        }
+
+        // Called beside the selected node's other settings in RebuildInspector.
+        void AddParameterNodeControls(GraphNode node)
+        {
+            if (graph == null || node == null || node.Operation != "core.parameter") return;
+            var parameters = graph.Parameters.Where(p => p != null).ToList();
+            if (parameters.Count == 0) return;
+            var reference = new PopupField<string>("Reads", parameters.Select(p => p.Name).ToList(),
+                Math.Max(0, parameters.FindIndex(p => p.Id == (string)node.Properties["parameterId"])));
+            reference.RegisterValueChangedCallback(e =>
             {
-                selectedParameterId = (string)node.Properties["parameterId"];
-                var parameters = graph.Parameters.Where(p => p != null).ToList();
-                if (parameters.Count > 0)
-                {
-                    var reference = new PopupField<string>("Reads", parameters.Select(p => p.Name).ToList(), Math.Max(0, parameters.FindIndex(p => p.Id == selectedParameterId)));
-                    reference.RegisterValueChangedCallback(e => Edit("Reassign parameter", () => node.Properties["parameterId"] = parameters[reference.index].Id));
-                    section.Add(reference);
-                }
-            }
-            if (!string.IsNullOrEmpty(selectedParameterId))
-            {
-                var parameter = graph.Parameters.FirstOrDefault(p => p != null && p.Id == selectedParameterId);
-                if (parameter != null) AddParameterEditor(section, parameter);
-            }
+                var parameter = parameters[reference.index];
+                selectedParameterId = parameter.Id;
+                Edit("Reassign parameter", () => node.Properties["parameterId"] = parameter.Id);
+            });
+            inspector.Add(reference);
         }
 
         void AddParameterRow(VisualElement parent, GraphParameter parameter)
@@ -55,7 +72,6 @@ namespace NXSG.Editor
         void AddParameterEditor(VisualElement parent, GraphParameter parameter)
         {
             var editor = new VisualElement { style = { marginTop = 6, paddingLeft = 6, paddingRight = 6, paddingBottom = 6, backgroundColor = new Color(.12f, .12f, .12f) } };
-            editor.Add(new Label("EDIT PARAMETER") { style = { unityFontStyleAndWeight = FontStyle.Bold } });
             var name = new TextField("Name") { value = parameter.Name, isDelayed = true };
             name.RegisterValueChangedCallback(e =>
             {

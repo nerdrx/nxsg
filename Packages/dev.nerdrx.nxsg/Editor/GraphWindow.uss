@@ -65,3 +65,16 @@
     padding-bottom: 0;
     align-self: center;
 }
+
+/* Inspector disclosure: common controls stay readable at narrow sidebar widths. */
+#nxsg-sidebar .nxsg-inspector-section { margin-top: 5px; margin-bottom: 2px; }
+#nxsg-sidebar .nxsg-inspector-section > .unity-toggle { min-height: 27px; margin-left: 0; margin-right: 0; color: rgb(229,231,233); -unity-font-style: bold; }
+#nxsg-sidebar .nxsg-inspector-section > .unity-foldout__content { margin-left: 8px; padding-left: 0; padding-right: 0; }
+#nxsg-sidebar .nxsg-inspector-section .unity-toggle__text { white-space: normal; }
+#nxsg-sidebar .nxsg-help { color: rgb(183,191,202); white-space: normal; margin-top: 5px; margin-bottom: 7px; }
+#nxsg-default-legend { font-size: 11px; }
+#nxsg-sidebar .nxsg-control-label { color: rgb(206,212,221); margin-top: 5px; white-space: normal; }
+#nxsg-sidebar .nxsg-vector-field { margin-top: 6px; margin-bottom: 7px; }
+#nxsg-sidebar .nxsg-vector-field > .unity-base-field__input { min-height: 25px; flex-grow: 1; width: 100%; }
+#nxsg-sidebar .nxsg-vector-field .unity-base-field__label { white-space: nowrap; }
+#nxsg-sidebar .nxsg-vector-field > .unity-base-field__label { white-space: normal; }

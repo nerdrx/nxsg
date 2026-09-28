@@ -25,23 +25,35 @@ namespace NXSG.Editor
                 case UtilityNodes.MsdfDecal:
                     AddTexturePicker(node, "RGB MSDF atlas");
                     AddColorField(node, "color", "Fill", Color.white, "color");
-                    AddColorField(node, "outlineColor", "Outline", Color.black, "outlineColor");
-                    AddNumber(node, "outlineWidth", "Outline width", 0, "outlineWidth");
-                    AddNumber(node, "softness", "Edge softness (pixels)", 0, "softness");
-                    AddNumber(node, "distanceRange", "Atlas distance range (texels)", 4, "distanceRange");
-                    inspector.Add(new HelpBox("Use a real RGB multi-channel signed-distance atlas. Import it linearly with mipmaps and compression disabled, bilinear filtering, and clamp wrap. The atlas tool below creates a single-channel SDF numeric atlas, which belongs on Numeric Text.", HelpBoxMessageType.Info));
+                    InspectorSection(node, "msdf.edges", "Outline and edges", () =>
+                    {
+                        AddColorField(node, "outlineColor", "Outline", Color.black, "outlineColor");
+                        AddNumber(node, "outlineWidth", "Outline width", 0, "outlineWidth");
+                        AddNumber(node, "softness", "Edge softness (pixels)", 0, "softness");
+                    });
+                    InspectorSection(node, "msdf.atlas", "Atlas settings and requirements", () =>
+                    {
+                        AddNumber(node, "distanceRange", "Atlas distance range (texels)", 4, "distanceRange");
+                        inspector.Add(new HelpBox("Assign an RGB multi-channel signed-distance atlas. Import it as linear data with mipmaps and compression disabled, bilinear filtering, and clamp wrap.", HelpBoxMessageType.Info));
+                    });
                     return true;
                 case UtilityNodes.NumericText:
                     AddTexturePicker(node, "Numeric SDF atlas");
                     AddColorField(node, "color", "Text tint", Color.white, "color");
                     AddNumber(node, "value", "Number", 0, "value");
-                    AddIntegerField(node, "digits", "Maximum integer digits", 1, 8, 6);
-                    AddIntegerField(node, "decimals", "Decimal places", 0, 4, 1);
                     AddNumber(node, "scale", "Text scale", 1, "scale");
-                    AddNumber(node, "spacing", "Character spacing", .08f, "spacing");
-                    var create = new Button(() => CreateAtlas(node)) { text = "Create numeric SDF atlas…", tooltip = "Creates digits, minus and decimal point as a small single-channel SDF texture asset." };
-                    inspector.Add(create);
-                    inspector.Add(new HelpBox("Draws digits 0–9, minus and decimal point. Connect Viewer Stats → Render FPS, Camera Distance, World Position component, or a clock output to Value. FPS is the current viewer's Unity render-frame reciprocal, not compositor FPS. Values use shader float precision (about 7 significant decimal digits); extra layout digits do not add precision.", HelpBoxMessageType.Info));
+                    InspectorSection(node, "numeric-text.format", "Number formatting", () =>
+                    {
+                        AddIntegerField(node, "digits", "Maximum integer digits", 1, 8, 6);
+                        AddIntegerField(node, "decimals", "Decimal places", 0, 4, 1);
+                        AddNumber(node, "spacing", "Character spacing", .08f, "spacing");
+                    });
+                    InspectorSection(node, "numeric-text.atlas-help", "Atlas and connections", () =>
+                    {
+                        var create = new Button(() => CreateAtlas(node)) { text = "Create numeric SDF atlas…", tooltip = "Creates digits, minus and decimal point as a small single-channel SDF texture asset." };
+                        inspector.Add(create);
+                        inspector.Add(new HelpBox("Creates an atlas for digits 0–9, minus, and decimal point. Connect Viewer Stats → Render FPS, Camera Distance, World Position component, or a clock output to Value. Render FPS is the current viewer's Unity frame rate, not compositor FPS. Shader values have about 7 significant decimal digits; extra layout digits do not add precision.", HelpBoxMessageType.Info));
+                    });
                     return true;
                 case UtilityNodes.ViewerStats:
                     inspector.Add(new HelpBox("Viewer-local stats: Render FPS = 1 / Unity delta time; World Position = current shaded point; Camera Distance = distance to the active viewer camera; Unity Time follows _Time; Network Time follows VRChat's wrapping synchronized millisecond counter. These values can differ per viewer.", HelpBoxMessageType.Info));

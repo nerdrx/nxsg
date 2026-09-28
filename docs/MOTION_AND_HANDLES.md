@@ -3,7 +3,7 @@
 ## Place a sticker without painting
 
 Select a **Sticker** node and open its placement tool in the inspector, or use
-**Create → Place selected sticker**. The tool edits the same graph, with Undo.
+**Tools → Scene → Place selected sticker…**. The tool edits the same graph, with Undo.
 Use the visible Undo/Redo, Center sticker and Reset view controls. Numeric fields
 allow precise placement; Escape cancels the current drag. A failed graph edit
 keeps the last successful preview and reports the error.
@@ -31,14 +31,14 @@ Displacement input. Bounds must contain the displaced mesh. Sway is procedural
 animation, not simulated inertia, cloth, or retained particle history.
 
 Import **Motion Glow** from the package examples for a connected glow/flutter
-graph. In **Create → Material playground / compare**, change **Velocity (m/s)**
+graph. In **Tools → Preview → Material playground and comparison**, change **Velocity (m/s)**
 to test the effect without touching scene materials.
 
 ## Feed real avatar motion
 
 The shader needs an Animator driver; installing the shader alone does not
 provide motion data. Build a graph containing a connected Avatar Motion node,
-assign its generated material, then open **Create → Create avatar motion driver**.
+assign its generated material, then open **Tools → Scene → Create avatar motion driver…**.
 Choose the avatar root and renderer. Generate a standalone controller for an
 otherwise empty FX slot, or add motion layers to the existing FX controller.
 Alpha.7 copies the generated motion layers, states, trees and clips into the

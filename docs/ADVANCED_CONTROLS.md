@@ -2,13 +2,15 @@
 
 This guide covers the added surface, lighting, timing, and texture controls. The node inspectors show the same controls and explain their socket behavior.
 
-Toon and PBR cards keep common inputs visible and group less-used sockets into collapsed sections. Expand a section to connect another control. Connected sockets remain visible when their section is collapsed.
+The inspector keeps common surface controls open and groups optional settings into sections that start collapsed. Section state is remembered per graph, node, and section through inspector rebuilds. A `*` beside a field means its value differs from a new node's default; a section `*` means it contains a changed value. These markers are separate from the graph's unsaved-edits indicator. XYZ vector fields use full-width component rows.
+
+Toon and PBR cards group optional canvas sockets by purpose; surface-particle sockets use Emission timing, Size & edges, and Motion groups. Expand a group to reveal unconnected inputs. Connected sockets stay visible outside the foldout so existing wires remain apparent. Layered PBR groups optional sockets into lighting, clearcoat, and sheen.
 
 ## 1. Face inputs and two-sided rendering
 
 Use **Front Face** to read rasterized face orientation. `Is Front` is 1 for front-facing fragments and 0 for back-facing fragments; connect it to a `Mix` factor to choose front and back colors or UV branches. `Normal World` outputs a geometric world-space normal. It does not replace the tangent-space normal expected by surface normal inputs. The material must render both sides: set **Output → Visible faces → Both**.
 
-Output defaults preserve the previous behavior: **Visible faces** is Front, **Flip back-face normals** is Off, **Alpha to coverage** is Off, **Two-sided transparency** is Off, and **Alpha edge sharpness** is 0. Flip back-face normals when a double-sided lit surface should light consistently from each side. Alpha edge sharpness reshapes coverage around the surface cutoff using pixel derivatives. Coverage and sharpening affect the base mesh and its additional-light pass. Shadow maps retain the surface cutoff; fur, shells and outline overlays keep their own alpha rules.
+Output keeps **Surface mode** and **Visible faces** visible. Depth and render order, Coverage and transparency, and Stencil are separate collapsed sections. Defaults preserve previous behavior: Visible faces is Front, Flip back-face normals is Off, Alpha to coverage is Off, Two-sided transparency is Off, and Alpha edge sharpness is 0. Flip back-face normals when a double-sided lit surface should light consistently from each side. Alpha edge sharpness reshapes coverage around the surface cutoff using pixel derivatives. Coverage and sharpening affect the base mesh and its additional-light pass. Shadow maps retain the surface cutoff; fur, shells and outline overlays keep their own alpha rules.
 
 **Alpha to coverage** maps output alpha to multisample coverage. It is intended for MSAA, especially cutout edges; Unity warns that using it without MSAA can be unpredictable across graphics APIs and GPUs. [Unity 2022.3 AlphaToMask reference](https://docs.unity3d.com/2022.3/Documentation/Manual/SL-AlphaToMask.html)
 
@@ -18,7 +20,7 @@ Example: `Front Face.Is Front → Mix.Factor`; connect front and back color bran
 
 ## 2. Toon shading, rim, and layered shadows
 
-**Toon Surface → Shading** selects Threshold (default), Multiple bands, Texture ramp, or Layered shadows. Multiple bands has 2–8 bands (default 3). Texture ramp uses ramp X from shadow to light; set the ramp texture wrap mode to Clamp. Layered shadows supports 1–3 ordered layers; each layer has its own tint, border, blur, strength/mask, shade-map value, normal influence, and scene-shadow response. Later layers blend over earlier ones, and inactive layer wires remain stored but are ignored.
+**Toon Surface → Shading** selects Threshold (default), Multiple bands, Texture ramp, or Layered shadows. This expanded section contains the mode-specific core settings first. Multiple bands has 2–8 bands (default 3). Texture ramp uses ramp X from shadow to light; set the ramp texture wrap mode to Clamp. Layered shadows has its own section with 1–3 ordered layer sub-sections; each layer has its own tint, border, blur, strength/mask, shade-map value, normal influence, and scene-shadow response. Later layers blend over earlier ones, and inactive layer wires remain stored but are ignored. Integrated rim shading and Shadow border tint are optional sections below the core settings.
 
 The integrated rim defaults to Strength 0, Width 0.2, Softness 0.05, and Light alignment 1. Increase Strength to enable it; Width and Softness shape the camera-facing edge, while Light alignment makes it follow the main light. Shadow border tint also defaults off (Tint strength 0). It is separate from the rim.
 
@@ -26,9 +28,9 @@ Example: choose Layered shadows, set **Shadow layers** to 2, give layer 1 a broa
 
 ## 3. Surface lighting controls and indirect lighting
 
-Toon and PBR surface inspectors expose **Ambient occlusion** and **Direct light visibility**. Both default to 1 (fully visible). Connect **Contact Shadows → Visibility** to Direct light visibility/Shadow to attenuate direct lighting. Emission is unaffected by that socket.
+Toon and PBR surface inspectors expose **Ambient visibility** and **Direct light visibility** under **Light visibility**. Both default to 1 (fully visible). Connect **Contact Shadows → Visibility** to Direct light visibility/Shadow to attenuate direct lighting. Emission is unaffected by that socket.
 
-The optional indirect controls are neutral by default: Bent normal influence 1 only matters when a bent normal is connected; Light direction override 0 leaves real light directions in use. Bent normals are tangent-space inputs that shape ambient and reflection-probe visibility. They do not cast shadows between body parts. The optional light-direction vector is world-space by default, can use object space, and blends toward a target direction. Real light distance, cookies, and cast-shadow maps still come from Unity's light.
+Optional indirect controls are separated into collapsed **Bent normal** and **Direction override** sections. Bent normal influence defaults to 1 and only matters when a bent normal is connected; Light direction override strength defaults to 0 and leaves real light directions in use. Bent normals are tangent-space inputs that shape ambient and reflection-probe visibility. They do not cast shadows between body parts. The optional light-direction vector is world-space by default, can use object space, and blends toward a target direction. Real light distance, cookies, and cast-shadow maps still come from Unity's light.
 
 **Minimum brightness** defaults to 0; **Maximum brightness** defaults to 0 (unlimited); **Lighting saturation** defaults to 1 (original saturation). These values affect lighting contributions, not Albedo or Emission. The maximum is applied per contribution, so several lights can add above it.
 

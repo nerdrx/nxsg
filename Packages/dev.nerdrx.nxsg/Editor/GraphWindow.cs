@@ -560,7 +560,7 @@ namespace NXSG.Editor
                         canvas.Focus(); evt.StopPropagation();
                     });
                     var visibleInputs = VisibleInputPorts(node).ToList();
-                    if (node.Operation == "core.toonSurface" || node.Operation == "core.pbrSurface")
+                    if (node.Operation == "core.toonSurface" || node.Operation == "core.pbrSurface" || node.Operation == "core.layeredPbrSurface" || node.Operation == "core.surfaceParticles")
                         AddSurfaceSockets(box, node, visibleInputs);
                     else
                         foreach (var port in visibleInputs) AddSocket(box, node, port, false);
@@ -729,12 +729,20 @@ namespace NXSG.Editor
             {
                 ("Lighting & shadows", "lighting", new List<string>()),
                 ("Rim & border", "rim", new List<string>()),
-                ("Advanced lighting", "advanced", new List<string>())
+                ("Advanced lighting", "advanced", new List<string>()),
+                ("Clearcoat", "coat", new List<string>()),
+                ("Velvet sheen", "sheen", new List<string>())
             };
-            var common = new HashSet<string> { "albedo", "normal", "emission", "opacity", "displacement" };
+            if (node.Operation == "core.surfaceParticles") groups = new List<(string title, string key, List<string> ports)>
+            {
+                ("Emission timing", "emission", new List<string>()),
+                ("Size & edges", "appearance", new List<string>()),
+                ("Motion", "motion", new List<string>())
+            };
+            var common = new HashSet<string> { "base", "albedo", "normal", "emission", "opacity", "displacement", "mask" };
             foreach (var port in ports)
             {
-                if (common.Contains(port) || node.Operation == "core.pbrSurface" && (port == "metallic" || port == "roughness"))
+                if (common.Contains(port) || (node.Operation == "core.pbrSurface" || node.Operation == "core.layeredPbrSurface") && (port == "metallic" || port == "roughness"))
                 {
                     AddSocket(box, node, port, false);
                     continue;
@@ -785,10 +793,15 @@ namespace NXSG.Editor
 
         static int SurfaceSocketGroup(string operation, string port)
         {
+            if (operation == "core.surfaceParticles")
+                return port == "density" || port == "emissionRate" || port == "lifetime" || port == "time" ? 0
+                    : port == "size" || port == "edgeSharpness" ? 1 : port == "speed" || port == "gravity" || port == "spread" ? 2 : -1;
+            if (operation == "core.layeredPbrSurface" && port.StartsWith("coat", StringComparison.Ordinal)) return 3;
+            if (operation == "core.layeredPbrSurface" && port.StartsWith("sheen", StringComparison.Ordinal)) return 4;
             if (port == "bentNormal" || port == "bentStrength" || port == "lightDirection" || port == "lightDirectionStrength") return 2;
             if (operation == "core.toonSurface" && (port.StartsWith("rim", StringComparison.Ordinal) || port.StartsWith("border", StringComparison.Ordinal))) return 1;
             if (operation == "core.toonSurface" && (port.StartsWith("shade", StringComparison.Ordinal) || port.StartsWith("threshold", StringComparison.Ordinal) || port.StartsWith("softness", StringComparison.Ordinal) || port.StartsWith("shadowStrength", StringComparison.Ordinal) || port.StartsWith("normalStrength", StringComparison.Ordinal) || port == "shadow" || port == "occlusion" || port.StartsWith("receiveShadow", StringComparison.Ordinal) || port.StartsWith("layerReceiveShadow", StringComparison.Ordinal))) return 0;
-            if (operation == "core.pbrSurface" && (port == "occlusion" || port == "shadow" || port == "specularAa")) return 0;
+            if ((operation == "core.pbrSurface" || operation == "core.layeredPbrSurface") && (port == "occlusion" || port == "shadow" || port == "specularAa")) return 0;
             return -1;
         }
 
@@ -815,13 +828,14 @@ namespace NXSG.Editor
             {
                 case "shadeColor": return "Shadow tint"; case "shadeMap": return "Shade map";
                 case "shadowStrength": return "Shadow strength"; case "normalStrength": return "Normal influence";
+                case "layerReceiveShadow2": return "Layer 2 shadows"; case "layerReceiveShadow3": return "Layer 3 shadows";
                 case "receiveShadow": return "Receive shadows"; case "layerReceiveShadow": return "Layer shadows";
                 case "occlusion": return "Occlusion"; case "shadow": return "Shadow";
                 case "borderColor": return "Border color"; case "borderWidth": return "Border width"; case "borderStrength": return "Border strength";
                 case "rimColor": return "Rim color"; case "rimStrength": return "Rim strength"; case "rimWidth": return "Rim width";
                 case "rimSoftness": return "Rim softness"; case "rimLightAlignment": return "Rim light alignment";
                 case "bentNormal": return "Bent normal"; case "bentStrength": return "Bent strength";
-                case "lightDirection": return "Light direction"; case "lightDirectionStrength": return "Light direction strength";
+                case "lightDirection": return "Light direction"; case "lightDirectionStrength": return "Direction influence";
                 case "metallic": return "Metallic"; case "roughness": return "Roughness"; case "specularAa": return "Specular anti-aliasing";
                 case "pixelWidth": return "Pixel width"; case "depthBias": return "Depth bias"; case "directionStrength": return "Direction influence";
                 case "coat": return "Coat weight"; case "coatRoughness": return "Coat roughness"; case "coatNormal": return "Coat normal";
@@ -989,6 +1003,7 @@ namespace NXSG.Editor
         {
             if (inspector == null) return;
             inspector.Clear();
+            inspectorProperties.Clear(); inspectorSectionUpdates.Clear();
             previewHost = new VisualElement { style = { marginBottom = 10 } };
             inspector.Add(previewHost); RefreshPreviewPanel();
             var library = new VisualElement { name = "node-library", style = { marginTop = 14 } };
@@ -1042,13 +1057,17 @@ namespace NXSG.Editor
                 if (GraphTypes.IsDynamic(node.Operation)) inspector.Add(new Label("Automatic type: " + (inferredTypes.TryGetValue(node.Id, out var inferred) && inferred == "float" ? "Number" : "Color"))
                     { style = { color = new Color(.7f, .8f, .9f), marginBottom = 4 } });
                 inspector.Add(new Label(NodeCatalog.Description(node.Operation)) { name = "nxsg-node-description", style = { whiteSpace = WhiteSpace.Normal, marginBottom = 6 } });
+                var legend = new Label("* Changed from default") { name = "nxsg-default-legend", tooltip = "An asterisk marks values that differ from a new node. It is separate from unsaved changes. Collapsed headings also mark changed settings inside." };
+                legend.AddToClassList("nxsg-help"); inspector.Add(legend);
                 AddNodePreviewControls(node);
                 AddEffectHandlesInspectorHook(node);
+                AddParameterNodeControls(node);
                 if (node.Operation == "core.constant")
                 {
                     var values = node.Properties["value"] as JArray;
                     var field = new ColorField("Color") { value = values != null && values.Count == 4 ? new Color((float)values[0], (float)values[1], (float)values[2], (float)values[3]) : Color.white };
                     field.RegisterValueChangedCallback(evt => Edit("Change color", () => { node.Properties["valueType"] = "color"; node.Properties["value"] = new JArray(evt.newValue.r, evt.newValue.g, evt.newValue.b, evt.newValue.a); }));
+                    TrackProperty(node, "value", field, new JArray(1, 1, 1, 1));
                     inspector.Add(field);
                 }
                 if (node.Operation == "core.texture2D") AddTexturePicker(node, "Texture");
@@ -1090,46 +1109,25 @@ namespace NXSG.Editor
                     case "core.emission": AddNumber(node, "strength", "Strength", 1, "strength"); break;
                     case "core.fresnel": AddNumber(node, "power", "Power", 5, "power"); break;
                     case "core.layer": AddNumber(node, "mask", "Mask", 1, "mask"); break;
-                    case "core.pbrSurface": AddLightingControls(node); AddAlbedoAlphaToggle(node); AddNumber(node, "opacity", "Opacity", 1, "opacity"); AddNumber(node, "cutoff", "Cutoff", .001f); AddNumber(node, "displacement", "Displacement", 0, "displacement"); AddNumber(node, "metallic", "Metallic", 0, "metallic"); AddNumber(node, "roughness", "Roughness", .5f, "roughness"); AddBoundedNumber(node,"specularAa","Specular anti-aliasing",0,1,0,"specularAa"); break;
+                    case "core.pbrSurface": AddSurfaceBasics(node, true); AddLightingControls(node); break;
                     case "core.output": AddOutputControls(node); break;
-                    case "core.toonSurface": AddToonLightingControls(node); AddLightingControls(node); AddAlbedoAlphaToggle(node); AddNumber(node, "opacity", "Opacity", 1, "opacity"); AddNumber(node, "cutoff", "Cutoff", .001f); AddNumber(node, "displacement", "Displacement", 0, "displacement"); break;
-                    case "core.surfaceParticles":
-                        AddInspectorSection("APPEARANCE");
-                        var sourceUvToggle = new Toggle("Color from mesh UVs") { value = (int?)node.Properties["sourceUV"] == 1,
-                            tooltip = "On: particle Albedo and Emission sample the connected texture at the spawn point on mesh UV0. Off: each particle displays the texture using its own sprite UVs. Opacity keeps sprite UVs." };
-                        sourceUvToggle.RegisterValueChangedCallback(evt => Edit("Change particle color UVs", () => node.Properties["sourceUV"] = evt.newValue ? 1 : 0));
-                        inspector.Add(sourceUvToggle);
-                        AddIndexedChoice(node,"blendMode","Blending",new[]{"Alpha","Additive"},1);
-                        AddInspectorSection("EMISSION");
-                        AddBoundedNumber(node,"density","Triangle density",0,1,.1f,"density");
-                        AddBoundedNumber(node,"emissionRate","Emission rate / triangle / sec",0,4,1 / Mathf.Max(.001f, (float?)node.Properties["lifetime"] ?? 2),"emissionRate");
-                        AddInspectorSection("SIZE & FADING");
-                        AddBoundedNumber(node,"size","Particle size",.0001f,1,.03f,"size");
-                        AddBoundedNumber(node,"edgeSharpness","Edge sharpness",0,1,0,"edgeSharpness");
-                        inspector.Add(new Label("Edge sharpness: 0 = soft puff, 1 = crisp circle. Opacity and lifetime fading still apply.") { style = { whiteSpace = WhiteSpace.Normal } });
-                        AddBoundedNumber(node,"lifetime","Lifetime (seconds)",.05f,30,2,"lifetime");
-                        AddParticleCurves(node);
-                        AddInspectorSection("MOTION");
-                        AddNumber(node,"speed","Outward speed",.2f,"speed");
-                        AddNumber(node,"gravity","Gravity (local Y)",0,"gravity");
-                        AddBoundedNumber(node,"spread","Velocity randomness",0,5,.05f,"spread");
-                        AddInspectorSection("OUTPUT");
-                        AddBoundedNumber(node,"opacity","Opacity",0,1,1,"opacity");
-                        AddBoundedNumber(node,"mask","Emitter mask",0,1,1,"mask");
-                        inspector.Add(new Label("Connect your surface to Base, then this node to Output. Emits from the same mesh: Density selects source triangles (1 = all). Rate requests births per source triangle per second. Connected Rate and Lifetime drive adaptive tessellation up to level 64; high values cost more. Change Rate or Lifetime to retime procedural particles; there is no persistent simulation. Mask uses mesh UVs. Color from mesh UVs samples particle color at its spawn point; otherwise it uses sprite UVs. Particles follow the current pose. Expand renderer bounds if particles disappear near screen edges.") { style = { whiteSpace = WhiteSpace.Normal } });
-                        break;
+                    case "core.toonSurface": AddToonLightingControls(node); AddLightingControls(node); AddSurfaceBasics(node); break;
+                    case "core.surfaceParticles": AddSurfaceParticleControls(node); break;
                     case "core.volumeSurface":
                         AddIndexedChoice(node,"mode","Rendering",new[]{"Volume · smoke / nebula","Solid SDF · lit surface"});
                         if ((int?)node.Properties["mode"] != 1) AddBoundedNumber(node,"density","Density",0,100,1,"density");
                         AddColorField(node,"color","Color",new Color(.4f,.2f,1,1),"color");
                         AddColorField(node,"emission","Emission",Color.black,"emission");
+                        InspectorSection(node, "raymarch-settings", "Raymarching and bounds", () =>
+                        {
                         var stepsField = new IntegerField("March steps (8–128)") { isDelayed = true, value = (int?)node.Properties["steps"] ?? 32 };
                         stepsField.RegisterValueChangedCallback(e => { if (e.newValue < 8 || e.newValue > 128) { stepsField.SetValueWithoutNotify(e.previousValue); SetStatus("Use 8–128 march steps."); return; } EditValue("Change march steps", () => node.Properties["steps"] = e.newValue); });
-                        inspector.Add(stepsField);
+                        TrackProperty(node,"steps",stepsField,32); inspector.Add(stepsField);
                         AddNumber(node,"maxDistance","Max travel (local units)",4);
                         AddVolumeVector(node,"bounds","Box half extents",Vector3.one*.5f);
                         AddIndexedChoice(node,"depthClip","Camera depth clipping",new[]{"Off · no depth required","On · needs camera depth"});
                         inspector.Add(new Label("Use a closed cube proxy, centered at the object origin, matching these bounds. Distance accepts an SDF shape. Connect Ray Position to 3D/4D Noise position for volumetric density. More steps cost more per pixel and per eye. Depth clipping cannot include most transparent objects; this volume does not cast self-shadows.") { style = { whiteSpace = WhiteSpace.Normal } });
+                        });
                         break;
                     case "core.sdfSphere": AddNumber(node,"radius","Radius",.3f,"radius"); break;
                     case "core.sdfBox": AddVolumeVector(node,"size","Half extents",Vector3.one*.3f); break;
@@ -1141,7 +1139,7 @@ namespace NXSG.Editor
                         AddBoundedNumber(node, "softDistance", "Soft intersection distance", 0, 5, 0);
                         inspector.Add(new Label("Particle color and lifetime alpha apply automatically. Use Renderer streams Position, Normal, Color, UV. Soft distance 0 disables depth fading; positive values need camera depth.") { style = { whiteSpace = WhiteSpace.Normal } });
                         break;
-                    case "core.unlitSurface": AddAlbedoAlphaToggle(node); AddNumber(node, "opacity", "Opacity", 1, "opacity"); AddNumber(node, "cutoff", "Cutoff", .001f); AddNumber(node, "displacement", "Displacement", 0, "displacement"); break;
+                    case "core.unlitSurface": AddSurfaceBasics(node); break;
                     case "core.sticker": AddTexturePicker(node, "Sticker texture"); AddVector(node, "position", "Position", Vector2.zero); AddVector(node, "size", "Size", Vector2.one); AddNumber(node, "rotation", "Rotation", 0); AddNumber(node, "mask", "Mask", 1, "mask"); break;
                     case "core.dissolve": AddNumber(node, "threshold", "Threshold", .5f, "threshold"); AddNumber(node, "edgeWidth", "Edge width", .05f); break;
                     case "core.flipbook": AddNumber(node, "columns", "Columns", 1); AddNumber(node, "rows", "Rows", 1); AddNumber(node, "speed", "Speed", 1); break;
@@ -1154,7 +1152,7 @@ namespace NXSG.Editor
                     case "core.normalMap":
                         AddNumber(node, "strength", "Strength", 1);
                         var flipGreen=new Toggle("Flip green (DirectX/OpenGL)"){value=(int?)node.Properties["flipGreen"]==1};
-                        flipGreen.RegisterValueChangedCallback(evt=>Edit("Flip normal green",()=>node.Properties["flipGreen"]=evt.newValue?1:0));inspector.Add(flipGreen);break;
+                        flipGreen.RegisterValueChangedCallback(evt=>Edit("Flip normal green",()=>node.Properties["flipGreen"]=evt.newValue?1:0));TrackProperty(node,"flipGreen",flipGreen,0);inspector.Add(flipGreen);break;
                     case "core.darknessGlow":
                         AddNumber(node,"strength","Glow strength",1,"strength");AddNumber(node,"threshold","Light threshold",.4f,"threshold");AddNumber(node,"softness","Soft transition",.2f,"softness");break;
                     case "core.ltcgi":
@@ -1171,6 +1169,7 @@ namespace NXSG.Editor
             if (libraryPanel != null) { libraryPanel.Clear(); libraryPanel.Add(library); }
             AddParameterControls();
             AddFrameControls();
+            RefreshInspectorMarkers();
         }
 
         void AddNodePreviewControls(GraphNode node)
@@ -1182,11 +1181,14 @@ namespace NXSG.Editor
             }).ToList();
             if (ports.Count == 0) return;
             if (string.IsNullOrEmpty(selectedPreviewPort) || !ports.Contains(selectedPreviewPort)) selectedPreviewPort = ports[0];
+            InspectorSection(node, "preview", "Node preview", () =>
+            {
             var field = new PopupField<string>("Preview output", ports, Math.Max(0, ports.IndexOf(selectedPreviewPort)));
             field.tooltip = "Preview this node output without changing graph connections.";
             field.RegisterValueChangedCallback(evt => selectedPreviewPort = evt.newValue);
             inspector.Add(field);
             inspector.Add(new Button(() => PreviewNode(node, selectedPreviewPort)) { text = "Preview selected node", tooltip = "Build a temporary preview graph from this output. Original graph stays unchanged." });
+            });
         }
 
         ShaderGraph PreparePreviewGraph()
@@ -1263,8 +1265,9 @@ namespace NXSG.Editor
                     return new JArray(position, color.r, color.g, color.b, color.a);
                 }));
                 gradient = evt.newValue; field.SetValueWithoutNotify(gradient);
-                session.json = GraphJson.Serialize(graph, true); hasUnsavedChanges = true; EditorUtility.SetDirty(session); QueueLivePreview();
+                session.json = GraphJson.Serialize(graph, true); hasUnsavedChanges = true; EditorUtility.SetDirty(session); RefreshInspectorMarkers(); QueueLivePreview();
             });
+            TrackProperty(node, "stops", field, null);
             inspector.Add(field);
         }
 
@@ -1290,29 +1293,38 @@ namespace NXSG.Editor
                 if (!(graph.Adapter["textures"] is JObject)) graph.Adapter["textures"] = new JObject();
                 ((JObject)graph.Adapter["textures"])[resourceId ?? ""] = evt.newValue == null ? "" : AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(evt.newValue));
             }));
+            inspectorProperties.Add(new InspectorProperty {
+                element = field,
+                changed = () => !string.IsNullOrEmpty((string)(graph.Adapter?["textures"] as JObject)?[resourceId ?? ""])
+                    || resource != null && !string.IsNullOrEmpty(resource.Uri) && !resource.Uri.StartsWith("builtin://", StringComparison.Ordinal),
+                update = changed => field.label = label + (changed ? " *" : "")
+            });
             inspector.Add(field);
         }
 
         void AddAudioLinkControls(GraphNode node)
         {
-            var bandValue = node.Properties["band"] != null ? (int)node.Properties["band"] : 0;
-            var band = new PopupField<string>("Band", new List<string> { "Bass", "Low mids", "High mids", "Treble" }, Mathf.Clamp(bandValue, 0, 3));
-            band.RegisterValueChangedCallback(evt => Edit("Change AudioLink band", () => node.Properties["band"] = band.index));
-            inspector.Add(band);
+            AddIndexedChoice(node, "band", "Band", new[] { "Bass", "Low mids", "High mids", "Treble" });
             AddNumber(node, "gain", "Gain", 1);
-            var range = new Toggle("Clamp range") { value = (int?)node.Properties["rangeEnabled"] == 1,
-                tooltip = "Clamp AudioLink output after gain. Disabled keeps the full gain response." };
-            range.RegisterValueChangedCallback(e => Edit("Change AudioLink range mode", () => node.Properties["rangeEnabled"] = e.newValue ? 1 : 0));
-            inspector.Add(range);
-            AddNumber(node, "min", "Minimum", 0);
-            AddNumber(node, "max", "Maximum", 1);
             AddUnitNumber(node, "smoothing", "Smoothing", .5f);
             AddNumber(node, "fallback", "Fallback", 0);
-            var toggle = new Toggle("Preview AudioLink") { value = audioPreviewEnabled, tooltip = "Simulate AudioLink only in temporary preview material." };
-            var slider = new Slider("Preview value", 0, 1) { value = audioPreviewValue, showInputField = true, tooltip = "Simulate the same input amplitude for all AudioLink nodes; each node keeps its gain." };
-            toggle.RegisterValueChangedCallback(evt => { audioPreviewEnabled = evt.newValue; ApplyAudioLinkPreview(); });
-            slider.RegisterValueChangedCallback(evt => { audioPreviewValue = Mathf.Clamp01(evt.newValue); ApplyAudioLinkPreview(); });
-            inspector.Add(toggle); inspector.Add(slider);
+            InspectorSection(node, "audio-range", "Output range", () =>
+            {
+                var range = new Toggle("Clamp range") { value = (int?)node.Properties["rangeEnabled"] == 1,
+                    tooltip = "Limit output after gain. Off preserves the full signal." };
+                range.RegisterValueChangedCallback(e => Edit("Change AudioLink range mode", () => node.Properties["rangeEnabled"] = e.newValue ? 1 : 0));
+                TrackProperty(node, "rangeEnabled", range, 0); inspector.Add(range);
+                AddNumber(node, "min", "Minimum", 0);
+                AddNumber(node, "max", "Maximum", 1);
+            });
+            InspectorSection(node, "audio-preview", "Preview input", () =>
+            {
+                var toggle = new Toggle("Preview AudioLink") { value = audioPreviewEnabled, tooltip = "Simulate AudioLink in temporary preview materials only." };
+                var slider = new Slider("Preview value", 0, 1) { value = audioPreviewValue, showInputField = true, tooltip = "Simulates the input amplitude for all AudioLink nodes; each keeps its gain." };
+                toggle.RegisterValueChangedCallback(evt => { audioPreviewEnabled = evt.newValue; ApplyAudioLinkPreview(); });
+                slider.RegisterValueChangedCallback(evt => { audioPreviewValue = Mathf.Clamp01(evt.newValue); ApplyAudioLinkPreview(); });
+                inspector.Add(toggle); inspector.Add(slider);
+            });
         }
 
         void SetAudioLinkPreview(bool enabled, float value)
@@ -1356,10 +1368,11 @@ namespace NXSG.Editor
                     AnimationUtility.SetKeyRightTangentMode(curve, i, AnimationUtility.TangentMode.Linear);
                 }
                 field.SetValueWithoutNotify(curve);
-                session.json = GraphJson.Serialize(graph, true); hasUnsavedChanges = true; EditorUtility.SetDirty(session);
+                session.json = GraphJson.Serialize(graph, true); hasUnsavedChanges = true; EditorUtility.SetDirty(session); RefreshInspectorMarkers();
                 QueueLivePreview();
                 SetStatus("Unsaved Ramp curve · preview updates after a short pause.");
             });
+            TrackProperty(node, "points", field, new JArray(new JArray(0, 0), new JArray(1, 1)));
             inspector.Add(field);
             inspector.Add(new Button(() => Edit("Reset Ramp curve", () => node.Properties["points"] = new JArray(new JArray(0, 0), new JArray(1, 1)))) { text = "Reset curve" });
         }
@@ -1380,11 +1393,12 @@ namespace NXSG.Editor
                 Undo.RegisterCompleteObjectUndo(session, "Change Factor");
                 node.Properties["factor"] = value;
                 session.json = GraphJson.Serialize(graph, true);
-                hasUnsavedChanges = true; EditorUtility.SetDirty(session);
+                hasUnsavedChanges = true; EditorUtility.SetDirty(session); RefreshInspectorMarkers();
                 // Keep the active slider alive while dragging; no graph structure changed.
                 QueueLivePreview();
                 SetStatus(livePreview ? "Unsaved edits · live preview updates after a short pause." : "Unsaved edits · preview shows the last successful build.");
             });
+            TrackProperty(node, "factor", field, .5f);
             inspector.Add(field);
         }
 
@@ -1396,8 +1410,9 @@ namespace NXSG.Editor
                 if (float.IsNaN(evt.newValue) || float.IsInfinity(evt.newValue)) return;
                 Undo.RegisterCompleteObjectUndo(session,"Change " + label);
                 node.Properties[property] = Mathf.Clamp01(evt.newValue); field.SetValueWithoutNotify((float)node.Properties[property]);
-                session.json = GraphJson.Serialize(graph,true); hasUnsavedChanges = true; EditorUtility.SetDirty(session); QueueLivePreview();
+                session.json = GraphJson.Serialize(graph,true); hasUnsavedChanges = true; EditorUtility.SetDirty(session); RefreshInspectorMarkers(); QueueLivePreview();
             });
+            TrackProperty(node, property, field, fallback);
             inspector.Add(field);
         }
 
@@ -1409,6 +1424,7 @@ namespace NXSG.Editor
                 tooltip = help ?? "Used when the " + property + " input is unconnected. Matching uses RGB in the graph's working space; alpha is ignored." };
             field.SetEnabled(!graph.Connections.Any(edge => edge.To.NodeId == node.Id && edge.To.PortId == property));
             field.RegisterValueChangedCallback(evt => EditValue("Change " + label, () => node.Properties[property] = new JArray(evt.newValue.r, evt.newValue.g, evt.newValue.b, evt.newValue.a)));
+            TrackProperty(node, property, field, new JArray(fallback.r, fallback.g, fallback.b, fallback.a));
             inspector.Add(field);
         }
 
@@ -1421,11 +1437,14 @@ namespace NXSG.Editor
             if (node.Operation == "core.colorAdjust")
             {
                 AddBoundedNumber(node, "saturation", "Saturation", 0, 2, 1, "saturation", "0 = grayscale, 1 = unchanged. Higher values intensify color.");
+                InspectorSection(node, "tonal-adjustments", "Tone and exposure", () =>
+                {
                 AddNumber(node, "lift", "Lift", 0, "lift", "0 = unchanged. Raises shadows toward white; negative values deepen them.");
                 AddBoundedNumber(node, "gamma", "Gamma", .01f, 4, 1, "gamma", "1 = unchanged. Higher values brighten midtones. Values below 0.0001 evaluate as 0.0001.");
                 AddNumber(node, "gain", "Gain", 1, "gain", "Multiplies RGB. 1 = unchanged, 2 = twice the value.");
                 AddNumber(node, "contrast", "Contrast", 1, "contrast", "1 = unchanged, 0 = flat 0.5 gray. Contrast pivots around 0.5.");
                 AddNumber(node, "exposure", "Exposure (stops)", 0, "exposure", "0 = unchanged. +1 doubles RGB; -1 halves it.");
+                });
             }
             inspector.Add(new Button(() => ResetColorAdjustment(node)) { name = "reset-color-adjustments", text = "Reset unconnected controls",
                 tooltip = "Restore neutral numeric values. Connected inputs, wires and hue space stay as they are. Undo restores your settings." });
@@ -1456,6 +1475,7 @@ namespace NXSG.Editor
                 if (node.Operation == "core.value" || node.Operation == "core.constant") Edit("Change " + label, () => node.Properties[property] = evt.newValue);
                 else EditValue("Change " + label, () => node.Properties[property] = evt.newValue);
             });
+            TrackProperty(node, property, field, fallback);
             inspector.Add(field);
         }
 
@@ -1465,9 +1485,11 @@ namespace NXSG.Editor
             var field = new Vector3Field(label) { value = v != null && v.Count == 3 ? new Vector3((float)v[0], (float)v[1], (float)v[2]) : fallback };
             field.RegisterValueChangedCallback(e => {
                 var value = e.newValue;
-                if (new[]{value.x,value.y,value.z}.Any(x => float.IsNaN(x) || float.IsInfinity(x) || x <= 0 || x > 100)) { SetStatus("Use positive extents up to 100 local units."); return; }
+                if (new[]{value.x,value.y,value.z}.Any(x => float.IsNaN(x) || float.IsInfinity(x) || x <= 0 || x > 100)) { field.SetValueWithoutNotify(e.previousValue); SetStatus("Use positive extents up to 100 local units."); return; }
                 EditValue("Change " + label, () => node.Properties[property] = new JArray(value.x,value.y,value.z));
             });
+            TrackProperty(node, property, field, new JArray(fallback.x, fallback.y, fallback.z));
+            StackVectorField(field);
             inspector.Add(field);
         }
 
@@ -1478,9 +1500,11 @@ namespace NXSG.Editor
             field.RegisterValueChangedCallback(evt =>
             {
                 var value = evt.newValue;
-                if (float.IsNaN(value.x) || float.IsInfinity(value.x) || float.IsNaN(value.y) || float.IsInfinity(value.y)) { SetStatus("Enter finite vector values."); return; }
-                Edit("Change " + label, () => node.Properties[property] = new JArray(value.x, value.y));
+                if (float.IsNaN(value.x) || float.IsInfinity(value.x) || float.IsNaN(value.y) || float.IsInfinity(value.y)) { field.SetValueWithoutNotify(evt.previousValue); SetStatus("Enter finite vector values."); return; }
+                EditValue("Change " + label, () => node.Properties[property] = new JArray(value.x, value.y));
             });
+            TrackProperty(node, property, field, new JArray(fallback.x, fallback.y));
+            StackVectorField(field);
             inspector.Add(field);
         }
 

@@ -58,7 +58,7 @@ namespace NXSG.Editor
 
         VisualElement CreateSidebar()
         {
-            sidebar = new VisualElement { name = "nxsg-sidebar", style = { minWidth = 240, backgroundColor = new Color(.153f,.165f,.18f) } };
+            sidebar = new VisualElement { name = "nxsg-sidebar", style = { minWidth = 280, backgroundColor = new Color(.153f,.165f,.18f) } };
             sidebar.RegisterCallback<GeometryChangedEvent>(evt => { if (evt.newRect.width > 0) sidebarWidth = evt.newRect.width; });
             var tabs = new Toolbar { style = { minHeight = 30 } };
             var inspectorTab = new ToolbarButton(() => ShowSidebarTab(0)) { text = "Inspector" };
@@ -102,6 +102,7 @@ namespace NXSG.Editor
             if (graph == null) return;
             Undo.RegisterCompleteObjectUndo(session, name);
             action();
+            RefreshInspectorMarkers();
             session.json = GraphJson.Serialize(graph, true);
             hasUnsavedChanges = true;
             EditorUtility.SetDirty(session);

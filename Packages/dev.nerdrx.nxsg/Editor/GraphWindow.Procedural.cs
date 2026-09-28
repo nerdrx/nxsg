@@ -21,6 +21,7 @@ namespace NXSG.Editor
             { tooltip = "A connected UV wire overrides this choice. Mesh UV and Polar do not follow the camera. UV1–UV3 require those channels on your mesh." };
             field.SetEnabled(!graph.Connections.Any(e => e.To.NodeId == node.Id && e.To.PortId == "uv"));
             field.RegisterValueChangedCallback(evt => Edit("Change coordinates", () => node.Properties["coordinateSource"] = keys[Array.IndexOf(labels, evt.newValue)]));
+            TrackProperty(node, "coordinateSource", field, "uv0");
             inspector.Add(field);
             if (node.Operation == "core.polarUV")
                 inspector.Add(new HelpBox("Polar is applied after these input coordinates. For plain Panosphere, select Panosphere from the node header menu.", HelpBoxMessageType.Info));
@@ -30,6 +31,7 @@ namespace NXSG.Editor
         {
             var field = new PopupField<string>(label, choices.ToList(), Mathf.Clamp(((int?)node.Properties[property] ?? fallback) - first, 0, choices.Length - 1)) { tooltip = help };
             field.RegisterValueChangedCallback(evt => Edit("Change " + label, () => node.Properties[property] = Array.IndexOf(choices, evt.newValue) + first));
+            TrackProperty(node, property, field, fallback);
             inspector.Add(field);
         }
 
@@ -45,6 +47,7 @@ namespace NXSG.Editor
                 { tooltip = "Used when Position is unconnected. Object coordinates follow object transforms; World coordinates stay fixed in the scene." };
                 field.SetEnabled(!graph.Connections.Any(e => e.To.NodeId == node.Id && e.To.PortId == "position"));
                 field.RegisterValueChangedCallback(evt => Edit("Change position space", () => node.Properties["coordinateSpace"] = field.index == 1 ? "world" : "object"));
+                TrackProperty(node, "coordinateSpace", field, "object");
                 inspector.Add(field);
             }
             AddNumber(node, "scale", "Scale", 5);
@@ -116,7 +119,10 @@ namespace NXSG.Editor
             });
             slider.labelElement.style.display = DisplayStyle.None;
             slider.tooltip = (help == null ? "" : help + "\n") + label + ": drag within " + min + "–" + max + ", or type a value on the right.";
-            inspector.Add(new Label(label + (connected ? " · connected" : "")) { tooltip = connected ? row.tooltip : number.tooltip });
+            var caption = new Label(label + (connected ? " · connected" : "")) { tooltip = connected ? row.tooltip : number.tooltip };
+            caption.AddToClassList("nxsg-control-label");
+            TrackProperty(node, property, number, changed => caption.text = label + (changed ? " *" : "") + (connected ? " · connected" : ""), fallback);
+            inspector.Add(caption);
             row.Add(slider);
             row.Add(number);
             inspector.Add(row);

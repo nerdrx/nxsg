@@ -126,6 +126,12 @@ public static class SurfaceSocketFoldoutSmoke
                     Graph.Connections.Add(new GraphConnection { Id = "connected-all-" + port, From = new GraphPortRef { NodeId = "color", PortId = "value" }, To = new GraphPortRef { NodeId = "toon", PortId = port } });
                 var pbr = NodeCatalog.Create("core.pbrSurface"); pbr.Id = "pbr"; Graph.Nodes.Add(pbr);
                 Graph.Layout.Nodes["pbr"] = new GraphNodeLayout { X = 550, Y = 100 };
+                foreach (var operation in new[] { "core.layeredPbrSurface", "core.surfaceParticles" })
+                {
+                    var extra = NodeCatalog.Create(operation); extra.Id = operation; Graph.Nodes.Add(extra);
+                    Graph.Layout.Nodes[extra.Id] = new GraphNodeLayout { X = 800, Y = 100 };
+                }
+                Graph.Connections.Add(new GraphConnection { Id = "connected-rate", From = new GraphPortRef { NodeId = "color", PortId = "value" }, To = new GraphPortRef { NodeId = "core.surfaceParticles", PortId = "emissionRate" } });
                 Invoke("Rebuild"); phase = 5;
             }
             else
@@ -135,6 +141,12 @@ public static class SurfaceSocketFoldoutSmoke
                 var pbrCard = nodes["pbr"];
                 foreach (var port in new[] { "albedo", "normal", "emission", "opacity", "displacement", "metallic", "roughness" })
                     Require(hit("pbr", port).parent.parent == pbrCard, "PBR common input is not always visible: " + port);
+                var layered = nodes["core.layeredPbrSurface"];
+                Require(layered.Q<Foldout>("surface-sockets-coat")?.value == false && layered.Q<Foldout>("surface-sockets-sheen")?.value == false, "Layered PBR secondary groups are not collapsed");
+                var particles = nodes["core.surfaceParticles"];
+                Require(particles.Q<Foldout>("surface-sockets-emission")?.value == false && particles.Q<Foldout>("surface-sockets-motion")?.value == false, "Particle secondary groups are not collapsed");
+                Require(hit("core.surfaceParticles", "emissionRate").worldBound.height > 0 && hit("core.surfaceParticles", "emissionRate").parent.parent == particles, "Connected particle rate is hidden");
+                Require(hit("core.surfaceParticles", "lifetime").worldBound.height == 0, "Unused particle lifetime is visible while collapsed");
                 Debug.Log("NXSG SURFACE SOCKET FOLDOUT SMOKE PASSED"); Finish(0);
             }
         }

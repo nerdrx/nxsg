@@ -147,6 +147,7 @@ namespace NXSG.Editor
                 field.SetValueWithoutNotify(curve);
                 SetStatus("Unsaved " + label + " · preview updates after a short pause.");
             });
+            TrackProperty(node, property, field, new JArray(new JArray(0, 1), new JArray(1, 1)));
             inspector.Add(field);
         }
 
@@ -169,6 +170,7 @@ namespace NXSG.Editor
                 field.SetValueWithoutNotify(gradient);
                 SetStatus("Unsaved " + label + " · preview updates after a short pause.");
             });
+            TrackProperty(node, property, field, new JArray(new JArray(0, 1, 1, 1, 1), new JArray(1, 1, 1, 1, 1)));
             inspector.Add(field);
         }
 

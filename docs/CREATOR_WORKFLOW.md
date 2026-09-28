@@ -4,28 +4,34 @@ This page describes the editor tools currently available in the Linux Unity
 2022.3.22f1 package. Open **Tools → NXSG → Open Graph Editor**, then open or
 create a graph and save it inside `Assets` before building.
 
-## Create menu
+## Tools menu
 
-The graph editor's **Create** menu collects small creator tools:
+The graph editor's **Tools** toolbar menu groups its commands by area:
 
-- **Material playground / compare** opens a temporary preview lab for the
-  current graph snapshot. Reopen it from Create to load subsequent graph edits. It renders a sphere or cube with Studio, Dark, or Colored
+- **Tools → Preview → Material playground and comparison** opens a temporary
+  preview lab for the current graph snapshot. Reopen it from the same menu to
+  load subsequent graph edits. It renders a sphere or cube with Studio, Dark, or Colored
   Lights, advances a preview clock, and lets you pause, loop, scrub, and change
   speed. **Snapshot A** and **Snapshot B** retain image comparisons.
-- **Why does the scene look different?** shows whether the preview contains
-  unsaved edits, which material is selected, and the current build status. It also lists properties differing from shader defaults and checks the generated shader hash. Lighting, probes and mesh differences still need a visual comparison.
-- **Bookmark current view…** and **Jump to bookmark…** save and restore graph
-  pan and zoom in the `.nxsg` layout. Bookmarks are named and can be deleted.
-- **Bake selected output to texture…** accepts a numeric or color output from a
+- **Tools → Preview → Why does the scene look different?** shows whether the
+  preview contains unsaved edits, which material is selected, and the current
+  build status. It also lists properties differing from shader defaults and
+  checks the generated shader hash. Lighting, probes and mesh differences still
+  need a visual comparison.
+- **Tools → View → Bookmark current view…** and **Tools → View → Jump to
+  bookmark…** save and restore graph pan and zoom in the `.nxsg` layout.
+  Bookmarks are named and can be deleted.
+- **Tools → Material → Bake selected output to texture…** accepts a numeric or color output from a
   UV-local branch at 256, 512, 1024, or 2048 square. It writes a linear,
   non-HDR 8-bit PNG, clamps HDR and negative values, and keeps the source graph
   editable. The baker rejects time, geometry-dependent, and unsupported nodes.
 
-The same menu contains **Review selected textures…** and **Import texture
-set…**. Review lets you correct filename suggestions for albedo, mask, normal,
-roughness, metallic, ambient occlusion, height, and flow slots. It previews RGBA or one
-channel at a time, chooses a mask channel, supports mask inversion and
-strength, and creates a mask, flow, or reviewed graph. Normal previews decode
+**Tools → Textures → Review selected textures…** and **Tools → Textures → Import
+texture set…** open the texture review workflow. You can correct filename
+suggestions for albedo, mask, normal, roughness, metallic, ambient occlusion,
+height, and flow slots. It previews RGBA or one channel at a time, chooses a
+mask channel, supports mask inversion and strength, and creates a mask, flow, or
+reviewed graph. Normal previews decode
 the normal map; the graph inspector's **Flip green (DirectX/OpenGL)** option
 handles green-channel orientation. NXSG does not change Unity importer
 settings for you.
@@ -51,8 +57,8 @@ matching group in the generated material inspector. Clearing the field removes
 the group. Group data lives in the graph adapter and survives display-name
 changes.
 
-In the graph material menu, choose **Material → Save preset…** or **Material →
-Load preset…**. Presets are Unity assets containing shader-compatible values,
+In the graph editor's **Tools → Material** submenu, choose **Save preset…** or
+**Load preset…**. Presets are Unity assets containing shader-compatible values,
 textures, and texture scale/offset. Loading checks the exact shader name,
 records Undo for the target material, and leaves incompatible targets
 untouched. The underlying utility also supports applying one preset to multiple

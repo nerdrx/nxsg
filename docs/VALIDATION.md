@@ -1009,3 +1009,31 @@ Windows-target compilation on Linux does not establish native Windows rendering,
 VRChat upload/client behavior, headset output, or mirror appearance. After
 updating NXSG, rebuild existing graphs with **Build for VRChat**: changing the
 package does not rewrite previously generated shader assets.
+
+## Version 2 editor polish — 2026-09-28
+
+- **Window layout:** `EditorPolishCapture` passed wide and 850×500 layouts,
+  visible numeric-field bounds, preview collapse, and a connected-node picker
+  opened at the bottom-right canvas edge. The fixture explicitly excludes
+  closed-foldout contents from visible-field checks. Log:
+  `work/unity/editor-v2-layout-final.log`.
+- **Inspector behavior:** `InspectorPolishSmoke` opened all **181** catalog
+  operations and confirmed that fresh nodes have no changed-default markers.
+  Editing a value updated its field and section asterisks immediately; Undo
+  restored the default and cleared both. Foldout state survived inspector
+  rebuilds. XYZ components fit within the narrow sidebar. Log:
+  `work/unity/inspector-v2-defaults.log`.
+- **Graph sockets:** `SurfaceSocketFoldoutSmoke` passed connected-input
+  visibility, hidden-input hit rejection, alignment, persistence and empty-group
+  suppression. Additional checks cover Layered PBR coat/sheen sections and
+  Surface Particles timing/motion sections. Log:
+  `work/unity/surface-foldouts-v2.log`.
+- **Portable suite:** graph and compiler checks passed. Log:
+  `work/portable-v2.log`.
+- **Packaging:** 11 Python tests passed; all 146 package metadata GUIDs are
+  unique and every C# source has metadata. Log: `work/packaging-v2.log`.
+
+[Actual inspector capture](images/inspector-v2.png). Editor checks ran in an
+isolated Unity 2022.3.22f1 project under headless Gamescope on Linux. They do not
+cover every OS, theme or display scale. This pass changes editor organization
+and controls; existing graph property IDs and shader calculations are retained.

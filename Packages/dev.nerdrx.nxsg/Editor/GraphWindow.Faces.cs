@@ -14,15 +14,14 @@ namespace NXSG.Editor
 
         void AddFaceOutputControls(GraphNode node)
         {
-            AddInspectorSection("FACE RENDERING");
             AddIndexedChoice(node, "flipBackfaceNormals", "Flip back-face normals", new[] { "Off", "On" });
             AddIndexedChoice(node, "alphaToCoverage", "Alpha to coverage", new[] { "Off", "On" });
             AddBoundedNumber(node, "alphaEdgeSharpness", "Alpha edge sharpness", 0, 1, 0);
             FeatureNote("Alpha to coverage maps fragment alpha to MSAA sample coverage. It needs multisample anti-aliasing. Edge sharpness hardens the alpha transition.");
             AddIndexedChoice(node, "twoPassTransparency", "Two-sided transparency", new[] { "Off", "Back then front" });
             if ((int?)node.Properties["twoPassTransparency"] != 1) return;
-            FurSection("Back-face pass", () => AddTransparencyPassControls(node, "back"));
-            FurSection("Front-face pass", () => AddTransparencyPassControls(node, "front"));
+            InspectorSection(node,"output.back-pass","Back-face pass",()=>AddTransparencyPassControls(node,"back"));
+            InspectorSection(node,"output.front-pass","Front-face pass",()=>AddTransparencyPassControls(node,"front"));
             FeatureNote("Each pass draws one face orientation. Pass order is back first, then front; transparent object sorting still applies.");
         }
 

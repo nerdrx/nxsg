@@ -14,15 +14,16 @@ namespace NXSG.Editor
     {
         void AddCreatorMenu(Toolbar toolbar)
         {
-            var tools = new ToolbarMenu { text="Create", tooltip="Preview, import, bake and organize your material" };
-            tools.menu.AppendAction("Material playground / compare", _ => OpenMaterialPlayground());
-            tools.menu.AppendAction("Place selected sticker…", _ => OpenEffectHandlesForSelectedNode());
-            tools.menu.AppendAction("Create avatar motion driver…", _ => MotionDriverWindow.Open());
-            tools.menu.AppendAction("Why does the scene look different?", _ => ShowPreviewDiagnostics());
-            tools.menu.AppendAction("Bookmark current view…", _ => BookmarkDialog());
-            tools.menu.AppendAction("Jump to bookmark…", _ => BookmarkMenu());
-            tools.menu.AppendAction("Bake selected output to texture…", _ => BakeSelected());
-            AddTextureToolsMenu(tools);
+            var tools = new ToolbarMenu { text="Tools", tooltip="Preview, manage materials and textures, and organize your graph view." };
+            tools.menu.AppendAction("Preview/Material playground and comparison", _ => OpenMaterialPlayground());
+            tools.menu.AppendAction("Preview/Why does the scene look different?", _ => ShowPreviewDiagnostics());
+            tools.menu.AppendAction("Textures/Review selected textures…", _ => TextureSetReviewWindow.Open(this, Selection.GetFiltered<Texture2D>(SelectionMode.Assets)));
+            tools.menu.AppendAction("Textures/Import texture set…", _ => TextureSetReviewWindow.Open(this, Array.Empty<Texture2D>()));
+            tools.menu.AppendAction("Material/Bake selected output to texture…", _ => BakeSelected());
+            tools.menu.AppendAction("Scene/Place selected sticker…", _ => OpenEffectHandlesForSelectedNode());
+            tools.menu.AppendAction("Scene/Create avatar motion driver…", _ => MotionDriverWindow.Open());
+            tools.menu.AppendAction("View/Bookmark current view…", _ => BookmarkDialog());
+            tools.menu.AppendAction("View/Jump to bookmark…", _ => BookmarkMenu());
             AddMaterialToolsMenu(tools);
             toolbar.Add(tools);
         }

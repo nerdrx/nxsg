@@ -16,6 +16,7 @@ public static class EditorPolishCapture
     static GraphWindow window;
     static int phase;
     static int ticks;
+    static double phaseStartedAt;
 
     static object Get(string name) => typeof(GraphWindow).GetField(name, Private).GetValue(window);
     static void Invoke(string name, params object[] args) => typeof(GraphWindow).GetMethod(name, Private).Invoke(window, args);
@@ -36,8 +37,7 @@ public static class EditorPolishCapture
             if (File.Exists(sample)) Invoke("LoadPath", sample);
             else Invoke("NewGraph");
 
-            phase = 0;
-            ticks = 0;
+            SetPhase(0);
             EditorApplication.update += Tick;
         }
         catch (Exception exception)
@@ -49,15 +49,14 @@ public static class EditorPolishCapture
 
     static void Tick()
     {
-        if (++ticks < 90) return;
+        if (++ticks < 90 || EditorApplication.timeSinceStartup - phaseStartedAt < .5) return;
         try
         {
-            if (phase == 0) { var g=(NXSG.Core.ShaderGraph)Get("graph"); Invoke("SelectNode", g.Nodes.First(n=>n.Operation=="core.surfaceParticles").Id, false); Invoke("FrameNodes", false); phase = 1; ticks = 0; return; }
+            if (phase == 0) { var g=(NXSG.Core.ShaderGraph)Get("graph"); Invoke("SelectNode", g.Nodes.First(n=>n.Operation=="core.surfaceParticles").Id, false); Invoke("FrameNodes", false); SetPhase(1); return; }
             if (phase == 1)
             {
                 CaptureEditor();
-                phase = 2;
-                ticks = 0;
+                SetPhase(2);
                 return;
             }
 
@@ -66,19 +65,19 @@ public static class EditorPolishCapture
                 Check(File.Exists("/tmp/nxsg-editor-current.png"), "Gamescope did not write its screenshot.");
                 File.Copy("/tmp/nxsg-editor-current.png", "Library/NXSG/editor-current.png", true);
                 window.position = new Rect(0, 0, 850, 500);
-                phase = 3; ticks = 0; return;
+                SetPhase(3); return;
             }
             CheckNarrowLayout();
             if (phase == 3)
             {
                 File.Copy("Library/NXSG/editor-current.png", "Library/NXSG/ui-wide.png", true);
                 ((VisualElement)Get("previewHost")).Q<Foldout>().value=false;
-                phase=7; ticks=0; return;
+                SetPhase(7); return;
             }
             if (phase == 7)
             {
                 Check(!((VisualElement)Get("previewHost")).Q<Foldout>().value,"Preview did not collapse");
-                CaptureEditor(); phase=4; ticks=0; return;
+                CaptureEditor(); SetPhase(4); return;
             }
             if (phase == 4)
             {
@@ -89,7 +88,7 @@ public static class EditorPolishCapture
                 typeof(GraphWindow).GetField("pendingPort",Private).SetValue(window,"surface");
                 typeof(GraphWindow).GetField("pendingOutput",Private).SetValue(window,true);
                 var c=(VisualElement)Get("canvas");Invoke("ShowSpawnMenu",new Vector2(c.worldBound.xMax-5,c.worldBound.yMax-5));
-                phase=5;ticks=0;return;
+                SetPhase(5);return;
             }
             if(phase==5)
             {
@@ -97,7 +96,7 @@ public static class EditorPolishCapture
                 Check(menu.worldBound.xMin>=c.worldBound.xMin && menu.worldBound.xMax<=c.worldBound.xMax+1 && menu.worldBound.yMin>=c.worldBound.yMin && menu.worldBound.yMax<=c.worldBound.yMax+1,"Connected-node popup escaped canvas");
                 var search=menu.Q<ToolbarSearchField>();
                 Check(search.worldBound.xMax<=menu.worldBound.xMax && search.worldBound.xMin>=menu.worldBound.xMin,"Popup search escaped menu");
-                CaptureEditor();phase=6;ticks=0;return;
+                CaptureEditor();SetPhase(6);return;
             }
             File.Copy("/tmp/nxsg-editor-current.png", "Library/NXSG/ui-popup.png", true);
             EditorApplication.update -= Tick;
@@ -112,6 +111,13 @@ public static class EditorPolishCapture
             Debug.LogException(exception);
             EditorApplication.Exit(1);
         }
+    }
+
+    static void SetPhase(int value)
+    {
+        phase = value;
+        ticks = 0;
+        phaseStartedAt = EditorApplication.timeSinceStartup;
     }
 
     static void CaptureEditor()
@@ -139,10 +145,24 @@ public static class EditorPolishCapture
         Check(canvas.worldBound.width > 0 && inspector.worldBound.width > 0, "Narrow layout lost canvas or inspector width.");
         var sidebar=window.rootVisualElement.Q("nxsg-sidebar");
         Check(sidebar.worldBound.xMax<=root.xMax+1,"Sidebar escaped window");
-        foreach(var field in inspector.Query<FloatField>().ToList())
+        var visibleFields = inspector.Query<FloatField>().ToList().Where(field => IsDisplayed(field, inspector)).ToList();
+        Check(visibleFields.Count > 0, "Narrow inspector has no visible numeric fields to check.");
+        foreach(var field in visibleFields)
         {
-            Check(field.worldBound.width>50 && field.worldBound.xMax<=sidebar.worldBound.xMax+1,"Numeric field clipped horizontally");
+            Check(field.worldBound.width>50 && field.worldBound.xMax<=sidebar.worldBound.xMax+1,"Numeric field clipped horizontally: " + field.name + " / " + field.label + " bounds=" + field.worldBound + " sidebar=" + sidebar.worldBound + " phase=" + phase);
         }
         Check(window.rootVisualElement.Query<VisualElement>().ToList().All(element => !float.IsNaN(element.worldBound.x)), "Narrow layout produced invalid geometry.");
+    }
+
+    static bool IsDisplayed(VisualElement element, VisualElement boundary)
+    {
+        for (var current = element; current != null; current = current.parent)
+        {
+            // Unity 2022.3 can retain Flex in resolvedStyle below a closed Foldout.
+            if (current is Foldout foldout && !foldout.value && foldout.contentContainer.Contains(element)) return false;
+            if (current.resolvedStyle.display == DisplayStyle.None) return false;
+            if (current == boundary) return true;
+        }
+        return false;
     }
 }
