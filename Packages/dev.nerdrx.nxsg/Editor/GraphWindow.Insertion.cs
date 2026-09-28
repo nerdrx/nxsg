@@ -9,7 +9,7 @@ namespace NXSG.Editor
     {
         string insertionEdge;
         string insertionNodeId;
-        readonly System.Collections.Generic.List<(GraphConnection edge, SocketView from, SocketView to)> insertionCandidates = new System.Collections.Generic.List<(GraphConnection, SocketView, SocketView)>();
+        readonly System.Collections.Generic.List<(GraphConnection edge, Vector2 a, Vector2 b, float bend, Vector2[] points)> insertionCandidates = new System.Collections.Generic.List<(GraphConnection, Vector2, Vector2, float, Vector2[])>();
 
         void PrepareInsertionCache(GraphNode node)
         {
@@ -27,7 +27,19 @@ namespace NXSG.Editor
                     !socketLookup.TryGetValue((edge.To.NodeId, edge.To.PortId, false), out var to)) continue;
                 if (!graphNodes.TryGetValue(from.node, out var source) || !graphNodes.TryGetValue(to.node, out var target)) continue;
                 if (inputs.Any(port => CanOffer(source, from.port, node, port)) && outputs.Any(port => CanOffer(node, port, target, to.port)))
-                    insertionCandidates.Add((edge, from, to));
+                {
+                    var a = layer.WorldToLocal(from.hit.worldBound.center);
+                    var b = layer.WorldToLocal(to.hit.worldBound.center);
+                    var bend = Mathf.Max(45, Mathf.Abs(b.x - a.x) * .45f);
+                    var points = new Vector2[33];
+                    points[0] = a;
+                    for (var i = 1; i <= 32; i++)
+                    {
+                        var t = i / 32f; var u = 1 - t;
+                        points[i] = u*u*u*a + 3*u*u*t*(a + Vector2.right*bend) + 3*u*t*t*(b - Vector2.right*bend) + t*t*t*b;
+                    }
+                    insertionCandidates.Add((edge, a, b, bend, points));
+                }
             }
         }
 
@@ -41,18 +53,15 @@ namespace NXSG.Editor
             var best=18f/Mathf.Max(.1f,zoom);
             foreach(var candidate in insertionCandidates)
             {
-                var edge = candidate.edge; var from = candidate.from; var to = candidate.to;
-                var a=layer.WorldToLocal(from.hit.worldBound.center);var b=layer.WorldToLocal(to.hit.worldBound.center);var bend=Mathf.Max(45,Mathf.Abs(b.x-a.x)*.45f);
+                var edge = candidate.edge; var a = candidate.a; var b = candidate.b; var bend = candidate.bend;
                 // A cubic stays inside the bounds of its endpoints and control points.
                 if (center.y < Mathf.Min(a.y,b.y)-best || center.y > Mathf.Max(a.y,b.y)+best ||
                     center.x < Mathf.Min(Mathf.Min(a.x,b.x),b.x-bend)-best || center.x > Mathf.Max(Mathf.Max(a.x,b.x),a.x+bend)+best) continue;
-                var previous=a;
                 for(var i=1;i<=32;i++)
                 {
-                    float t=i/32f,u=1-t;var point=u*u*u*a+3*u*u*t*(a+Vector2.right*bend)+3*u*t*t*(b-Vector2.right*bend)+t*t*t*b;
+                    var previous = candidate.points[i - 1]; var point = candidate.points[i];
                     var segment=point-previous;var closest=previous+segment*Mathf.Clamp01(Vector2.Dot(center-previous,segment)/Mathf.Max(.0001f,segment.sqrMagnitude));
                     var distance=Vector2.Distance(center,closest);if(distance<best){best=distance;insertionEdge=edge.Id;}
-                    previous=point;
                 }
             }
         }

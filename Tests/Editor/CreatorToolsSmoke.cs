@@ -17,7 +17,7 @@ public static class CreatorToolsSmoke
             if(SystemInfo.graphicsDeviceType==GraphicsDeviceType.Null)throw new Exception("GPU required");
             ShaderUtil.allowAsyncCompilation=false;
             UnityEditor.SceneManagement.EditorSceneManager.NewScene(UnityEditor.SceneManagement.NewSceneSetup.EmptyScene,UnityEditor.SceneManagement.NewSceneMode.Single);
-            Bake(); Clock(); Glow(); Bookmarks();
+            BakeTexture(); Bake(); Clock(); Glow(); Bookmarks();
             Debug.Log("NXSG CREATOR TOOLS SMOKE PASSED"); EditorApplication.Exit(0);
         }
         catch(Exception e){Debug.LogException(e);EditorApplication.Exit(1);}
@@ -42,6 +42,27 @@ public static class CreatorToolsSmoke
         var time=Add(g,"time","time");bool rejected=false;try{GraphBaker.Prepare(g,"time","value");}catch(InvalidOperationException){rejected=true;}Require(rejected,"Bake accepted animated time");
         var path=GraphBaker.Bake(g,"color","value","Assets/CreatorBake.png",32);var importer=(TextureImporter)AssetImporter.GetAtPath(path);Require(!importer.sRGBTexture,"Bake import not linear");AssetDatabase.DeleteAsset(path);
         Debug.Log("CREATOR BAKE GPU PASSED");
+    }
+    static void BakeTexture()
+    {
+        var path=AssetDatabase.GenerateUniqueAssetPath("Assets/NxsgBakeTexture.asset");
+        var source=new Texture2D(2,2,TextureFormat.RGBA32,false,true) { filterMode=FilterMode.Point };
+        source.SetPixels(new[] {new Color(.2f,.4f,.7f,.5f),new Color(.8f,.1f,.3f,1),new Color(.2f,.4f,.7f,.5f),new Color(.8f,.1f,.3f,1)});
+        source.Apply();AssetDatabase.CreateAsset(source,path);
+        Texture2D baked=null;
+        try
+        {
+            var graph=GraphSamples.CreateDefault();
+            graph.Adapter=new JObject { ["textures"]=new JObject { ["white"]=AssetDatabase.AssetPathToGUID(path) } };
+            var original=GraphJson.Serialize(graph);
+            baked=GraphBaker.Render(graph,"texture","color",32);
+            var left=baked.GetPixel(4,16);var right=baked.GetPixel(28,16);
+            Require(Mathf.Abs(left.r-.2f)<.03f&&Mathf.Abs(left.g-.4f)<.03f&&Mathf.Abs(left.b-.7f)<.03f&&Mathf.Abs(left.a-.5f)<.03f,"Bake lost source texture RGBA: "+left);
+            Require(Mathf.Abs(right.r-.8f)<.03f&&Mathf.Abs(right.g-.1f)<.03f&&Mathf.Abs(right.b-.3f)<.03f&&right.a>.98f,"Bake lost source texture UV variation: "+right);
+            Require(GraphJson.Serialize(graph)==original,"Texture bake changed graph");
+            Debug.Log("CREATOR TEXTURE BAKE GPU PASSED: "+left+" / "+right);
+        }
+        finally {if(baked!=null)UnityEngine.Object.DestroyImmediate(baked);AssetDatabase.DeleteAsset(path);}
     }
     static void Clock()
     {

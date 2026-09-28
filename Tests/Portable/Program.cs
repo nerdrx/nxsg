@@ -65,7 +65,7 @@ internal static class Program
         Assert(GraphValidator.Validate(polarExample).IsValid && ShaderEmitter.Emit(polarExample).Succeeded, "polar palette example validates and emits");
         var rampExample = GraphJson.Parse(File.ReadAllText(Path.Combine(fixtures, "../../Packages/dev.nerdrx.nxsg/Samples~/Noise Ramp.nxsg")));
         Assert(GraphValidator.Validate(rampExample).IsValid && ShaderEmitter.Emit(rampExample).Succeeded, "noise ramp example validates and emits");
-        foreach (var effectExample in new[] { "Audio Hologram", "Noise Color Ramp", "Animated Sticker", "Groomed Fur", "Parallax Tiles", "Tessellated Bumps", "Fur Fins", "Shiny Surface", "Refraction Glass", "Interior Bomb", "Motion Glow" })
+        foreach (var effectExample in new[] { "Audio Hologram", "Noise Color Ramp", "Animated Sticker", "Groomed Fur", "Parallax Tiles", "Tessellated Bumps", "Fur Fins", "Shiny Surface", "Refraction Glass", "Interior Bomb", "Motion Glow", "Touch Dent" })
         {
             var sample = GraphJson.Parse(File.ReadAllText(Path.Combine(fixtures,"../../Packages/dev.nerdrx.nxsg/Samples~/" + effectExample + ".nxsg")));
             var result = ShaderEmitter.Emit(sample);

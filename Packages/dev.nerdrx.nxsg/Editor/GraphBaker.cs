@@ -64,7 +64,9 @@ namespace NXSG.Editor
                 using(var preview=GraphPreview.Create(prepared,null))
                 {
                     preview.Material.SetFloat("_NXSG_PreviewClock",1); preview.Material.SetFloat("_NXSG_PreviewTime",0);
-                    Graphics.Blit(Texture2D.whiteTexture,target,preview.Material,0);
+                    // Blit binds its source as _MainTex; keep the graph's first texture intact.
+                    var source=preview.Material.HasProperty("_MainTex")?preview.Material.GetTexture("_MainTex"):null;
+                    Graphics.Blit(source,target,preview.Material,0);
                     RenderTexture.active=target;
                     texture=new Texture2D(resolution,resolution,TextureFormat.RGBA32,false,true);
                     texture.ReadPixels(new Rect(0,0,resolution,resolution),0,0);texture.Apply();return texture;

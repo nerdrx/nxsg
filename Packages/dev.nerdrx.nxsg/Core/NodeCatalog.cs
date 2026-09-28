@@ -335,6 +335,7 @@ namespace NXSG.Core
             if (FeatureNodes.IsKnown(operation))
             {
                 if (operation == "core.tessellation") return "tessellation tesselation subdivide subdivison subdivision displacement GPU geometry";
+                if (operation == "core.depthBulge") return "depth bulge touch dent press squish proximity";
                 return operation.Replace("core.", "").Replace("UV", " uv").Replace("Mask", " mask");
             }
             switch (operation)

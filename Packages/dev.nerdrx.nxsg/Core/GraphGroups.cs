@@ -29,10 +29,15 @@ namespace NXSG.Core
             if (members.Count == 0) throw new InvalidOperationException("Select nodes to group.");
             if (graph.Layout == null) graph.Layout = new GraphLayout();
             if (graph.Layout.ExtensionData == null) graph.Layout.ExtensionData = new Dictionary<string, JToken>();
-            // Groups are deliberately flat: regrouping takes nodes out of their previous group.
-            foreach (var existing in All(graph).ToArray())
-                existing["members"] = new JArray(Members(graph, existing).Where(id => !members.Contains(id)));
-            var groups = new JArray(All(graph).Where(g => Members(graph, g).Length > 0).Select(g => g.DeepClone()));
+            // Build the post-edit groups on copies so a rejected edit cannot mutate the graph.
+            var groups = new JArray(All(graph).Select(g =>
+            {
+                var remaining = Members(graph, g).Where(id => !members.Contains(id)).ToArray();
+                if (remaining.Length == 0) return null;
+                var copy = (JObject)g.DeepClone();
+                copy["members"] = new JArray(remaining);
+                return copy;
+            }).Where(g => g != null));
             if (groups.Count >= 1024) throw new InvalidOperationException("Too many groups.");
             var group = new JObject { ["id"] = Guid.NewGuid().ToString("N"), ["name"] = string.IsNullOrWhiteSpace(name) ? "Pattern" : name.Substring(0, Math.Min(name.Length, 80)),
                 ["collapsed"] = true, ["members"] = new JArray(members.OrderBy(id => id, StringComparer.Ordinal)) };

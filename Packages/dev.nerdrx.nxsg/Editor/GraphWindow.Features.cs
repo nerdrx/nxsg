@@ -16,6 +16,14 @@ namespace NXSG.Editor
             {
                 case "core.layeredPbrSurface": AddLayeredSurfaceControls(node); return true;
                 case "core.fur": AddFurControls(node); return true;
+                case "core.depthBulge":
+                    AddNumber(node, "height", "Bulge height", -.03f, "height", "Signed object units: negative presses inward, positive pushes outward.");
+                    AddNumber(node, "distance", "Touch distance (m)", .1f, "distance", "Camera depth separation in metres. Zero or negative disables the effect.");
+                    AddNumber(node, "falloff", "Falloff", 1, "falloff", "Higher values concentrate the deformation near the touching depth.");
+                    AddNumber(node, "bias", "Self-depth bias (m)", .002f, "bias", "Ignores almost equal depths. Increase slightly if the untouched mesh ripples; too much suppresses small contacts.");
+                    AddBoundedNumber(node, "mask", "Mask", 0, 1, 1, "mask");
+                    FeatureNote("Height uses signed object units: negative dents, positive bulges. Distance and bias use metres; falloff shapes the effect; mask is 0–1. Touch outputs proximity weight. Connect Displacement to surface Displacement. Needs a camera depth texture and enough mesh vertices. Skipped in mirrors and shadow/depth passes; not physics or contact detection.");
+                    return true;
                 case "core.parallaxUV": AddCoordinateChoice(node); AddNumber(node, "height", "Height", .5f, "height"); AddNumber(node, "strength", "Depth strength", .05f); AddNumber(node, "reference", "Reference height", .5f); return true;
                 case "core.avatarMotion": FeatureNote("Create an FX motion driver from the Create menu, then merge its layers into your avatar FX controller. Reads locomotion, not individual bones. Matching properties on other materials on this renderer are animated too.");return true;
                 case "core.motionResponse": AddNumber(node,"startSpeed","Start speed (m/s)",.1f);AddNumber(node,"fullSpeed","Full speed (m/s)",4);AddNumber(node,"curve","Response curve",1);return true;

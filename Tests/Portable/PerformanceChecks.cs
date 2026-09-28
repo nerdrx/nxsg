@@ -24,6 +24,24 @@ public static class PerformanceChecks
         check(pbrBuild.Succeeded && Regex.Matches(pbrBuild.ShaderSource, @"\bPass\s*\{").Count == report.StaticPassBudget,
             "PBR static pass count matches emitted shader declarations");
 
+        var minimal = CreatePbrGraph();
+        var minimalBuild = ShaderEmitter.Emit(minimal);
+        check(minimalBuild.Succeeded && !minimalBuild.ShaderSource.Contains("float NX_ProcHash(") &&
+            !minimalBuild.ShaderSource.Contains("float NX_DistortionFbm(") &&
+            !minimalBuild.ShaderSource.Contains("float NX_SdfBox(") &&
+            !minimalBuild.ShaderSource.Contains("float3 NX_SafeNormal("),
+            "minimal PBR omits unused helper bundles");
+        var weave = NodeCatalog.Create("core.weave"); weave.Id = "unused-weave"; minimal.Nodes.Add(weave);
+        var disconnectedBuild = ShaderEmitter.Emit(minimal);
+        check(disconnectedBuild.Succeeded && !disconnectedBuild.ShaderSource.Contains("float NX_Weave("),
+            "disconnected weave does not emit its helper");
+        check(!minimalBuild.ShaderSource.Contains("NX_DepthBulgeTouch"),
+            "unused Depth Bulge helper is omitted");
+        Connect(minimal, "weave-roughness", "unused-weave", "value", "pbr", "roughness");
+        var connectedBuild = ShaderEmitter.Emit(minimal);
+        check(connectedBuild.Succeeded && connectedBuild.ShaderSource.Contains("float NX_Weave("),
+            "connected weave emits its required helper");
+
         var volume = new ShaderGraph { GraphId = "performance-volume" };
         volume.Nodes.Add(new GraphNode { Id = "volume", Operation = "core.volumeSurface", Properties = new JObject { ["steps"] = 96 } });
         volume.Nodes.Add(new GraphNode { Id = "out", Operation = "core.output" });
@@ -40,6 +58,20 @@ public static class PerformanceChecks
         var pomReport = GraphPerformance.Analyze(parallax);
         check(pomReport.TextureSampleSites == 1 && pomReport.LoopBudgets.Any(s => s.Contains("up to 48")), "POM site count separated from its loop evaluation budget");
         check(pomReport.StaticPassBudget == 2, "unlit surface still counts its shadow caster");
+
+        var depthBulge = new ShaderGraph { GraphId = "performance-depth-bulge" };
+        var bulgeNode = NodeCatalog.Create("core.depthBulge"); bulgeNode.Id = "bulge"; depthBulge.Nodes.Add(bulgeNode);
+        var bulgeSurface = NodeCatalog.Create("core.unlitSurface"); bulgeSurface.Id = "surface"; depthBulge.Nodes.Add(bulgeSurface);
+        var bulgeOutput = NodeCatalog.Create("core.output"); bulgeOutput.Id = "out"; depthBulge.Nodes.Add(bulgeOutput);
+        Connect(depthBulge, "bulge-displacement", "bulge", "displacement", "surface", "displacement");
+        Connect(depthBulge, "surface-out", "surface", "surface", "out", "surface");
+        var depthReport = GraphPerformance.Analyze(depthBulge);
+        check(depthReport.TextureSampleSites == 1 && depthReport.HotSpots.Any(item => item.NodeId == "bulge" && item.Estimate.Contains("depth sample") && item.Explanation.Contains("per vertex")),
+            "Depth Bulge reports stage-aware scene-depth sampling cost");
+        check(depthReport.StaticPassBudget == 2, "Depth Bulge displacement keeps the unlit base and undeformed shadow pass");
+        Connect(depthBulge, "bulge-opacity", "bulge", "touch", "surface", "opacity");
+        check(GraphPerformance.Analyze(depthBulge).StaticPassBudget == 1 && !ShaderEmitter.Emit(depthBulge).ShaderSource.Contains("Name \"ShadowCaster\""),
+            "camera-depth opacity omits the shadow pass consistently with the emitter");
 
         var particles = new ShaderGraph { GraphId = "performance-particles" };
         particles.Nodes.Add(new GraphNode { Id = "pbr", Operation = "core.pbrSurface" });
@@ -87,6 +119,16 @@ public static class PerformanceChecks
             var report=GraphPerformance.Analyze(graph);
             check(Regex.Matches(result.ShaderSource,@"\bPass\s*\{").Count==report.StaticPassBudget,
                 "Performance pass estimate matches example: "+Path.GetFileName(path));
+            var sampleName = Path.GetFileName(path);
+            if (sampleName == "4D Clouds.nxsg")
+                check(result.ShaderSource.Contains("float NX_ProcHash(") && result.ShaderSource.Contains("NX_Noise4("),
+                    "4D Clouds retains its procedural helper");
+            if (sampleName == "Ripple Tiles.nxsg")
+                check(result.ShaderSource.Contains("float NX_DistortionFbm(") && result.ShaderSource.Contains("NX_Warp("),
+                    "Ripple Tiles retains its distortion helper");
+            if (sampleName == "Volume Carved Orb.nxsg")
+                check(result.ShaderSource.Contains("float NX_SdfBox(") && result.ShaderSource.Contains("NX_SdfBlend("),
+                    "Volume Carved Orb retains its SDF helpers");
         }
         var inactive=NodeCatalog.Create("core.layeredPbrSurface");inactive.Id="inactive";
         var texture=NodeCatalog.Create("core.texture2D");texture.Id="texture";

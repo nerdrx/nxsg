@@ -93,7 +93,7 @@ namespace NXSG.Core
                 throw new ArgumentNullException(nameof(graph));
             }
 
-            var document = PrepareDocument(graph);
+            var document = PrepareDocument(graph, indented);
             return indented ? document.ToString(Formatting.Indented) : Canonicalize(document);
         }
 
@@ -104,7 +104,7 @@ namespace NXSG.Core
                 throw new ArgumentNullException(nameof(graph));
             }
 
-            var semantic = PrepareDocument(graph);
+            var semantic = PrepareDocument(graph, false);
             semantic.Remove("layout");
 
             var canonical = Canonicalize(semantic);
@@ -138,11 +138,11 @@ namespace NXSG.Core
             return settings;
         }
 
-        private static JObject PrepareDocument(ShaderGraph graph)
+        private static JObject PrepareDocument(ShaderGraph graph, bool sortProperties)
         {
             var root = JObject.FromObject(graph, CreateSerializer());
             SortKnownIdentityArrays(root);
-            return SortObjectProperties(root);
+            return sortProperties ? SortObjectProperties(root) : root;
         }
 
         private static void SortKnownIdentityArrays(JObject root)

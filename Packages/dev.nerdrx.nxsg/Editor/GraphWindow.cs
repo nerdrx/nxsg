@@ -214,8 +214,16 @@ namespace NXSG.Editor
         void OnSelectionChange()
         {
             var material = Selection.activeObject as Material;
-            if (MatchesSource(material)) { contextMaterial = material; ClearPreview(); QueueLivePreview(); RebuildInspector(); }
+            var previousContext = contextMaterial;
+            var selectedMatches = MatchesSource(material);
+            if (selectedMatches) contextMaterial = material;
             UpdateIdentity();
+            if (selectedMatches || contextMaterial != previousContext)
+            {
+                ClearPreview();
+                QueueLivePreview();
+                RebuildInspector();
+            }
         }
 
         bool MatchesSource(Material material)
@@ -505,6 +513,8 @@ namespace NXSG.Editor
                         if (evt.button != 0) return;
                         SelectNode(node.Id, evt.shiftKey || selection.Contains(node.Id));
                         dragging = true; pointerStart = evt.position;
+                        insertionNodeId = null;
+                        insertionEdge = null;
                         dragOrigins.Clear();
                         foreach (var id in selection) dragOrigins[id] = Position(id);
                         title.CapturePointer(evt.pointerId); evt.StopPropagation();

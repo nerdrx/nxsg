@@ -16,6 +16,7 @@ public static class ResponsivenessSmoke
     const BindingFlags Private = BindingFlags.Instance | BindingFlags.NonPublic;
     static GraphWindow window;
     static int ticks, phase;
+    static Vector2 initialWireStart;
 
     static object Field(string name) => typeof(GraphWindow).GetField(name, Private).GetValue(window);
     static void Set(string name, object value) => typeof(GraphWindow).GetField(name, Private).SetValue(window, value);
@@ -60,6 +61,20 @@ public static class ResponsivenessSmoke
                 Invoke("SetPosition", "insert", position); box.style.left = position.x; box.style.top = position.y;
                 return;
             }
+            if (phase == 4)
+            {
+                CheckInsertionGeometryInvalidation();
+                CheckSocketLookup();
+                CheckDeferredSceneHash();
+                UnityEngine.Debug.Log("NXSG RESPONSIVENESS SMOKE PASSED");
+                Finish(0);
+                return;
+            }
+            if (phase == 6)
+            {
+                BeginInsertionGeometryInvalidation();
+                return;
+            }
             Invoke("UpdateInsertionTarget", "insert");
             Require((string)Field("insertionEdge") == "wire", "Insertion target did not find the known nearby wire");
             var watch = Stopwatch.StartNew();
@@ -73,16 +88,53 @@ public static class ResponsivenessSmoke
             Undo.PerformUndo();
             Require(Graph.Connections.Count(e => e.Id == "wire") == 1 && !Graph.Connections.Any(e => e.From.NodeId == "insert"), "Undo did not restore the original wire");
 
-            CheckSocketLookup();
-            CheckDeferredSceneHash();
-            UnityEngine.Debug.Log("NXSG RESPONSIVENESS SMOKE PASSED");
-            Finish(0);
+            Invoke("Rebuild");
+            phase = 5;
         }
         catch (Exception exception)
         {
             UnityEngine.Debug.LogException(exception);
             Finish(1);
         }
+    }
+
+    static void BeginInsertionGeometryInvalidation()
+    {
+        Set("selection", new List<string> { "insert" });
+        Set("selected", "insert");
+        Invoke("UpdateInsertionTarget", "insert");
+        initialWireStart = CandidateWireStart();
+        var source = ((Dictionary<string, VisualElement>)Field("nodes"))["source"];
+        var old = (Vector2)Invoke("Position", "source");
+        var moved = old + new Vector2(24, 0);
+        Invoke("SetPosition", "source", moved);
+        source.style.left = moved.x;
+        source.style.top = moved.y;
+        phase = 3;
+    }
+
+    static void CheckInsertionGeometryInvalidation()
+    {
+        var title = ((Dictionary<string, VisualElement>)Field("nodes"))["insert"].Children().First();
+        using (var down = PointerDownEvent.GetPooled(new Event { type = EventType.MouseDown, button = 0, mousePosition = title.worldBound.center })) title.SendEvent(down);
+        Require(Field("insertionNodeId") == null, "Starting a new node drag retained insertion geometry from the previous gesture");
+        Require(Field("insertionEdge") == null, "Starting a new node drag retained the previous wire highlight");
+        using (var up = PointerUpEvent.GetPooled(new Event { type = EventType.MouseUp, button = 0, mousePosition = title.worldBound.center })) title.SendEvent(up);
+        Invoke("UpdateInsertionTarget", "insert");
+        var movedWireStart = CandidateWireStart();
+        var delta = movedWireStart - initialWireStart;
+        Require(Mathf.Abs(delta.x - 24) < 2 && Mathf.Abs(delta.y) < 2, "New drag did not rebuild insertion geometry after the source endpoint moved 24 canvas units");
+    }
+
+    static Vector2 CandidateWireStart()
+    {
+        var candidates = (System.Collections.IEnumerable)Field("insertionCandidates");
+        foreach (var candidate in candidates)
+        {
+            var entry = (ValueTuple<GraphConnection, Vector2, Vector2, float, Vector2[]>)candidate;
+            if (entry.Item1.Id == "wire") return entry.Item2;
+        }
+        throw new InvalidOperationException("Known wire is missing from insertion candidates");
     }
 
     static ShaderGraph CreateGraph()

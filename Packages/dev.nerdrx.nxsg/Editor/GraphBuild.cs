@@ -70,7 +70,8 @@ namespace NXSG.Editor
                 throw new InvalidOperationException("Build validation needs a graphics-enabled Unity Editor. Parsing-only mode cannot validate the shader.");
 
             var sourceSnapshot = File.ReadAllText(absolute);
-            if (GraphJson.ComputeSemanticHash(GraphJson.Parse(sourceSnapshot)) != GraphJson.ComputeSemanticHash(graph))
+            var graphHash = GraphJson.ComputeSemanticHash(graph);
+            if (GraphJson.ComputeSemanticHash(GraphJson.Parse(sourceSnapshot)) != graphHash)
                 throw new IOException("Save the current graph before building. The source and edit snapshot differ.");
             timer.Mark("generate/validate");
             var previous = new Journal
@@ -83,7 +84,7 @@ namespace NXSG.Editor
             ShaderUtil.allowAsyncCompilation = false;
             try
             {
-                var shaderSource = "// NXSG graph hash: " + GraphJson.ComputeSemanticHash(graph) + "\n" + result.ShaderSource;
+                var shaderSource = "// NXSG graph hash: " + graphHash + "\n" + result.ShaderSource;
                 var unchanged = File.Exists(shaderPath) && File.ReadAllText(shaderPath) == shaderSource;
                 if (File.ReadAllText(absolute) != sourceSnapshot)
                     throw new IOException("Graph changed while building. Save and build again.");
@@ -93,9 +94,10 @@ namespace NXSG.Editor
                 // Unity tracks include dependencies. An unchanged shader needs no forced reimport,
                 // but still goes through dependency import and pass validation (including after reload).
                 AssetDatabase.ImportAsset(shaderPath, ImportAssetOptions.ForceSynchronousImport);
+                timer.Mark(unchanged ? "reuse/import shader" : "import shader");
                 Checkpoint?.Invoke("shader-promoted");
                 var shader = CheckShader(shaderPath);
-                timer.Mark(unchanged ? "reuse/validate shader" : "import/compile shader");
+                timer.Mark("compile/validate passes");
                 if (File.ReadAllText(absolute) != sourceSnapshot)
                     throw new IOException("Graph changed while building. Save and build again.");
                 var material = AssetDatabase.LoadAssetAtPath<Material>(materialPath);

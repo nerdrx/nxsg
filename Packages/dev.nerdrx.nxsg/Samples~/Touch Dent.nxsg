@@ -1,0 +1,19 @@
+{
+  "format": "nxsg",
+  "schemaVersion": 1,
+  "graphId": "touch-dent-example",
+  "nodes": [
+    {"id":"color","operation":"core.constant","version":1,"properties":{"valueType":"color","value":[0.24,0.08,0.5,1]}},
+    {"id":"touch","operation":"core.depthBulge","version":1,"properties":{"height":-0.03,"distance":0.1,"falloff":1,"bias":0.002,"mask":1}},
+    {"id":"surface","operation":"core.pbrSurface","version":1,"properties":{"opacity":1,"metallic":0,"roughness":0.5}},
+    {"id":"output","operation":"core.output","version":1,"properties":{}}
+  ],
+  "connections": [
+    {"id":"color-surface","from":{"nodeId":"color","portId":"value"},"to":{"nodeId":"surface","portId":"albedo"}},
+    {"id":"touch-surface","from":{"nodeId":"touch","portId":"displacement"},"to":{"nodeId":"surface","portId":"displacement"}},
+    {"id":"surface-output","from":{"nodeId":"surface","portId":"surface"},"to":{"nodeId":"output","portId":"surface"}}
+  ],
+  "parameters": [],
+  "resources": [],
+  "layout": {"nodes":{"color":{"x":40,"y":20},"touch":{"x":40,"y":190},"surface":{"x":340,"y":80},"output":{"x":610,"y":80}}}
+}

@@ -28,6 +28,7 @@ namespace NXSG.Backend
         bool wireframeEnabled;
         bool ltcgiEnabled;
         bool lightingControlsEnabled;
+        bool depthBulgeEnabled;
         bool coatEnabled, sheenEnabled;
         int depth;
 
@@ -149,6 +150,41 @@ namespace NXSG.Backend
             if (particle && fallback == "toonstandard") fallback = "Particle";
             var live = new HashSet<string>();
             Visit(root, live);
+            var needsProceduralHelpers = live.Any(id =>
+            {
+                var node = nodes[id];
+                return node.Operation == "core.musgrave" || node.Operation == "core.voronoi" ||
+                    node.Operation == "core.checker" || node.Operation == "core.wave" ||
+                    node.Operation == "core.noise" && IntProp(node, "dimensions", 2, 1, 4) != 2;
+            });
+            var needsDistortionHelpers = live.Any(id =>
+            {
+                var operation = nodes[id].Operation;
+                return operation == "core.uvDistort" || operation == "core.gradient" ||
+                    operation == "core.uvTile" || operation == "core.posterize";
+            });
+            var needsVolumeHelpers = live.Any(id =>
+            {
+                var operation = nodes[id].Operation;
+                return operation == "core.sdfBox" || operation == "core.sdfTorus" || operation == "core.sdfBlend";
+            });
+            var needsFeatureHelpers = live.Any(id =>
+            {
+                var operation = nodes[id].Operation;
+                return FeatureNodes.IsKnown(operation) && operation != "core.fur" &&
+                    operation != "core.layeredPbrSurface" && operation != "core.tessellation" && operation != "core.depthBulge";
+            });
+            var depthBulge = depthBulgeEnabled = live.Any(id => nodes[id].Operation == "core.depthBulge");
+            if (depthBulge && (particle || furNode != null))
+                throw new InvalidOperationException("Depth Bulge supports mesh surfaces and Tessellation, not Volume, Particle Surface or Fur.");
+            if (depthBulge && surfaceParticles)
+            {
+                var particleInputs = new HashSet<string>();
+                foreach (var port in NodeCatalog.Ports(root.Operation, false).Where(port => port != "base"))
+                { var source = Source(root, port); if (source != null) Visit(source, particleInputs); }
+                if (particleInputs.Any(id => nodes[id].Operation == "core.depthBulge"))
+                    throw new InvalidOperationException("Connect Depth Bulge to the Base surface, not the generated particle inputs.");
+            }
             if (!volumeEnabled && live.Any(id => nodes[id].Operation == "core.rayPosition")) throw new InvalidOperationException("Ray Position requires Volume Surface connected directly to Output.");
             if (volumeEnabled && live.Any(id => new[]{"core.particleInfo", "core.ltcgi", "core.wireframe", "core.refraction", "core.parallaxOcclusion"}.Contains(nodes[id].Operation))) throw new InvalidOperationException("Volume Surface cannot evaluate particle data, lighting, wireframe, refraction or parallax branches inside its march loop.");
             var refracts = live.Any(id => nodes[id].Operation == "core.refraction");
@@ -245,8 +281,11 @@ namespace NXSG.Backend
             b.AppendLine(PreviewClock.Hlsl);
 
             b.AppendLine(Helpers);
-            b.AppendLine(VolumeShader.Helpers);
+            if (depthBulge) b.AppendLine(DepthBulgeShader.Hlsl);
+            if (needsVolumeHelpers) b.AppendLine(VolumeShader.Helpers);
+            if (needsProceduralHelpers) b.AppendLine(ProceduralShader.Hlsl);
             if (lightingControlsEnabled) b.AppendLine(LightingHelpers);
+            if (needsFeatureHelpers) b.AppendLine(FeatureShader.Helpers);
             if(furNode!=null) {
                 int quality=IntProp(furNode,"selfShadowQuality",0,0,3);
                 b.AppendLine(FurLighting.Helpers(quality,double.Parse(RawProp(furNode,"selfShadowStrength",1),CultureInfo.InvariantCulture),double.Parse(RawProp(furNode,"selfShadowBias",.03),CultureInfo.InvariantCulture)));
@@ -254,15 +293,14 @@ namespace NXSG.Backend
             }
             if (ltcgiEnabled) b.AppendLine(LtcgiShader.Hlsl);
             if(refracts) b.AppendLine("sampler2D _NXSG_GrabTexture; float4 _NXSG_GrabTexture_TexelSize;");
-            b.AppendLine(FeatureShader.Helpers);
             if (coatEnabled) b.AppendLine(LayeredPbrShader.CoatHelpers);
             if (sheenEnabled) b.AppendLine(LayeredPbrShader.SheenHelpers);
             if (live.Any(id => nodes[id].Operation == "core.glitter")) b.AppendLine(GlitterShader.Hlsl);
-            b.AppendLine(ProceduralShader.Hlsl);
-            b.AppendLine(DistortionShader.Hlsl);
+            if (needsDistortionHelpers) b.AppendLine(DistortionShader.Hlsl);
             b.AppendLine(code.ToString());
             b.AppendLine("ENDCG\n" + passCode + shadowPass + "}\nCustomEditor \"NXSG.Editor.NXSGMaterialShaderGUI\"\nFallback Off\n}");
             if (refracts) diagnostics.Add(new Diagnostic(DiagnosticSeverity.Warning,"cost.refraction","$","Refraction copies the framebuffer into a shared named GrabPass texture and uses the transparent queue. It cannot refract off-screen objects; overlapping transparent materials and stereo need validation."));
+            if (depthBulge) diagnostics.Add(new Diagnostic(DiagnosticSeverity.Warning, "depth.bulge", "$", "Depth Bulge needs a camera depth texture and enough mesh vertices. It detects visible depth proximity, not physical contact; transparent objects usually do not contribute. Missing depth, mirrors/oblique cameras and shadow/depth passes leave it inactive. Expand bounds for displacement. Shadows keep the original shape; stereo and VRChat need client validation."));
             if (live.Any(id => nodes[id].Operation == "core.textureBomb")) diagnostics.Add(new Diagnostic(DiagnosticSeverity.Warning,"cost.textureBomb","$","Texture Bomb blends four transformed texture samples, plus plain sampling when Blend is not constant one."));
             if (passes.Count > 1) diagnostics.Add(new Diagnostic(DiagnosticSeverity.Warning, "cost.shell", root.Id, (passes.Count - 1) + " extra transparent mesh pass" + (passes.Count == 2 ? "" : "es") + " per view; normal offset does not expand renderer bounds. Overlapping transparent objects can sort imperfectly."));
             if (passes.Count > 1) diagnostics.Add(new Diagnostic(DiagnosticSeverity.Warning, "lighting.forwardAdd", root.Id, "Shell passes use LightMode Always and do not receive additional per-pixel lights; the base lit surface does."));
@@ -302,7 +340,7 @@ namespace NXSG.Backend
         GraphNode Source(GraphNode n, string port) { return edges.TryGetValue(Key(n.Id, port), out var edge) ? nodes[edge.From.NodeId] : null; }
         bool ContainsScreenDependentOperation(GraphNode root, string port)
         {
-            var operations = new HashSet<string> { "core.refraction", "core.screenUV", "core.cameraDistance", "core.viewDirection", "core.fresnel", "core.rimGlow", "core.matcapTexture", "core.interiorMapping" };
+            var operations = new HashSet<string> { "core.refraction", "core.screenUV", "core.cameraDistance", "core.viewDirection", "core.fresnel", "core.rimGlow", "core.matcapTexture", "core.interiorMapping", "core.depthBulge" };
             var seen = new HashSet<string>();
             var stack = new Stack<GraphNode>();
             var first = Source(root, port);
@@ -367,6 +405,10 @@ namespace NXSG.Backend
             string uv = DefaultUV(n, vertex);
             switch (n.Operation)
             {
+                case "core.depthBulge":
+                    body = "NX_DepthBulgeTouch(input.originalWs," + S("distance", .1) + "," + S("falloff", 1) + "," + S("bias", .002) + ")*saturate(" + S("mask", 1) + ")";
+                    if (port == "displacement") body = "(" + body + ")*" + S("height", -.03);
+                    break;
                 case "core.previewVector": body = Source(n,"normal") != null ? "float4(" + P("normal","float3(0,0,1)","vector3") + "*.5+.5,1)" : "float4(" + P("uv",uv,"vector2") + ",0,1)"; break;
                 case "core.particleColor": body = port == "alpha" ? "input.color.a" : "input.color"; break;
                 case "core.particleInfo":
@@ -697,7 +739,7 @@ namespace NXSG.Backend
             b.AppendLine("NXInput vert(NXApp v) { UNITY_SETUP_INSTANCE_ID(v); NXInput input=NX_Make(v); v.vertex.xyz+=v.normal*("+displacement+"+"+offset+"+"+tessHeight+"); NXInput o=NX_Make(v); o.originalLocal=input.originalLocal; o.originalWs=input.originalWs; UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o); TRANSFER_VERTEX_TO_FRAGMENT(o); return o; }");
             if (tess) b.AppendLine(TessellationShader.Forward(Prop(tessellation,"factor",8), Prop(tessellation,"minFactor",1), Prop(tessellation,"nearDistance",2), Prop(tessellation,"farDistance",15), Prop(tessellation,"smoothing",0)));
             if (wireframeEnabled) b.AppendLine(WireGeometry);
-            b.AppendLine("float4 frag(NXInput input):SV_Target { UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input); float4 c="+color+"*_Color; float3 emission=("+emission+").rgb; float alpha=saturate("+(IntProp(surface,"useAlbedoAlpha",1,0,1)==1 ? "c.a" : "_Color.a")+"*"+opacity+");");
+            b.AppendLine("float4 frag(NXInput input):SV_Target { UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input); "+(depthBulgeEnabled ? "NX_DepthBulgeNormals(input); " : "")+"float4 c="+color+"*_Color; float3 emission=("+emission+").rgb; float alpha=saturate("+(IntProp(surface,"useAlbedoAlpha",1,0,1)==1 ? "c.a" : "_Color.a")+"*"+opacity+");");
             if(!shell)b.AppendLine("clip(alpha-"+Prop(surface,"cutoff",.001)+");");
             if(surface.Operation=="core.unlitSurface")b.AppendLine("return float4(c.rgb+emission,alpha);");
             else
@@ -736,7 +778,7 @@ namespace NXSG.Backend
             b.AppendLine("NXInput vertAdd(NXApp v) { UNITY_SETUP_INSTANCE_ID(v); NXInput input=NX_Make(v); v.vertex.xyz+=v.normal*("+displacement+"+"+offset+"+"+tessHeight+"); NXInput o=NX_Make(v); o.originalLocal=input.originalLocal; o.originalWs=input.originalWs; UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o); TRANSFER_VERTEX_TO_FRAGMENT(o); return o; }");
             if (tess) b.AppendLine(TessellationShader.Forward(Prop(tessellation,"factor",8),Prop(tessellation,"minFactor",1),Prop(tessellation,"nearDistance",2),Prop(tessellation,"farDistance",15),Prop(tessellation,"smoothing",0)).Replace("vertTess", "vertTessAdd").Replace("hullTess", "hullTessAdd").Replace("domainTess", "domainTessAdd").Replace("return vert(a)", "return vertAdd(a)"));
             if (wireframeEnabled) b.AppendLine(WireGeometry.Replace("geomWire", "geomWireAdd"));
-            b.AppendLine("float4 fragAdd(NXInput input):SV_Target { UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input); float4 c="+color+"*_Color; float alpha=saturate("+(IntProp(surface,"useAlbedoAlpha",1,0,1)==1 ? "c.a" : "_Color.a")+"*"+opacity+"); clip(alpha-"+Prop(surface,"cutoff",.001)+"); float3 tn="+normal+"; float3 n=normalize(normalize(input.tangent)*tn.x+normalize(input.bitangent)*tn.y+normalize(input.n)*tn.z); float3 view=normalize(_WorldSpaceCameraPos-input.ws); float3 lightDir=normalize(UnityWorldSpaceLightDir(input.ws)); UNITY_LIGHT_ATTENUATION(atten,input,input.ws);");
+            b.AppendLine("float4 fragAdd(NXInput input):SV_Target { UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input); "+(depthBulgeEnabled ? "NX_DepthBulgeNormals(input); " : "")+"float4 c="+color+"*_Color; float alpha=saturate("+(IntProp(surface,"useAlbedoAlpha",1,0,1)==1 ? "c.a" : "_Color.a")+"*"+opacity+"); clip(alpha-"+Prop(surface,"cutoff",.001)+"); float3 tn="+normal+"; float3 n=normalize(normalize(input.tangent)*tn.x+normalize(input.bitangent)*tn.y+normalize(input.n)*tn.z); float3 view=normalize(_WorldSpaceCameraPos-input.ws); float3 lightDir=normalize(UnityWorldSpaceLightDir(input.ws)); UNITY_LIGHT_ATTENUATION(atten,input,input.ws);");
             if (IsPbr(surface))
             {
                 b.AppendLine(lighting ? "half3 spec; half reflectivity; half3 diffuse=DiffuseAndSpecularFromMetallic(c.rgb,saturate("+metallic+"),spec,reflectivity); UnityLight light; light.color=NX_LightingContribution(_LightColor0.rgb*atten,"+lightingSaturation+","+lightingMax+"); light.dir=lightDir; light.ndotl=saturate(dot(n,lightDir)); UnityIndirect indirect; indirect.diffuse=0; indirect.specular=0; half rough=saturate("+roughness+"); float3 pbr=UNITY_BRDF_PBS(diffuse,spec,reflectivity,1-rough,n,view,light,indirect).rgb;" : "half3 spec; half reflectivity; half3 diffuse=DiffuseAndSpecularFromMetallic(c.rgb,saturate("+metallic+"),spec,reflectivity); UnityLight light; light.color=_LightColor0.rgb*atten; light.dir=lightDir; light.ndotl=saturate(dot(n,lightDir)); UnityIndirect indirect; indirect.diffuse=0; indirect.specular=0; half rough=saturate("+roughness+"); float3 pbr=UNITY_BRDF_PBS(diffuse,spec,reflectivity,1-rough,n,view,light,indirect).rgb;");

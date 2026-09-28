@@ -53,6 +53,23 @@ public static class EffectsBackendChecks
         var pasted=GraphClipboard.Paste(grouped,snippet,20,20);assert(pasted.NodeIds.All(id=>!grouped.Nodes.Any(n=>n.Id==id)),"Pattern inserts fresh IDs");
         assert(GraphGroups.All(pasted.Graph).Count()==2,"Pattern clipboard preserves groups with remapped members");
         GraphGroups.Remove(grouped,group);assert(GraphGroups.All(grouped).Count()==0&&GraphJson.ComputeSemanticHash(grouped)==hash,"ungroup preserves nodes");
+
+        var fullGroups = new ShaderGraph { GraphId="group-limit", Layout=new GraphLayout { ExtensionData=new System.Collections.Generic.Dictionary<string,JToken>() } };
+        fullGroups.Nodes.Add(new GraphNode { Id="a", Operation="core.constant" });
+        fullGroups.Nodes.Add(new GraphNode { Id="b", Operation="core.constant" });
+        for (var i=0;i<1023;i++) fullGroups.Nodes.Add(new GraphNode { Id="n"+i, Operation="core.constant" });
+        fullGroups.Layout.ExtensionData["groups"] = new JArray(Enumerable.Range(0,1024).Select(i => new JObject {
+            ["id"]="g"+i, ["name"]="group", ["members"]=new JArray(i==0 ? new[] {"a","b"} : new[] {"n"+(i-1)})
+        }));
+        var fullGroupsBefore = GraphJson.Serialize(fullGroups);
+        var rejected = false;
+        try { GraphGroups.Add(fullGroups,new[] {"a"},"Rejected"); }
+        catch (InvalidOperationException) { rejected = true; }
+        assert(rejected,"regroup that exceeds group limit is rejected");
+        assert(GraphJson.Serialize(fullGroups)==fullGroupsBefore,"rejected regroup at group limit leaves graph unchanged");
+        GraphGroups.Add(fullGroups,new[] {"a","b"},"Replacement");
+        assert(GraphGroups.All(fullGroups).Count()==1024 && GraphGroups.Members(fullGroups,GraphGroups.All(fullGroups).Last()).Length==2,
+            "regroup that replaces an existing group succeeds at group limit");
     }
     static void Connect(ShaderGraph graph,string from,string port,string to,string input)
     { graph.Connections.Add(new GraphConnection {Id=Guid.NewGuid().ToString("N"),From=new GraphPortRef {NodeId=from,PortId=port},To=new GraphPortRef {NodeId=to,PortId=input}}); }

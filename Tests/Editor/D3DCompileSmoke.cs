@@ -23,9 +23,20 @@ public static class D3DCompileSmoke
             Directory.CreateDirectory(Path.Combine(Application.dataPath, "SmokeResults/D3DCompileSmoke"));
             AssetDatabase.Refresh();
 
-            var sampleNames = new[] { "Lacquered Surface", "Velvet Fabric", "Shiny Surface", "Neon Wireframe", "Tessellated Bumps", "Fur Cards", "Surface Sparkles", "Particle Lifetime", "Audio Hologram", "Volume Nebula", "Volume Carved Orb", "Volume Smoke Ring" };
+            var sampleNames = new[] { "Lacquered Surface", "Velvet Fabric", "Shiny Surface", "Neon Wireframe", "Tessellated Bumps", "Fur Cards", "Surface Sparkles", "Particle Lifetime", "Audio Hologram", "Volume Nebula", "Volume Carved Orb", "Volume Smoke Ring", "Touch Dent" };
             var sampleRoot = Path.Combine(UnityEditor.PackageManager.PackageInfo.FindForAssembly(typeof(ShaderEmitter).Assembly).resolvedPath, "Samples~");
             var shaders = sampleNames.Select((name, index) => Emit(File.ReadAllText(Path.Combine(sampleRoot, name + ".nxsg")), "sample_" + index)).ToList();
+            // Camera-depth LOD sampling must compile in both the regular vertex
+            // path and the tessellation domain, alongside a generated-particle pass.
+            foreach (var wrapper in new[] { "core.tessellation", "core.surfaceParticles" })
+            {
+                var touch = GraphJson.Parse(File.ReadAllText(Path.Combine(sampleRoot, "Touch Dent.nxsg")));
+                var wrapperNode = NodeCatalog.Create(wrapper); wrapperNode.Id = "wrapper";
+                touch.Nodes.Add(wrapperNode);
+                touch.Connections.Single(e => e.To.NodeId == "output").To = new GraphPortRef { NodeId = "wrapper", PortId = "base" };
+                touch.Connections.Add(new GraphConnection { Id = "wrapper-output", From = new GraphPortRef { NodeId = "wrapper", PortId = "surface" }, To = new GraphPortRef { NodeId = "output", PortId = "surface" } });
+                shaders.Add(Emit(GraphJson.Serialize(touch), "depth_" + wrapper.Substring(5)));
+            }
             shaders.Add(Emit(GraphJson.Serialize(Minimal("core.toonSurface")), "minimal_toon"));
             shaders.Add(Emit(GraphJson.Serialize(Minimal("core.pbrSurface")), "minimal_pbr"));
 

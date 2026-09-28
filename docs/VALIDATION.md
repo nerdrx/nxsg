@@ -590,3 +590,131 @@ world, headset, graphics settings and the tested graph set were not captured
 with that feedback, so it does not establish the full reproducible compatibility
 matrix or native Windows coverage. The dated automated records above remain
 scoped to their named fixtures.
+
+## 2026-09-25 - Texture baking and editor regression fixes
+
+- Texture baking replaced the graph's first texture with white because
+  `Graphics.Blit` binds its source to `_MainTex`. Baking now passes the texture
+  already assigned by the graph. The regression failed with RGBA `(1, 1, 1, 1)`
+  before the fix and passed with the expected colour, alpha and UV variation
+  afterward. This matches the [Unity 2022.3 Blit contract](https://docs.unity3d.com/2022.3/Documentation/ScriptReference/Graphics.Blit.html)
+  (checked 2026-09-25).
+- Reassigning the current material's shader could clear the graph's material
+  context while retaining its old preview. Selection updates now invalidate
+  that preview and queue a replacement. The regression failed before the fix
+  and passed afterward; selecting an unrelated asset still preserves a valid
+  material context.
+- Regrouping at the 1,024-group limit could modify membership before rejecting
+  the edit. The operation now validates a copy before publishing the changes.
+  A regression with 1,025 distinct nodes confirms rejection leaves serialized
+  graph data unchanged and replacing an existing group at capacity succeeds.
+
+Checks passed: the portable suite; 9 VPM packaging tests; 2 Unity-runner tests;
+`CreatorToolsSmoke.Run` (texture/constant/UV baking, preview clock, glow, normal
+flip and bookmarks); `SelectionContextSmoke.Run`; and `git diff --check`.
+Both editor regressions were exercised before and after their fixes inside
+headless Gamescope using Unity 2022.3.22f1 (`887be4894c44`), Linux OpenGLCore,
+Mesa 26.2.3 and the RX 7900 XTX. These are editor/core checks, not a new
+VRChat client, headset or native Windows validation run.
+
+Local evidence: `work/bughunt-portable.log`, `work/bughunt-groups-before.log`,
+`work/unity/bughunt-bake-before.log`, `work/unity/bughunt-bake-after.log`,
+`work/unity/bughunt-context-before.log`, `work/unity/bughunt-context-after.log`.
+
+## 2026-09-25 — Shader generation and build-path optimization
+
+- Compact graph serialization and semantic hashing skip a preparatory property
+  sort that canonical output already performs. On a 300-node/300-edge portable
+  workload, three paired Release runs measured median compact serialization at
+  6.834 ms before and 5.104 ms after, and semantic hashing at 10.148 ms before
+  and 5.026 ms after. Exact fingerprints matched for all 35 shipped samples
+  and a nested Unicode extension-data graph, in both en-US and de-DE cultures.
+  The portable runner passed. Raw runs and fingerprints are in
+  `work/opt-core/runs/`; `work/opt-core/README.md` has the reproduction steps.
+- Generated shader source across six representative graphs decreased from
+  209,548 to 155,894 characters (25.6%). Unity 2022.3.22f1 on Linux/OpenGLCore
+  imported each before/after shader synchronously, compiled and validated every
+  non-GrabPass pass, with one warmup and five alternating-order timed pairs per
+  sample after warming Unity and driver caches. Median total import-plus-pass
+  validation times were:
+
+  | Sample | Source characters before → after | Before → after |
+  | --- | ---: | ---: |
+  | 4D Clouds | 25,353 → 16,357 | 32.07 → 30.51 ms |
+  | Groomed Fur | 70,964 → 57,489 | 59.29 → 51.24 ms |
+  | Lacquered Surface | 30,665 → 21,953 | 39.26 → 37.58 ms |
+  | Ripple Tiles | 26,128 → 20,814 | 39.31 → 38.25 ms |
+  | Showcase Hologram | 29,468 → 20,756 | 40.04 → 38.19 ms |
+  | Volume Carved Orb | 26,970 → 18,525 | 36.72 → 35.18 ms |
+
+  This is warm editor/driver shader import and pass-validation evidence; it is
+  not a cold build measurement, VRChat frame rate, or headset performance.
+  Raw data and runner: `work/opt-compile-timing.csv`,
+  `work/unity/opt-compile-final.log`, and
+  `work/socket-check/Assets/Editor/OptimizationCompileTiming.cs`.
+- The final helper gating excludes Fur, Layered PBR Surface, and Tessellation
+  from the generic feature-helper bundle unless another reachable feature node
+  needs it. `FeatureNodesRenderSmoke` (39 feature nodes), `ProceduralRenderSmoke`,
+  `DistortionRenderSmoke`, and the current portable suite passed. Final D3D11
+  shader compilation passed 16 shaders, including Fur, Layered PBR, and
+  Tessellation, with no shader errors (`work/unity/opt-d3d-final.log`).
+- Final `BuildTransactionSmoke` and `SceneSyncSmoke` passed
+  (`work/unity/opt-build-transaction.log`,
+  `work/unity/opt-scene-sync.log`).
+- `GraphBuild` computes the semantic hash once for the current graph and reuses
+  it in the generated shader header. An identical generated shader skips the
+  file write, while synchronous asset import and `CheckShader` pass compilation
+  and validation still run. Generation, graph validation, source-snapshot
+  checks, recovery journaling, and material-property preservation remain in the
+  build path. This is a source review of the hash-reuse change; Build
+  Transaction and Scene Sync smoke checks passed in the final run.
+- Three unchanged-build medians were 43.18 ms for Animated Palette, 45.26 ms
+  for Volume Pearl, and 50.13 ms for Fur Cards, compared with baseline medians
+  of 35.87, 43.15, and 47.07 ms respectively. These runs show no demonstrated
+  warm unchanged-build speedup: synchronous import overhead dominates this
+  path, and cross-process timings were noisy. This result does not support a
+  claim that every build is faster.
+- The fixed-fixture `ResponsivenessSmoke` passed: 1,000 warm insertion-target
+  updates took 7.3 ms versus 134.7 ms in the baseline run. It also exercised
+  actual insertion and Undo, moved-endpoint updates, and new-drag cache
+  validation. Log: `work/unity/opt-editor-final2.log`. Build Transaction and
+  Scene Sync checks also passed in the final run.
+
+## 2026-09-28 — Depth Bulge
+
+- Added `core.depthBulge` with five numeric inputs (height, distance, falloff,
+  self-depth bias and mask), displacement and touch outputs, inspector controls,
+  search aliases, cost reporting, and the **Touch Dent** gallery graph. Unused
+  graphs omit its depth helper. See [setup and limits](DEPTH_BULGE.md).
+- Portable suite passed with the bundled .NET SDK. Coverage includes graph
+  round-trip, defaults, dynamic height, opaque queue/blending preservation,
+  helper pruning, pass-budget reporting, supported Tessellation/Surface
+  Particles Base, and rejection of unsupported Fur/Volume/particle paths.
+- Hidden Gamescope / Unity 2022.3.22f1, OpenGLCore on RX 7900 XTX:
+  `DepthBulgeSmoke` passed matched-pose render comparisons for negative/positive
+  height, zero mask, out-of-range geometry, missing camera depth, rejection of
+  self depth, orthographic depth, and oblique-projection disabling. The fixture
+  uses an 80×80-subdivision plane and a real opaque sphere; only height changes
+  in each deformation comparison. A separate depth-only sphere makes the
+  otherwise occluded touch mask visible for the diagnostic-output check.
+  RGB output was finite in the contact and orthographic renders.
+- Captures were inspected at `work/socket-check/Library/NXSG/`:
+  `depth-bulge-baseline.png`, `depth-bulge-contact-opaque.png`, and
+  `depth-bulge-contact.png` (red touch-mask diagnostic). The default small dent
+  appears around the sphere's silhouette; finite mesh resolution produces
+  visible facets. These are functional fixtures, not avatar-quality examples.
+  Log: `work/unity/depth-bulge-render.log`.
+- `FeatureNodesEditorSmoke` passed **42 inspectors**, including the new numeric
+  fields, explanatory note and disabled wired-height control. The initial run
+  caught missing connected-field disabling; the controls were fixed and the
+  full check rerun. Log: `work/unity/depth-bulge-editor.log`.
+- Windows/D3D11 shader bundle compilation passed **19 shaders**, including
+  Touch Dent with a regular PBR surface, Tessellation, and Surface Particles
+  Base. This exercises depth sampling in regular vertex and tessellation
+  domain paths plus the existing shader regression set. Log:
+  `work/unity/depth-bulge-d3d.log`.
+- This does **not** establish VRChat client, headset, stereo rendering or
+  arbitrary-world depth availability. The effect is camera-depth proximity,
+  not collision detection; mirrors are intentionally disabled. No avatar
+  helper or light was added, and the user's running Unity session was left
+  untouched.

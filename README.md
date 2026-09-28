@@ -17,7 +17,7 @@ The editor generates shaders and materials directly in Unity. Graphs remain edit
   <a href="docs/VPM.md">Installation help</a>
 </p>
 
-Add the NXSG repository and install **NX Shader Graph** in your project. Version **1.5.0** is available without enabling prerelease packages.
+Add the NXSG repository and install **NX Shader Graph** in your project. Version **1.6.0** is available without enabling prerelease packages.
 
 <details>
 <summary>VPM repository URL</summary>
@@ -49,6 +49,8 @@ https://nerdrx.github.io/nxsg/index.json
 | **Animation** | Flipbooks, vertex animation, AudioLink inputs, and animatable material properties. |
 | **Volumes** | Raymarched distance fields and procedural volume rendering. |
 | **Lighting integrations** | Additional pixel lights for Toon/PBR base surfaces and optional LTCGI support. |
+
+**Depth Bulge** adds camera-depth dents and bulges near other geometry. Connect its displacement output to a surface; [setup and limits](docs/DEPTH_BULGE.md).
 
 See the [node guide](docs/NODES.md) for individual nodes, inputs, and settings.
 

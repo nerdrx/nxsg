@@ -111,6 +111,8 @@ namespace NXSG.Core
                     items.Add(Item(node, "Adaptive tessellation", "Triangle count grows roughly quadratically with tessellation factor and varies with distance."));
                     loops.Add("Tessellation: factor " + Int(node,"minFactor",1,1,63) + " to " + Int(node,"factor",8,1,63) + " with fractional-odd spacing; camera distance affects topology.");
                 }
+                else if (op == "core.depthBulge")
+                    items.Add(Item(node, "One scene-depth sample per evaluation", "Displacement evaluates per vertex; Touch may evaluate per vertex or fragment depending on its connection. Mesh vertex count and pixel coverage determine work; mirrors and shadow/depth passes skip it."));
                 else if (op == "core.layeredPbrSurface")
                 {
                     items.Add(Item(node, "Lit surface pass", "The base uses ForwardBase and ForwardAdd per additional pixel light. When used as a shell layer, this surface adds one overlay pass instead."));
@@ -199,7 +201,7 @@ namespace NXSG.Core
             if (followsAlpha) PushSources(firstSurface, "albedo", nodes, incoming, pending);
             PushSources(firstSurface, "opacity", nodes, incoming, pending);
             var seen = new HashSet<string>(StringComparer.Ordinal);
-            var screenOps = new HashSet<string>(new[] { "core.refraction", "core.screenUV", "core.cameraDistance", "core.viewDirection", "core.fresnel", "core.rimGlow", "core.matcapTexture", "core.interiorMapping" }, StringComparer.Ordinal);
+            var screenOps = new HashSet<string>(new[] { "core.refraction", "core.screenUV", "core.cameraDistance", "core.viewDirection", "core.fresnel", "core.rimGlow", "core.matcapTexture", "core.interiorMapping", "core.depthBulge" }, StringComparer.Ordinal);
             while (pending.Count > 0)
             {
                 var node = pending.Pop();
@@ -230,7 +232,7 @@ namespace NXSG.Core
         {
             switch (n.Operation)
             {
-                case "core.texture2D": case "core.sticker": case "core.matcapTexture": case "core.interiorMapping": return 1;
+                case "core.texture2D": case "core.sticker": case "core.matcapTexture": case "core.interiorMapping": case "core.depthBulge": return 1;
                 case "core.chromaticTexture": return 3;
                 case "core.triplanarTexture": return 3;
                 case "core.parallaxOcclusion": return 1; // one sample site inside the loop; iteration budget is reported separately
