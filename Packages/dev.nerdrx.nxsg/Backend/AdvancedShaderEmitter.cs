@@ -65,7 +65,7 @@ namespace NXSG.Backend
             var hasTextureAlphaEdge = (graph.Connections ?? new List<GraphConnection>()).Any(edge =>
                 edge?.From != null && edge.To != null && connected.Contains(edge.From.NodeId) &&
                 liveById.TryGetValue(edge.From.NodeId, out var textureNode) && textureNode.Operation == "core.texture2D" && edge.From.PortId == "alpha");
-            return live.Any(n => n.Operation == "core.output" && n.Properties != null && n.Properties.Count > 0 || n.Operation == "core.toonSurface" && (new[]{"lightingMode","shadeMap","shadeColor","occlusion","shadow"}.Any(key=>n.Properties?[key]!=null) || incoming[n.Id].Any(e => !new[]{"albedo","normal","emission","opacity","displacement"}.Contains(e.To.PortId)))) || live.Any(n => ops.Contains(n.Operation) || FeatureNodes.IsKnown(n.Operation)) || live.Any(n => (n.Operation == "core.noise" || n.Operation == "core.uv0" || n.Operation == "core.polarUV" || n.Operation == "core.texture2D") && IsAdvancedCoordinates(n, incoming[n.Id])) || live.Count(n => n.Operation == "core.texture2D") > 1 ||
+            return live.Any(n => n.Operation == "core.output" && n.Properties != null && n.Properties.Count > 0 || n.Operation == "core.toonSurface" && (new[]{"lightingMode","shadeMap","shadeColor","occlusion","shadow","receiveShadow","borderColor","borderWidth","borderStrength"}.Any(key=>n.Properties?[key]!=null) || incoming[n.Id].Any(e => !new[]{"albedo","normal","emission","opacity","displacement"}.Contains(e.To.PortId)))) || live.Any(n => ops.Contains(n.Operation) || FeatureNodes.IsKnown(n.Operation)) || live.Any(n => (n.Operation == "core.noise" || n.Operation == "core.uv0" || n.Operation == "core.polarUV" || n.Operation == "core.texture2D") && IsAdvancedCoordinates(n, incoming[n.Id])) || live.Count(n => n.Operation == "core.texture2D") > 1 ||
                 hasColorScalarEdge ||
                 hasTextureAlphaEdge ||
                 live.Any(n => n.Operation == "core.toonSurface" && (n.Properties?["useAlbedoAlpha"] != null || n.Properties?["opacity"] != null || n.Properties?["displacement"] != null || incoming[n.Id].Any(e => e.To.PortId == "opacity" || e.To.PortId == "displacement" || e.To.PortId == "normal") || HasLightingControls(n)));
@@ -133,8 +133,15 @@ namespace NXSG.Backend
             var output = nodes.Values.Single(n => n.Operation == "core.output");
             var root = Source(output, "surface");
             if (root == null) throw new InvalidOperationException("Connect a Surface to Output.");
-            var outline = root.Operation == "core.outline" ? root : null;
+            var outline = root.Operation == "core.outline" || root.Operation == "core.softOutline" ? root : null;
             if (outline != null) root = Source(outline, "base") ?? throw new InvalidOperationException("Connect a mesh surface to Outline Base.");
+            geometryDissolve = root.Operation == "core.geometryDissolve" ? root : null;
+            if (geometryDissolve != null)
+            {
+                root = Source(geometryDissolve,"base") ?? throw new InvalidOperationException("Connect a mesh surface to Geometry Dissolve Base.");
+                if (!new[]{"core.toonSurface","core.unlitSurface","core.pbrSurface","core.layeredPbrSurface","core.shell","core.tessellation"}.Contains(root.Operation)) throw new InvalidOperationException("Geometry Dissolve supports mesh surfaces, Shell and Tessellation, not generated particles or Fur.");
+                geometryDissolveActive = Source(geometryDissolve,"amount") != null || (double?)geometryDissolve.Properties["amount"] > 0;
+            }
             renderState = new SurfaceRenderState(output);
             volumeEnabled = root.Operation == "core.volumeSurface";
             var particle = root.Operation == "core.particleSurface" || volumeEnabled;
@@ -156,7 +163,7 @@ namespace NXSG.Backend
             if (fallback != null && !new[] { "toonstandard", "standard", "unlit", "toon", "hidden" }.Contains(fallback)) throw new InvalidOperationException("Unsupported fallback tag.");
             if (particle && fallback == "toonstandard") fallback = "Particle";
             var live = new HashSet<string>();
-            Visit(outline ?? root, live);
+            Visit(outline ?? geometryDissolve ?? root, live);
             var needsProceduralHelpers = live.Any(id =>
             {
                 var node = nodes[id];
@@ -179,11 +186,11 @@ namespace NXSG.Backend
             {
                 var operation = nodes[id].Operation;
                 return FeatureNodes.IsKnown(operation) && operation != "core.fur" &&
-                    !AudioDataNodes.IsKnown(operation) && !new[]{"core.ssao","core.contactShadow","core.lightVolumes","core.outline","core.cubemap","core.textureArray","core.uvTileDiscard"}.Contains(operation) && operation != "core.layeredPbrSurface" && operation != "core.tessellation" && operation != "core.depthBulge";
+                    !AudioDataNodes.IsKnown(operation) && !new[]{"core.ssao","core.contactShadow","core.lightVolumes","core.outline","core.softOutline","core.geometryDissolve","core.sdfFaceShadow","core.depthRim","core.gem","core.cubemap","core.textureArray","core.uvTileDiscard"}.Contains(operation) && operation != "core.layeredPbrSurface" && operation != "core.tessellation" && operation != "core.depthBulge";
             });
-            screenDepthEnabled = live.Any(id => nodes[id].Operation == "core.ssao" || nodes[id].Operation == "core.contactShadow");
-            if (screenDepthEnabled && particle) throw new InvalidOperationException("Screen Space AO and Contact Shadows require a mesh surface, not Volume or Particle Surface.");
-            if (screenDepthEnabled) diagnostics.Add(new Diagnostic(DiagnosticSeverity.Warning,"depth.screenSpace","$","Screen-space lighting requires a valid camera depth texture. Hidden/off-screen occluders are unavailable; mirrors with oblique projections return unoccluded. Depth-free worlds return neutral visibility. Stereo and VRChat need client validation."));
+            screenDepthEnabled = live.Any(id => nodes[id].Operation == "core.ssao" || nodes[id].Operation == "core.contactShadow" || nodes[id].Operation == "core.depthRim");
+            if (screenDepthEnabled && (particle || surfaceParticles)) throw new InvalidOperationException("Screen-depth effects require a regular mesh surface, not Volume or Particle Surface.");
+            if (screenDepthEnabled) diagnostics.Add(new Diagnostic(DiagnosticSeverity.Warning,"depth.screenSpace","$","Screen-space effects require a valid camera depth texture. Hidden/off-screen geometry is unavailable; mirrors with oblique projections return a neutral result. Depth-free worlds return zero for Depth Rim and unoccluded for lighting masks. Stereo and VRChat need client validation."));
             var lightVolumes = live.Any(id => nodes[id].Operation == "core.lightVolumes");
             if (lightVolumes && !options.LightVolumesAvailable) throw new InvalidOperationException("Light Volumes requires the optional red.sim.lightvolumes v3 package. Install it, then rebuild.");
             var audioData = live.Any(id => AudioDataNodes.IsKnown(nodes[id].Operation));
@@ -199,12 +206,14 @@ namespace NXSG.Backend
                     throw new InvalidOperationException("Connect Depth Bulge to the Base surface, not the generated particle inputs.");
             }
             if (!volumeEnabled && live.Any(id => nodes[id].Operation == "core.rayPosition")) throw new InvalidOperationException("Ray Position requires Volume Surface connected directly to Output.");
-            if (volumeEnabled && live.Any(id => new[]{"core.particleInfo", "core.ltcgi", "core.lightVolumes", "core.wireframe", "core.refraction", "core.parallaxOcclusion"}.Contains(nodes[id].Operation))) throw new InvalidOperationException("Volume Surface cannot evaluate particle data, lighting, wireframe, refraction or parallax branches inside its march loop.");
-            if (live.Any(id => nodes[id].Operation == "core.outline" && nodes[id] != outline)) throw new InvalidOperationException("Use one Outline as the final node before Output.");
-            var refracts = live.Any(id => nodes[id].Operation == "core.refraction");
-            if(refracts && (particle || surfaceParticles)) throw new InvalidOperationException("Screen refraction currently supports regular mesh surfaces, not particle surfaces.");
+            if (volumeEnabled && live.Any(id => new[]{"core.particleInfo", "core.ltcgi", "core.lightVolumes", "core.wireframe", "core.refraction", "core.gem", "core.depthRim", "core.parallaxOcclusion"}.Contains(nodes[id].Operation))) throw new InvalidOperationException("Volume Surface cannot evaluate particle data, lighting, wireframe, screen depth, screen refraction or parallax branches inside its march loop.");
+            if (live.Any(id => (nodes[id].Operation == "core.outline" || nodes[id].Operation == "core.softOutline") && nodes[id] != outline)) throw new InvalidOperationException("Use one Outline or Soft Outline as the final node before Output.");
+            if (live.Any(id => nodes[id].Operation == "core.geometryDissolve" && nodes[id] != geometryDissolve)) throw new InvalidOperationException("Use one Geometry Dissolve before Output or Outline.");
+            if (geometryDissolveActive && outline != null) throw new InvalidOperationException("Geometry Dissolve cannot be outlined yet. Disconnect Outline while dissolving.");
+            var refracts = live.Any(id => nodes[id].Operation == "core.refraction" || nodes[id].Operation == "core.gem");
+            if(refracts && (particle || surfaceParticles)) throw new InvalidOperationException("Screen refraction and Gem currently support regular mesh surfaces, not particle surfaces.");
             var wireNode = live.Select(id => nodes[id]).FirstOrDefault(n => n.Operation == "core.wireframe");
-            wireframeEnabled = wireNode != null;
+            wireframeEnabled = wireNode != null || geometryDissolveActive;
             if (wireframeEnabled && particle) throw new InvalidOperationException("Wireframe currently supports Toon, Unlit, PBR and Shell surfaces; use those for mesh edges.");
             if (wireframeEnabled && surfaceParticles)
             {
@@ -266,7 +275,7 @@ namespace NXSG.Backend
             if (volumeEnabled) passCode.Append(VolumePass(root));
             else if (particle) passCode.Append(ParticlePass(root));
             else for (var i = 0; i < passes.Count; i++) passCode.Append(Pass(passes[i].Surface, i, passes[i].Offset, tessNode, refracts));
-            if (outline != null) passCode.Append(OutlinePass(outline, passes[0], tessNode));
+            if (outline != null) passCode.Append(outline.Operation == "core.softOutline" ? SoftOutlinePass(outline, passes[0], tessNode) : OutlinePass(outline, passes[0], tessNode));
             bool cardsOnly = furNode != null && IntProp(furNode, "cardsOnly", 0, 0, 1) == 1;
             if (furNode != null) diagnostics.Add(new Diagnostic(DiagnosticSeverity.Warning, "lighting.forwardAdd", furNode.Id, "Additional pixel lights affect the lit base surface only; fur overlays use the main light and ambient lighting."));
             if (furNode != null && !cardsOnly)
@@ -302,6 +311,10 @@ namespace NXSG.Backend
             b.AppendLine(Helpers);
             if (depthBulge) b.AppendLine(DepthBulgeShader.Hlsl);
             if (screenDepthEnabled) b.AppendLine(ScreenDepthShader.Hlsl);
+            if(refracts) b.AppendLine("sampler2D _NXSG_GrabTexture; float4 _NXSG_GrabTexture_TexelSize;");
+            if (live.Any(id => nodes[id].Operation == "core.sdfFaceShadow" || nodes[id].Operation == "core.gem")) b.AppendLine(DetailShader.CommonHelpers);
+            if (live.Any(id => nodes[id].Operation == "core.depthRim")) b.AppendLine(DetailShader.DepthRimHelpers);
+            if (live.Any(id => nodes[id].Operation == "core.gem")) b.AppendLine(DetailShader.GemHelpers);
             if (lightVolumes) b.AppendLine(LightVolumesShader.Hlsl + LightVolumeGraphHelper);
             if (needsVolumeHelpers) b.AppendLine(VolumeShader.Helpers);
             if (needsProceduralHelpers) b.AppendLine(ProceduralShader.Hlsl);
@@ -313,7 +326,6 @@ namespace NXSG.Backend
                 if(quality>0)diagnostics.Add(new Diagnostic(DiagnosticSeverity.Warning,"cost.furSelfShadow",furNode.Id,"Fur self-shadowing samples the local strand volume "+(quality==1?4:quality==2?8:16)+" times per shaded fur fragment. Cost grows with shell layers and screen coverage; it approximates local straight fur, not shadows across separate body parts."));
             }
             if (ltcgiEnabled) b.AppendLine(LtcgiShader.Hlsl);
-            if(refracts) b.AppendLine("sampler2D _NXSG_GrabTexture; float4 _NXSG_GrabTexture_TexelSize;");
             if (coatEnabled) b.AppendLine(LayeredPbrShader.CoatHelpers);
             if (sheenEnabled) b.AppendLine(LayeredPbrShader.SheenHelpers);
             if (live.Any(id => nodes[id].Operation == "core.glitter")) b.AppendLine(GlitterShader.Hlsl);
@@ -322,7 +334,7 @@ namespace NXSG.Backend
                 b.AppendLine("float NX_ArraySlice_"+Hash(prop.ResourceId)+"(float slice) { return clamp(floor(slice),0,max(0,"+prop.Name+"_Layers-1)); }");
             b.AppendLine(code.ToString());
             b.AppendLine("ENDCG\n" + passCode + shadowPass + "}\nCustomEditor \"NXSG.Editor.NXSGMaterialShaderGUI\"\nFallback Off\n}");
-            if (refracts) diagnostics.Add(new Diagnostic(DiagnosticSeverity.Warning,"cost.refraction","$","Refraction copies the framebuffer into a shared named GrabPass texture and uses the transparent queue. It cannot refract off-screen objects; overlapping transparent materials and stereo need validation."));
+            if (refracts) diagnostics.Add(new Diagnostic(DiagnosticSeverity.Warning,"cost.refraction","$","Refraction and Gem copy the framebuffer into a shared named GrabPass texture and use the transparent queue. They cannot refract off-screen objects; Gem uses a first-probe reflection approximation, and overlapping transparent materials and stereo need validation."));
             if (depthBulge) diagnostics.Add(new Diagnostic(DiagnosticSeverity.Warning, "depth.bulge", "$", "Depth Bulge needs a camera depth texture and enough mesh vertices. It detects visible depth proximity, not physical contact; transparent objects usually do not contribute. Missing depth, mirrors/oblique cameras and shadow/depth passes leave it inactive. Expand bounds for displacement. Shadows keep the original shape; stereo and VRChat need client validation."));
             if (live.Any(id => nodes[id].Operation == "core.textureBomb")) diagnostics.Add(new Diagnostic(DiagnosticSeverity.Warning,"cost.textureBomb","$","Texture Bomb blends four transformed texture samples, plus plain sampling when Blend is not constant one."));
             if (passes.Count > 1) diagnostics.Add(new Diagnostic(DiagnosticSeverity.Warning, "cost.shell", root.Id, (passes.Count - 1) + " extra transparent mesh pass" + (passes.Count == 2 ? "" : "es") + " per view; normal offset does not expand renderer bounds. Overlapping transparent objects can sort imperfectly."));
@@ -337,7 +349,8 @@ namespace NXSG.Backend
                 diagnostics.Add(new Diagnostic(DiagnosticSeverity.Warning, "cost.particleDepth", root.Id, "Soft intersections require a camera depth texture. Set soft distance to 0 when unavailable; transparent overdraw and depth sampling add cost."));
             // NXInput can exceed SM4's 16 vertex outputs once light/shadow and stereo fields are present.
             // Declare the actual varying budget in every pass, including geometry and tessellation passes.
-            return b.ToString().Replace("CGPROGRAM\n", "CGPROGRAM\n#pragma require interpolators32\n");
+            if (geometryDissolveActive) diagnostics.Add(new Diagnostic(DiagnosticSeverity.Warning,"cost.geometryDissolve",geometryDissolve.Id,"Geometry Dissolve transforms each triangle in base, additional light and shadow passes. Expand renderer bounds. It follows the current pose, without stored particle history."));
+            return b.ToString().Replace("#pragma target 4.0", geometryDissolveActive ? "#pragma target 4.5" : "#pragma target 4.0").Replace("CGPROGRAM\n", "CGPROGRAM\n#pragma require interpolators32\n");
         }
 
         void Visit(GraphNode node, HashSet<string> live)
@@ -363,7 +376,7 @@ namespace NXSG.Backend
         GraphNode Source(GraphNode n, string port) { return edges.TryGetValue(Key(n.Id, port), out var edge) ? nodes[edge.From.NodeId] : null; }
         bool ContainsScreenDependentOperation(GraphNode root, string port)
         {
-            var operations = new HashSet<string> { "core.refraction", "core.screenUV", "core.cameraDistance", "core.viewDirection", "core.fresnel", "core.rimGlow", "core.matcapTexture", "core.interiorMapping", "core.depthBulge", "core.ssao", "core.contactShadow", "core.lightVolumes" };
+            var operations = new HashSet<string> { "core.refraction", "core.gem", "core.depthRim", "core.screenUV", "core.cameraDistance", "core.viewDirection", "core.fresnel", "core.rimGlow", "core.matcapTexture", "core.interiorMapping", "core.depthBulge", "core.ssao", "core.contactShadow", "core.lightVolumes" };
             var seen = new HashSet<string>();
             var stack = new Stack<GraphNode>();
             var first = Source(root, port);
@@ -431,6 +444,15 @@ namespace NXSG.Backend
                 case "core.depthBulge":
                     body = "NX_DepthBulgeTouch(input.originalWs," + S("distance", .1) + "," + S("falloff", 1) + "," + S("bias", .002) + ")*saturate(" + S("mask", 1) + ")";
                     if (port == "displacement") body = "(" + body + ")*" + S("height", -.03);
+                    break;
+                case "core.sdfFaceShadow":
+                    body = DetailShader.FaceShadow(vertex, P, S, IntProp(n, "basis", 0, 0, 1), Literal(n.Properties["headRight"], "vector3"), Literal(n.Properties["headForward"], "vector3"));
+                    break;
+                case "core.depthRim":
+                    body = DetailShader.DepthRim(vertex, S);
+                    break;
+                case "core.gem":
+                    body = DetailShader.Gem(vertex, P, S, ColorProp(n, "color", 1, 1, 1, 1));
                     break;
                 case "core.previewVector": body = Source(n,"normal") != null ? "float4(" + P("normal","float3(0,0,1)","vector3") + "*.5+.5,1)" : "float4(" + P("uv",uv,"vector2") + ",0,1)"; break;
                 case "core.particleColor": body = port == "alpha" ? "input.color.a" : "input.color"; break;
@@ -608,7 +630,7 @@ namespace NXSG.Backend
                 default:
                     if (!FeatureNodes.IsKnown(n.Operation)) throw new InvalidOperationException("Unsupported value operation: " + n.Operation);
                     var resourceId=(string)n.Properties["resourceId"];
-                    body=FeatureShader.Body(n,uv,vertex,P,S,(property,fallback)=>Prop(n,property,fallback),(coords,isVertex)=>Sample(n,coords,isVertex),resourceId!=null && textureNames.TryGetValue(resourceId,out var sampler)?sampler:null);
+                    body=FeatureShader.Body(n,uv,vertex,P,S,(property,fallback)=>Prop(n,property,fallback),(property,r,g,b,a)=>ColorProp(n,property,r,g,b,a),(coords,isVertex)=>Sample(n,coords,isVertex),resourceId!=null && textureNames.TryGetValue(resourceId,out var sampler)?sampler:null);
                     break;
             }
             functions.Add(key, symbol);
@@ -740,6 +762,19 @@ namespace NXSG.Backend
             return GraphDependencies.IsLayerActive(surface, port, Source(surface, port) != null);
         }
 
+        bool HasSpecularAa(GraphNode surface)
+        {
+            return Source(surface, "specularAa") != null ||
+                double.Parse(RawProp(surface, "specularAa", 0), CultureInfo.InvariantCulture) > 0;
+        }
+
+        string SpecularAaCode(GraphNode surface, string normal, string prefix)
+        {
+            if (!HasSpecularAa(surface)) return "half rough=saturate(" + Scalar(surface, "roughness", .5) + ");";
+            var amount = Scalar(surface, "specularAa", 0);
+            return "half rough=saturate(" + Scalar(surface, "roughness", .5) + "); float3 " + prefix + "Dx=ddx(" + normal + ")," + prefix + "Dy=ddy(" + normal + "); rough=saturate(sqrt(rough*rough+max(0,dot(" + prefix + "Dx," + prefix + "Dx)+dot(" + prefix + "Dy," + prefix + "Dy))*saturate(" + amount + ")));";
+        }
+
         // Layer code is only emitted for active lobes; a connected weight remains dynamic even if its default is zero.
         string SurfaceLayers(GraphNode surface, bool additionalLight)
         {
@@ -752,7 +787,7 @@ namespace NXSG.Backend
             if (HasLayer(surface, "coat"))
             {
                 coatEnabled = true;
-                b.AppendLine("float3 coatTangent=" + Input(surface,"coatNormal","float3(0,0,1)","vector3") + "; float3 coatBasis=normalize(input.tangent)*coatTangent.x+normalize(input.bitangent)*coatTangent.y+normalize(input.n)*coatTangent.z; float3 coatNormal=dot(coatBasis,coatBasis)>1e-8?normalize(coatBasis):normalize(input.n); float coatRoughness=saturate(" + Scalar(surface,"coatRoughness",.1) + ");");
+                b.AppendLine("float3 coatTangent=" + Input(surface,"coatNormal","float3(0,0,1)","vector3") + "; float3 coatBasis=normalize(input.tangent)*coatTangent.x+normalize(input.bitangent)*coatTangent.y+normalize(input.n)*coatTangent.z; float3 coatNormal=dot(coatBasis,coatBasis)>1e-8?normalize(coatBasis):normalize(input.n); float coatRoughness=saturate(" + Scalar(surface,"coatRoughness",.1) + ");" + (HasSpecularAa(surface) ? " float3 coatAaDx=ddx(coatNormal),coatAaDy=ddy(coatNormal); coatRoughness=saturate(sqrt(coatRoughness*coatRoughness+max(0,dot(coatAaDx,coatAaDx)+dot(coatAaDy,coatAaDy))*saturate(" + Scalar(surface,"specularAa",0) + ")));" : ""));
                 b.AppendLine("float3 coatEnvironment=0;");
                 if (!additionalLight)
                 {
@@ -786,17 +821,18 @@ namespace NXSG.Backend
             var b=new StringBuilder("Pass {\nName \""+(shell?(passIndex == 1 ? "Shell" : "Shell" + passIndex.ToString(CultureInfo.InvariantCulture)):"ForwardBase")+"\"\nTags { \"LightMode\"=\""+(shell?"Always":"ForwardBase")+"\" }\n"+renderState.BaseState(shell, autoTransparent)+"\nCGPROGRAM\n#pragma target "+(tess?"4.6":wireframeEnabled?"4.0":"3.5")+"\n#pragma vertex "+(tess?"vertTess":"vert")+"\n"+(tess?"#pragma hull hullTess\n#pragma domain domainTess\n":"")+"#pragma fragment frag\n"+(wireframeEnabled?"#pragma geometry geomWire\n":"")+"#pragma multi_compile_fwdbase\n#pragma multi_compile_instancing\n");
             b.AppendLine("NXInput vert(NXApp v) { UNITY_SETUP_INSTANCE_ID(v); NXInput input=NX_Make(v); v.vertex.xyz+=v.normal*("+displacement+"+"+offset+"+"+tessHeight+"); NXInput o=NX_Make(v); o.originalLocal=input.originalLocal; o.originalWs=input.originalWs; UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o); TRANSFER_VERTEX_TO_FRAGMENT(o); return o; }");
             if (tess) b.AppendLine(TessellationShader.Forward(Prop(tessellation,"factor",8), Prop(tessellation,"minFactor",1), Prop(tessellation,"nearDistance",2), Prop(tessellation,"farDistance",15), Prop(tessellation,"smoothing",0)));
-            if (wireframeEnabled) b.AppendLine(WireGeometry);
+            if (wireframeEnabled) b.AppendLine(geometryDissolveActive ? BreakupGeometry(false) : WireGeometry);
             b.AppendLine("float4 frag(NXInput input):SV_Target { UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input); "+(depthBulgeEnabled ? "NX_DepthBulgeNormals(input); " : "")+"float4 c="+color+"*_Color; float3 emission=("+emission+").rgb; float alpha="+(forceOpaque ? "1" : "saturate("+(IntProp(surface,"useAlbedoAlpha",1,0,1)==1 ? "c.a" : "_Color.a")+"*"+opacity+")")+";");
             if(!shell && !forceOpaque)b.AppendLine("clip(alpha-"+Prop(surface,"cutoff",.001)+");");
             if(surface.Operation=="core.unlitSurface")b.AppendLine("return float4(c.rgb+emission,alpha);");
             else
             {
-                b.AppendLine("float3 tn="+normal+"; float3 n=normalize(normalize(input.tangent)*tn.x+normalize(input.bitangent)*tn.y+normalize(input.n)*tn.z); float3 view=normalize(_WorldSpaceCameraPos-input.ws); float3 lightDir=normalize(UnityWorldSpaceLightDir(input.ws)); UNITY_LIGHT_ATTENUATION(atten,input,input.ws); atten*=saturate("+directShadow+");");
+                b.AppendLine("float3 tn="+normal+"; float3 n=normalize(normalize(input.tangent)*tn.x+normalize(input.bitangent)*tn.y+normalize(input.n)*tn.z); float3 view=normalize(_WorldSpaceCameraPos-input.ws); float3 lightDir=normalize(UnityWorldSpaceLightDir(input.ws)); "+LightAttenuation(surface)+" atten*=saturate("+directShadow+");");
                 if(IsPbr(surface))
                 {
-                    if (!lighting) b.AppendLine("half3 spec; half reflectivity; half3 diffuse=DiffuseAndSpecularFromMetallic(c.rgb,saturate("+metallic+"),spec,reflectivity); UnityLight light; light.color=_LightColor0.rgb*atten; light.dir=lightDir; light.ndotl=saturate(dot(n,lightDir)); UnityIndirect indirect; indirect.diffuse=max(0,ShadeSH9(float4(n,1)))*saturate("+occlusion+"); half rough=saturate("+roughness+"); half4 env=UNITY_SAMPLE_TEXCUBE_LOD(unity_SpecCube0,reflect(-view,n),rough*6); indirect.specular=DecodeHDR(env,unity_SpecCube0_HDR)*saturate("+occlusion+"); float3 pbr=UNITY_BRDF_PBS(diffuse,spec,reflectivity,1-rough,n,view,light,indirect).rgb;");
-                    else b.AppendLine("half3 spec; half reflectivity; half3 diffuse=DiffuseAndSpecularFromMetallic(c.rgb,saturate("+metallic+"),spec,reflectivity); UnityLight light; light.color=NX_LightingContribution(_LightColor0.rgb*atten,"+lightingSaturation+","+lightingMax+"); light.dir=lightDir; light.ndotl=saturate(dot(n,lightDir)); UnityIndirect indirect; indirect.diffuse=NX_LightingBase(NX_LightingContribution(max(0,ShadeSH9(float4(n,1)))*saturate("+occlusion+"),"+lightingSaturation+","+lightingMax+"),"+lightingMin+","+lightingMax+"); half rough=saturate("+roughness+"); half4 env=UNITY_SAMPLE_TEXCUBE_LOD(unity_SpecCube0,reflect(-view,n),rough*6); indirect.specular=NX_LightingBase(NX_LightingContribution(DecodeHDR(env,unity_SpecCube0_HDR)*saturate("+occlusion+"),"+lightingSaturation+","+lightingMax+"),"+lightingMin+","+lightingMax+"); float3 pbr=UNITY_BRDF_PBS(diffuse,spec,reflectivity,1-rough,n,view,light,indirect).rgb;");
+                    var aaRoughness = SpecularAaCode(surface, "n", "specAa");
+                    if (!lighting) b.AppendLine("half3 spec; half reflectivity; half3 diffuse=DiffuseAndSpecularFromMetallic(c.rgb,saturate("+metallic+"),spec,reflectivity); UnityLight light; light.color=_LightColor0.rgb*atten; light.dir=lightDir; light.ndotl=saturate(dot(n,lightDir)); UnityIndirect indirect; indirect.diffuse=max(0,ShadeSH9(float4(n,1)))*saturate("+occlusion+"); "+aaRoughness+" half4 env=UNITY_SAMPLE_TEXCUBE_LOD(unity_SpecCube0,reflect(-view,n),rough*6); indirect.specular=DecodeHDR(env,unity_SpecCube0_HDR)*saturate("+occlusion+"); float3 pbr=UNITY_BRDF_PBS(diffuse,spec,reflectivity,1-rough,n,view,light,indirect).rgb;");
+                    else b.AppendLine("half3 spec; half reflectivity; half3 diffuse=DiffuseAndSpecularFromMetallic(c.rgb,saturate("+metallic+"),spec,reflectivity); UnityLight light; light.color=NX_LightingContribution(_LightColor0.rgb*atten,"+lightingSaturation+","+lightingMax+"); light.dir=lightDir; light.ndotl=saturate(dot(n,lightDir)); UnityIndirect indirect; indirect.diffuse=NX_LightingBase(NX_LightingContribution(max(0,ShadeSH9(float4(n,1)))*saturate("+occlusion+"),"+lightingSaturation+","+lightingMax+"),"+lightingMin+","+lightingMax+"); "+aaRoughness+" half4 env=UNITY_SAMPLE_TEXCUBE_LOD(unity_SpecCube0,reflect(-view,n),rough*6); indirect.specular=NX_LightingBase(NX_LightingContribution(DecodeHDR(env,unity_SpecCube0_HDR)*saturate("+occlusion+"),"+lightingSaturation+","+lightingMax+"),"+lightingMin+","+lightingMax+"); float3 pbr=UNITY_BRDF_PBS(diffuse,spec,reflectivity,1-rough,n,view,light,indirect).rgb;");
                     b.AppendLine(SurfaceLayers(surface, false));
                     b.AppendLine("return float4(pbr+emission,alpha);");
                 }
@@ -825,11 +861,12 @@ namespace NXSG.Backend
             var b = new StringBuilder("\nPass {\nName \"ForwardAdd\"\nTags { \"LightMode\"=\"ForwardAdd\" }\n"+renderState.AddState(autoTransparent)+"ColorMask RGB\nZWrite Off\nCGPROGRAM\n#pragma target "+(tess?"4.6":wireframeEnabled?"4.0":"3.5")+"\n#pragma vertex "+(tess?"vertTessAdd":"vertAdd")+"\n"+(tess?"#pragma hull hullTessAdd\n#pragma domain domainTessAdd\n":"")+"#pragma fragment fragAdd\n"+(wireframeEnabled?"#pragma geometry geomWireAdd\n":"")+"#pragma multi_compile_fwdadd_fullshadows\n#pragma multi_compile_instancing\n");
             b.AppendLine("NXInput vertAdd(NXApp v) { UNITY_SETUP_INSTANCE_ID(v); NXInput input=NX_Make(v); v.vertex.xyz+=v.normal*("+displacement+"+"+offset+"+"+tessHeight+"); NXInput o=NX_Make(v); o.originalLocal=input.originalLocal; o.originalWs=input.originalWs; UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o); TRANSFER_VERTEX_TO_FRAGMENT(o); return o; }");
             if (tess) b.AppendLine(TessellationShader.Forward(Prop(tessellation,"factor",8),Prop(tessellation,"minFactor",1),Prop(tessellation,"nearDistance",2),Prop(tessellation,"farDistance",15),Prop(tessellation,"smoothing",0)).Replace("vertTess", "vertTessAdd").Replace("hullTess", "hullTessAdd").Replace("domainTess", "domainTessAdd").Replace("return vert(a)", "return vertAdd(a)"));
-            if (wireframeEnabled) b.AppendLine(WireGeometry.Replace("geomWire", "geomWireAdd"));
-            b.AppendLine("float4 fragAdd(NXInput input):SV_Target { UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input); "+(depthBulgeEnabled ? "NX_DepthBulgeNormals(input); " : "")+"float4 c="+color+"*_Color; float alpha="+(renderState.ForceOpaque ? "1" : "saturate("+(IntProp(surface,"useAlbedoAlpha",1,0,1)==1 ? "c.a" : "_Color.a")+"*"+opacity+")")+"; "+(renderState.ForceOpaque ? "" : "clip(alpha-"+Prop(surface,"cutoff",.001)+"); ")+"float3 tn="+normal+"; float3 n=normalize(normalize(input.tangent)*tn.x+normalize(input.bitangent)*tn.y+normalize(input.n)*tn.z); float3 view=normalize(_WorldSpaceCameraPos-input.ws); float3 lightDir=normalize(UnityWorldSpaceLightDir(input.ws)); UNITY_LIGHT_ATTENUATION(atten,input,input.ws); atten*=saturate("+directShadow+");");
+            if (wireframeEnabled) b.AppendLine((geometryDissolveActive ? BreakupGeometry(false) : WireGeometry).Replace("geomWire", "geomWireAdd"));
+            b.AppendLine("float4 fragAdd(NXInput input):SV_Target { UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input); "+(depthBulgeEnabled ? "NX_DepthBulgeNormals(input); " : "")+"float4 c="+color+"*_Color; float alpha="+(renderState.ForceOpaque ? "1" : "saturate("+(IntProp(surface,"useAlbedoAlpha",1,0,1)==1 ? "c.a" : "_Color.a")+"*"+opacity+")")+"; "+(renderState.ForceOpaque ? "" : "clip(alpha-"+Prop(surface,"cutoff",.001)+"); ")+"float3 tn="+normal+"; float3 n=normalize(normalize(input.tangent)*tn.x+normalize(input.bitangent)*tn.y+normalize(input.n)*tn.z); float3 view=normalize(_WorldSpaceCameraPos-input.ws); float3 lightDir=normalize(UnityWorldSpaceLightDir(input.ws)); "+LightAttenuation(surface)+" atten*=saturate("+directShadow+");");
             if (IsPbr(surface))
             {
-                b.AppendLine(lighting ? "half3 spec; half reflectivity; half3 diffuse=DiffuseAndSpecularFromMetallic(c.rgb,saturate("+metallic+"),spec,reflectivity); UnityLight light; light.color=NX_LightingContribution(_LightColor0.rgb*atten,"+lightingSaturation+","+lightingMax+"); light.dir=lightDir; light.ndotl=saturate(dot(n,lightDir)); UnityIndirect indirect; indirect.diffuse=0; indirect.specular=0; half rough=saturate("+roughness+"); float3 pbr=UNITY_BRDF_PBS(diffuse,spec,reflectivity,1-rough,n,view,light,indirect).rgb;" : "half3 spec; half reflectivity; half3 diffuse=DiffuseAndSpecularFromMetallic(c.rgb,saturate("+metallic+"),spec,reflectivity); UnityLight light; light.color=_LightColor0.rgb*atten; light.dir=lightDir; light.ndotl=saturate(dot(n,lightDir)); UnityIndirect indirect; indirect.diffuse=0; indirect.specular=0; half rough=saturate("+roughness+"); float3 pbr=UNITY_BRDF_PBS(diffuse,spec,reflectivity,1-rough,n,view,light,indirect).rgb;");
+                var aaRoughness = SpecularAaCode(surface, "n", "specAaAdd");
+                b.AppendLine(lighting ? "half3 spec; half reflectivity; half3 diffuse=DiffuseAndSpecularFromMetallic(c.rgb,saturate("+metallic+"),spec,reflectivity); UnityLight light; light.color=NX_LightingContribution(_LightColor0.rgb*atten,"+lightingSaturation+","+lightingMax+"); light.dir=lightDir; light.ndotl=saturate(dot(n,lightDir)); UnityIndirect indirect; indirect.diffuse=0; indirect.specular=0; "+aaRoughness+" float3 pbr=UNITY_BRDF_PBS(diffuse,spec,reflectivity,1-rough,n,view,light,indirect).rgb;" : "half3 spec; half reflectivity; half3 diffuse=DiffuseAndSpecularFromMetallic(c.rgb,saturate("+metallic+"),spec,reflectivity); UnityLight light; light.color=_LightColor0.rgb*atten; light.dir=lightDir; light.ndotl=saturate(dot(n,lightDir)); UnityIndirect indirect; indirect.diffuse=0; indirect.specular=0; "+aaRoughness+" float3 pbr=UNITY_BRDF_PBS(diffuse,spec,reflectivity,1-rough,n,view,light,indirect).rgb;");
                 b.AppendLine(SurfaceLayers(surface, true));
                 b.AppendLine("return float4(pbr,alpha);");
             }
@@ -924,7 +961,13 @@ namespace NXSG.Backend
                     .Replace("v.normal*(" + displacement + "+" + offset + ")", "v.normal*(" + displacement + "+" + offset + "+" + tessHeight + ")");
                 shader = shader.Insert(shader.IndexOf("float4 fragShadow", StringComparison.Ordinal), TessellationShader.Shadow(Prop(tessellation,"factor",8), Prop(tessellation,"minFactor",1), Prop(tessellation,"nearDistance",2), Prop(tessellation,"farDistance",15), Prop(tessellation,"smoothing",0)));
             }
-            if (wireframeEnabled)
+            if (geometryDissolveActive)
+                shader=shader.Replace("#pragma target 3.5","#pragma target 4.5")
+                    .Replace("#pragma fragment fragShadow","#pragma fragment fragShadow\n#pragma geometry geomBreakupShadow")
+                    .Replace("float4 color:TEXCOORD10;", "float4 color:TEXCOORD10; float3 wireBary:TEXCOORD14;")
+                    .Replace("input.uv=i.uv;", "input.wireBary=i.wireBary; input.uv=i.uv;")
+                    .Replace("float4 fragShadow",BreakupGeometry(true)+"\nfloat4 fragShadow");
+            if (wireframeEnabled && !geometryDissolveActive)
                 shader = shader.Replace("#pragma target 3.5", "#pragma target 4.0").Replace("#pragma fragment fragShadow", "#pragma fragment fragShadow\n#pragma geometry geomWireShadow")
                     .Replace("float4 color:TEXCOORD10;", "float4 color:TEXCOORD10; float3 wireBary:TEXCOORD14;")
                     .Replace("float4 fragShadow", WireGeometry.Replace("NXInput", "NXShadow").Replace("geomWire", "geomWireShadow") + "\nfloat4 fragShadow")

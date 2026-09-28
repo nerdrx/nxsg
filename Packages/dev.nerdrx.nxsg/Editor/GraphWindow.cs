@@ -707,7 +707,7 @@ namespace NXSG.Editor
                         if(port=="threshold" && mode!=0 && mode!=3) continue;
                         if((port=="shadeColor" || port=="softness") && mode==2) continue;
                     }
-                    if(node.Operation=="core.outline" && (port=="width" || port=="pixelWidth"))
+                    if((node.Operation=="core.outline" || node.Operation=="core.softOutline") && (port=="width" || port=="pixelWidth"))
                     {
                         var pixel=((int?)node.Properties["widthMode"]??0)==1;
                         if(pixel!=(port=="pixelWidth")) continue;
@@ -999,7 +999,7 @@ namespace NXSG.Editor
                     case "core.emission": AddNumber(node, "strength", "Strength", 1, "strength"); break;
                     case "core.fresnel": AddNumber(node, "power", "Power", 5, "power"); break;
                     case "core.layer": AddNumber(node, "mask", "Mask", 1, "mask"); break;
-                    case "core.pbrSurface": AddLightingControls(node); AddAlbedoAlphaToggle(node); AddNumber(node, "opacity", "Opacity", 1, "opacity"); AddNumber(node, "cutoff", "Cutoff", .001f); AddNumber(node, "displacement", "Displacement", 0, "displacement"); AddNumber(node, "metallic", "Metallic", 0, "metallic"); AddNumber(node, "roughness", "Roughness", .5f, "roughness"); break;
+                    case "core.pbrSurface": AddLightingControls(node); AddAlbedoAlphaToggle(node); AddNumber(node, "opacity", "Opacity", 1, "opacity"); AddNumber(node, "cutoff", "Cutoff", .001f); AddNumber(node, "displacement", "Displacement", 0, "displacement"); AddNumber(node, "metallic", "Metallic", 0, "metallic"); AddNumber(node, "roughness", "Roughness", .5f, "roughness"); AddBoundedNumber(node,"specularAa","Specular anti-aliasing",0,1,0,"specularAa"); break;
                     case "core.output": AddOutputControls(node); break;
                     case "core.toonSurface": AddToonLightingControls(node); AddLightingControls(node); AddAlbedoAlphaToggle(node); AddNumber(node, "opacity", "Opacity", 1, "opacity"); AddNumber(node, "cutoff", "Cutoff", .001f); AddNumber(node, "displacement", "Displacement", 0, "displacement"); break;
                     case "core.surfaceParticles":

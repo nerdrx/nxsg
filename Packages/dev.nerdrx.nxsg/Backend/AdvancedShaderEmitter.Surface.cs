@@ -38,6 +38,7 @@ return float4((outputMode==1?diffuse:outputMode==2?specular:diffuse+specular)*ma
                         b.AppendLine("float bands="+IntProp(surface,"bands",3,2,8)+"-1; float scaled=lightCoordinate*bands; float lit=saturate((floor(scaled)+smoothstep(.5-max(.001,"+softness+"),.5+max(.001,"+softness+"),frac(scaled)))/bands);");
                     else b.AppendLine("float lit=smoothstep("+threshold+"-max(.001,"+softness+"),"+threshold+"+max(.001,"+softness+"),lightCoordinate);");
                     b.AppendLine("float3 toonResponse=lerp(lerp(float3(1,1,1),("+Input(surface,"shadeColor",ColorProp(surface,"shadeColor",0,0,0,1),"color")+").rgb,saturate("+strength+")),float3(1,1,1),lit);");
+                    AppendToonBorder(b, surface, mode == 1 ? "frac(lightCoordinate*bands)" : "lightCoordinate", mode == 1 ? ".5" : threshold);
                 }
             }
             b.AppendLine("float3 direct=_LightColor0.rgb*atten*toonResponse;");
@@ -80,7 +81,26 @@ return float4((outputMode==1?diffuse:outputMode==2?specular:diffuse+specular)*ma
                 var shadeColor = Input(surface, "shadeColor" + suffix, ColorProp(surface, "shadeColor" + suffix, red, green, blue, 1), "color");
                 var strength = layer == 1 ? ToonSetting(surface, "shadowStrength", passIndex) : Scalar(surface, strengthPort, 1);
                 b.AppendLine("toonResponse=lerp(toonResponse,(" + shadeColor + ").rgb,(1-toonLayer" + layer + "Lit)*saturate(" + strength + ")); ");
+                AppendToonBorder(b, surface, "toonLayer" + layer + "Coordinate", threshold);
             }
+        }
+
+        void AppendToonBorder(StringBuilder b, GraphNode surface, string coordinate, string threshold)
+        {
+            if (Source(surface,"borderStrength") == null && (double?)surface.Properties["borderStrength"] != null && (double)surface.Properties["borderStrength"] == 0) return;
+            if (Source(surface,"borderStrength") == null && surface.Properties["borderStrength"] == null) return;
+            var strength = Scalar(surface,"borderStrength",0);
+            var width = Scalar(surface,"borderWidth",.05);
+            var color = Input(surface,"borderColor",ColorProp(surface,"borderColor",1,.3,.15,1),"color");
+            b.AppendLine("toonResponse=lerp(toonResponse,("+color+").rgb,(1-smoothstep(0,max(.0001,"+width+"),abs("+coordinate+"-("+threshold+"))))*saturate("+strength+"));");
+        }
+
+        string LightAttenuation(GraphNode surface)
+        {
+            const string standard = "UNITY_LIGHT_ATTENUATION(atten,input,input.ws);";
+            if (surface.Operation != "core.toonSurface" || Source(surface,"receiveShadow") == null && (surface.Properties["receiveShadow"] == null || (double)surface.Properties["receiveShadow"] == 1)) return standard;
+            // Preserve Unity's distance/cookie attenuation. Replace only its scene-shadow factor in this pass.
+            return "float nxSceneShadow=UNITY_SHADOW_ATTENUATION(input,input.ws);\n#undef UNITY_SHADOW_ATTENUATION\n#define UNITY_SHADOW_ATTENUATION(a,b) lerp(1,nxSceneShadow,saturate("+Scalar(surface,"receiveShadow",1)+"))\n"+standard;
         }
 
     }

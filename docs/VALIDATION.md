@@ -821,3 +821,52 @@ These are Linux render tests and Windows-target cross-compilation. Native
 Windows, VRChat mirrors and headset/stereo rendering still require client
 checks. Inverted-hull outlines retain their mesh-normal and renderer-bounds
 limitations; extra lights are not added to the outline pass.
+
+## Surface details and geometry effects — 2026-09-28
+
+Version 1.9.0 was checked in the isolated Unity 2022.3.22f1 fixture on Linux,
+using headless Gamescope and OpenGL. The user's working avatar project was not
+used for these tests.
+
+- **Portable suite:** passed, including all bundled examples, new-node JSON
+  round trips, malformed property rejection, inactive geometry/helper pruning,
+  fragment-stage restrictions, neutral lighting controls, and typed numeric
+  values beyond slider ranges. Log: `work/all-features-portable-release.log`.
+- **Soft Outline:** `SoftOutlineSmoke` passed visible fins, zero opacity,
+  adjustable falloff, and material-tint alpha zero with both albedo-alpha modes.
+  Log: `work/unity/all-soft-outline5.log`.
+- **Triangle breakup:** `GeometryDissolveSmoke` passed intact, partial, fully
+  collapsed, zero-mask, and UV-textured-mask cases. The textured case keeps
+  the zero-alpha regions while removing the masked triangles. Shared
+  triangle-center input construction in base/add/shadow stages has portable
+  regression coverage. Log: `work/unity/all-geometry-dissolve6.log`.
+- **Toon lighting:** `ToonShadowControlSmoke` passed shadow receive on/off,
+  preserved point-light distance falloff, and rendered border tint.
+  Log: `work/unity/all-toon-shadow.log`.
+- **Lighting detail:** `LightingDetailSmoke` passed inspector controls,
+  disabling wired properties, tint persistence, neutral subsurface output,
+  finite PBR-AA/highlight/scatter endpoints, and rendered lobe/scatter tint
+  changes. Log: `work/unity/all-lighting-detail4.log`.
+- **Material detail:** `MaterialDetailRenderSmoke` passed front/side/back
+  face-shadow progression, absent-depth fallback, no interior rim on a tilted
+  plane, far-background silhouette detection, width zero, Gem tint and
+  refraction changes. `MaterialDetailSmoke` passed inspector availability.
+  Logs: `work/unity/all-material-detail-render7.log` and
+  `work/unity/all-material-detail-ui.log`.
+- **Windows-target compilation:** strict D3D11 asset-bundle compilation passed
+  for **70 shaders**, including the new effects, combined tessellation cases,
+  and existing particle/fur/volume/depth regression fixtures.
+  Log: `work/unity/all-details-d3d.log`.
+- **Packaging:** 11 Python tests passed. The package's 131 metadata GUIDs were
+  checked for uniqueness and required source/sample metadata was present.
+  Log: `work/all-features-packaging.log`.
+
+These checks do not establish native Windows rendering, VRChat upload/client
+behavior, stereo/mirror correctness, or GPU performance. Geometry-breakup
+shadow variants were cross-compiled; visual shadow parity for arbitrary meshes,
+UV masks, and adaptive tessellation remains a client/scene check. The Soft
+Outline image in the guide is an actual fixture render, not a concept image.
+
+No true delayed-pose afterimage node ships. The material-only requirement lacks
+a supported skinned-pose capture/history path; see
+[the investigation](research/AFTERIMAGE_HISTORY.md).

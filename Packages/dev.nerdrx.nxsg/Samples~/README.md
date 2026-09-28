@@ -65,3 +65,11 @@ Apply these to a closed Unity Cube. They use 128 steps for detail; reduce qualit
 - **Velvet Fabric** combines a woven pattern with colored grazing sheen. Both examples use generated patterns and need no external texture files.
 
 Open them from **Window → NXSG → Example Gallery**. Start with a directional light; reflection probes improve the clearcoat's environment reflection.
+
+## Surface detail studies
+
+- **Soft Aura** adds violet feathered silhouette fins to a dark Toon surface.
+- **Triangle Disintegration** uses an editable Value to break up a PBR mesh; change it from 0 to 1.
+- **Prismatic Gem** combines tinted chromatic screen refraction with probe reflections. Put visible geometry behind it and use a reflection probe.
+
+These are PC geometry/screen effects. See [Surface details](../../../docs/SURFACE_DETAILS.md) for setup, supported combinations, and rendering limits.

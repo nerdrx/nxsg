@@ -51,9 +51,9 @@ namespace NXSG.Core
             ["core.wireframe"] = new string[0],
             ["core.constant"] = new string[0], ["core.parameter"] = new string[0],
             ["core.uv0"] = new string[0], ["core.texture2D"] = new[] { "uv" },
-            ["core.multiply"] = new[] { "a", "b" }, ["core.toonSurface"] = new[] { "albedo", "normal", "emission", "opacity", "displacement", "shadeColor", "shadeMap", "occlusion", "shadow", "threshold", "softness", "shadowStrength", "normalStrength", "shadeColor2", "shadeMap2", "threshold2", "softness2", "shadowStrength2", "normalStrength2", "shadeColor3", "shadeMap3", "threshold3", "softness3", "shadowStrength3", "normalStrength3" },
+            ["core.multiply"] = new[] { "a", "b" }, ["core.toonSurface"] = new[] { "albedo", "normal", "emission", "opacity", "displacement", "shadeColor", "shadeMap", "occlusion", "shadow", "threshold", "softness", "shadowStrength", "normalStrength", "shadeColor2", "shadeMap2", "threshold2", "softness2", "shadowStrength2", "normalStrength2", "shadeColor3", "shadeMap3", "threshold3", "softness3", "shadowStrength3", "normalStrength3", "receiveShadow", "borderColor", "borderWidth", "borderStrength" },
             ["core.unlitSurface"] = new[] { "albedo", "emission", "opacity", "displacement" },
-            ["core.pbrSurface"] = new[] { "albedo", "emission", "opacity", "displacement", "normal", "metallic", "roughness", "occlusion", "shadow" },
+            ["core.pbrSurface"] = new[] { "albedo", "emission", "opacity", "displacement", "normal", "metallic", "roughness", "occlusion", "shadow", "specularAa" },
             ["core.particleSurface"] = new[] { "albedo", "emission", "opacity" },
             ["core.particleColor"] = new string[0], ["core.particleInfo"] = new string[0],
             ["core.surfaceParticles"] = new[] { "base", "albedo", "emission", "opacity", "mask", "time", "density", "emissionRate", "size", "lifetime", "speed", "gravity", "spread", "edgeSharpness" },
@@ -461,8 +461,9 @@ namespace NXSG.Core
                 case "core.toonSurface": case "core.pbrSurface":
                     if (port == "surface") return "surface";
                     if (port == "normal") return "vector3";
-                    if (port == "albedo" || port == "emission" || port == "shadeColor" || port == "shadeColor2" || port == "shadeColor3") return "color";
-                    if (node.Operation == "core.toonSurface" && new[] { "threshold", "softness", "shadowStrength", "normalStrength", "shadeMap2", "threshold2", "softness2", "shadowStrength2", "normalStrength2", "shadeMap3", "threshold3", "softness3", "shadowStrength3", "normalStrength3" }.Contains(port)) return "float";
+                    if (port == "albedo" || port == "emission" || port == "shadeColor" || port == "shadeColor2" || port == "shadeColor3" || port == "borderColor") return "color";
+                    if (port == "specularAa") return "float";
+                    if (node.Operation == "core.toonSurface" && new[] { "threshold", "softness", "shadowStrength", "normalStrength", "shadeMap2", "threshold2", "softness2", "shadowStrength2", "normalStrength2", "shadeMap3", "threshold3", "softness3", "shadowStrength3", "normalStrength3", "receiveShadow", "borderWidth", "borderStrength" }.Contains(port)) return "float";
                     if (port == "opacity" || port == "displacement" || port == "metallic" || port == "roughness" || port == "shadeMap" || port == "occlusion" || port == "shadow") return "float";
                     return null;
                 case "core.fresnel": return port == "value" ? "float" : (port == "power" ? "float" : null);
@@ -566,7 +567,7 @@ namespace NXSG.Core
                 case "core.surfaceParticles": node.Properties["sourceUV"] = 0; node.Properties["density"] = .1; node.Properties["emissionRate"] = .5; node.Properties["size"] = .03; node.Properties["lifetime"] = 2.0; node.Properties["speed"] = .2; node.Properties["gravity"] = 0.0; node.Properties["spread"] = .05; node.Properties["edgeSharpness"] = 0.0; node.Properties["blendMode"] = 1; node.Properties["opacity"] = 1.0; node.Properties["mask"] = 1.0; break;
                 case "core.particleSurface": node.Properties["opacity"] = 1.0; node.Properties["blendMode"] = 0; node.Properties["softDistance"] = 0.0; break;
                 case "core.unlitSurface": node.Properties["opacity"] = 1.0; node.Properties["displacement"] = 0.0; break;
-                case "core.pbrSurface": node.Properties["opacity"] = 1.0; node.Properties["displacement"] = 0.0; node.Properties["metallic"] = 0.0; node.Properties["roughness"] = 0.5; break;
+                case "core.pbrSurface": node.Properties["opacity"] = 1.0; node.Properties["displacement"] = 0.0; node.Properties["metallic"] = 0.0; node.Properties["roughness"] = 0.5; node.Properties["specularAa"] = 0.0; break;
                 case "core.layer": node.Properties["mask"] = 1.0; break;
                 case "core.dissolve": node.Properties["threshold"] = 0.5; node.Properties["edgeWidth"] = 0.05; break;
                 case "core.shell": node.Properties["offset"] = 0.02; break;

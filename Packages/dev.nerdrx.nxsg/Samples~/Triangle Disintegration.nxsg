@@ -1,0 +1,129 @@
+{
+  "format": "nxsg",
+  "schemaVersion": 1,
+  "graphId": "122c740d-78a9-47f7-b914-7e364a9b712d",
+  "nodes": [
+    {
+      "id": "color",
+      "operation": "core.constant",
+      "version": 1,
+      "properties": {
+        "valueType": "color",
+        "value": [
+          0.4,
+          0.09,
+          0.8,
+          1
+        ]
+      }
+    },
+    {
+      "id": "surface",
+      "operation": "core.pbrSurface",
+      "version": 1,
+      "properties": {
+        "roughness": 0.3,
+        "useAlbedoAlpha": 0
+      }
+    },
+    {
+      "id": "amount",
+      "operation": "core.value",
+      "version": 1,
+      "properties": {
+        "value": 0.4
+      }
+    },
+    {
+      "id": "breakup",
+      "operation": "core.geometryDissolve",
+      "version": 1,
+      "properties": {
+        "amount": 0,
+        "distance": 0.18,
+        "rotation": 0.3,
+        "shrink": 1,
+        "mask": 1
+      }
+    },
+    {
+      "id": "output",
+      "operation": "core.output",
+      "version": 1,
+      "properties": {}
+    }
+  ],
+  "connections": [
+    {
+      "id": "color-surface-albedo",
+      "from": {
+        "nodeId": "color",
+        "portId": "value"
+      },
+      "to": {
+        "nodeId": "surface",
+        "portId": "albedo"
+      }
+    },
+    {
+      "id": "surface-breakup-base",
+      "from": {
+        "nodeId": "surface",
+        "portId": "surface"
+      },
+      "to": {
+        "nodeId": "breakup",
+        "portId": "base"
+      }
+    },
+    {
+      "id": "amount-breakup-amount",
+      "from": {
+        "nodeId": "amount",
+        "portId": "value"
+      },
+      "to": {
+        "nodeId": "breakup",
+        "portId": "amount"
+      }
+    },
+    {
+      "id": "breakup-output-surface",
+      "from": {
+        "nodeId": "breakup",
+        "portId": "surface"
+      },
+      "to": {
+        "nodeId": "output",
+        "portId": "surface"
+      }
+    }
+  ],
+  "parameters": [],
+  "resources": [],
+  "patterns": [],
+  "layout": {
+    "nodes": {
+      "color": {
+        "x": 0,
+        "y": 100
+      },
+      "surface": {
+        "x": 275,
+        "y": 100
+      },
+      "amount": {
+        "x": 550,
+        "y": 100
+      },
+      "breakup": {
+        "x": 825,
+        "y": 100
+      },
+      "output": {
+        "x": 1100,
+        "y": 100
+      }
+    }
+  }
+}

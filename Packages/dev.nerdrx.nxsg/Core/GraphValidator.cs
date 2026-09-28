@@ -114,14 +114,15 @@ namespace NXSG.Core
                     CheckVector4(node.Properties["shadeColor" + suffix], path + ".properties.shadeColor" + suffix, diagnostics);
                     foreach (var key in new[] { "shadeMap", "threshold", "softness", "shadowStrength", "normalStrength" }) CheckNumber(node.Properties[key + suffix], path + ".properties." + key + suffix, diagnostics);
                 }
+                CheckVector4(node.Properties["borderColor"], path + ".properties.borderColor", diagnostics);
                 CheckIntegerRange(node.Properties["bands"], path + ".properties.bands", 2, 8, diagnostics);
-                foreach (var key in new[] { "shadeMap", "rampRow", "occlusion", "shadow" }) CheckNumber(node.Properties[key], path + ".properties." + key, diagnostics);
+                foreach (var key in new[] { "shadeMap", "rampRow", "occlusion", "shadow", "receiveShadow", "borderWidth", "borderStrength" }) CheckNumber(node.Properties[key], path + ".properties." + key, diagnostics);
                 if (IsNumber(node.Properties["lightingMode"]) && (double)node.Properties["lightingMode"] == 2 && !resources.Any(r => r != null && r.Id == GraphTypes.StringValue(node.Properties["resourceId"]) && r.Kind == "texture2D"))
                     Add(diagnostics, DiagnosticSeverity.Error, "resource.ramp", path, "Texture ramp mode needs a Texture2D ramp resource.");
             }
             if (node.Operation == "core.toonSurface" || node.Operation == "core.pbrSurface" || node.Operation == "core.layeredPbrSurface")
             { CheckNumber(node.Properties["occlusion"],path+".properties.occlusion",diagnostics); CheckNumber(node.Properties["shadow"],path+".properties.shadow",diagnostics); }
-            if(node.Operation=="core.outline")
+            if(node.Operation=="core.outline" || node.Operation=="core.softOutline")
             {
                 CheckVector4(node.Properties["color"],path+".properties.color",diagnostics);
                 CheckVector4(node.Properties["emission"],path+".properties.emission",diagnostics);
@@ -153,6 +154,8 @@ namespace NXSG.Core
             if (FeatureNodes.TryGet(node.Operation, out var feature))
             {
                 foreach (var name in FeatureNodes.Numeric(node.Operation)) CheckNumber(node.Properties[name], path + ".properties." + name, diagnostics);
+                if (node.Operation == "core.anisotropicHighlight") CheckVector4(node.Properties["secondaryTint"], path + ".properties.secondaryTint", diagnostics);
+                if (node.Operation == "core.subsurface") CheckVector4(node.Properties["tint"], path + ".properties.tint", diagnostics);
                 if (node.Operation == "core.fur")
                 {
                     CheckIntegerRange(node.Properties["cardsOnly"], path + ".properties.cardsOnly", 0, 1, diagnostics);
@@ -170,6 +173,16 @@ namespace NXSG.Core
                 if (node.Operation == "core.textureBomb") CheckIntegerRange(node.Properties["cells"], path + ".properties.cells", 1, 32, diagnostics);
                 if (node.Operation == "core.kaleidoscopeUV") CheckIntegerRange(node.Properties["segments"], path + ".properties.segments", 1, 64, diagnostics);
                 if (node.Operation == "core.stripes3D") CheckIntegerRange(node.Properties["axis"], path + ".properties.axis", 0, 2, diagnostics);
+                if (node.Operation == "core.sdfFaceShadow")
+                {
+                    CheckIntegerRange(node.Properties["basis"], path + ".properties.basis", 0, 1, diagnostics);
+                    CheckVector3(node.Properties["headRight"], path + ".properties.headRight", diagnostics);
+                    CheckVector3(node.Properties["headForward"], path + ".properties.headForward", diagnostics);
+                }
+                if (node.Operation == "core.gem")
+                {
+                    CheckVector4(node.Properties["color"], path + ".properties.color", diagnostics);
+                }
                 if (node.Operation == "core.tessellation")
                 {
                     CheckIntegerRange(node.Properties["factor"], path + ".properties.factor", 1, 63, diagnostics);
@@ -275,7 +288,7 @@ namespace NXSG.Core
                 case "core.toonSurface": numeric = new[] { "opacity", "displacement", "cutoff", "threshold", "softness", "shadowStrength" }; break;
                 case "core.unlitSurface": numeric = new[] { "opacity", "displacement", "cutoff" }; break;
                 case "core.layeredPbrSurface": numeric = new[] { "opacity", "displacement", "metallic", "roughness", "cutoff", "coat", "coatRoughness", "sheen", "sheenRoughness" }; CheckVector4(node.Properties["sheenColor"], path + ".properties.sheenColor", diagnostics); break;
-                case "core.pbrSurface": numeric = new[] { "opacity", "displacement", "metallic", "roughness", "cutoff" }; break;
+                case "core.pbrSurface": numeric = new[] { "opacity", "displacement", "metallic", "roughness", "specularAa", "cutoff" }; break;
                 case "core.surfaceParticles": numeric = new[] { "density", "size", "lifetime", "speed", "gravity", "spread", "opacity", "mask", "emissionRate", "edgeSharpness" }; break;
                 case "core.particleSurface": numeric = new[] { "opacity", "softDistance" }; break;
                 case "core.fresnel": numeric = new[] { "power" }; break;

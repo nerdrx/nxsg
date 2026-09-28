@@ -89,6 +89,13 @@ namespace NXSG.Editor
                 }
             }));
             inspector.Add(choice);
+            AddBoundedNumber(node,"receiveShadow","Receive scene shadows",0,1,1,"receiveShadow","Adjust scene-shadow strength while keeping light distance and cookie attenuation.");
+            if (((int?)node.Properties["lightingMode"]??0)!=2) FurSection("Shadow border tint",()=>
+            {
+                AddBoundedNumber(node,"borderStrength","Tint strength",0,1,0,"borderStrength");
+                AddColorField(node,"borderColor","Border color",new Color(1,.3f,.15f,1),"borderColor");
+                AddBoundedNumber(node,"borderWidth","Border width",0,.5f,.05f,"borderWidth");
+            });
             var mode=(int?)node.Properties["lightingMode"]??0;
             if(mode==3)
             {
@@ -142,6 +149,22 @@ namespace NXSG.Editor
                     AddNumber(node,"thickness","Thickness (m)",ao?.2f:.12f,"thickness");
                     AddNumber(node,"bias","Bias (m)",ao?.02f:.015f,"bias");
                     FeatureNote(ao?"Connect Visibility to surface Occlusion. Requires camera depth. Hidden or off-screen geometry cannot contribute.":"Connect Visibility to surface Shadow. Direction defaults to each light; an optional direction input uses world space. Screen depth cannot detect hidden or off-screen blockers."); return true;
+                case "core.geometryDissolve":
+                    AddBoundedNumber(node,"amount","Dissolve amount",0,1,0,"amount");
+                    AddBoundedNumber(node,"mask","Mask",0,1,1,"mask");
+                    AddNumber(node,"distance","Travel distance (m)",.3f,"distance");
+                    AddNumber(node,"rotation","Rotation (turns)",1,"rotation");
+                    AddBoundedNumber(node,"shrink","Shrink",0,1,1,"shrink");
+                    FeatureNote("Triangles follow the current animated pose. Direction defaults to each triangle's mesh normal; a connected vector uses world space. Amount 1 removes fully masked triangles. Expand renderer bounds. PC only."); return true;
+                case "core.softOutline":
+                    AddIndexedChoice(node,"widthMode","Width units",new[]{"World metres","Screen pixels"});
+                    if(((int?)node.Properties["widthMode"]??0)==0) AddNumber(node,"width","Width (m)",.04f,"width");
+                    else AddNumber(node,"pixelWidth","Width (px)",12,"pixelWidth");
+                    AddBoundedNumber(node,"mask","Width mask",0,1,1,"mask");
+                    AddColorField(node,"color","Aura color",new Color(.47f,.05f,1,1),"color");
+                    AddBoundedNumber(node,"opacity","Opacity",0,1,1,"opacity");
+                    AddNumber(node,"falloff","Edge falloff",1,"falloff","1 gives a linear fade. Higher values concentrate color near the mesh; lower values spread it outward.");
+                    FeatureNote("Feathered fins follow the silhouette from smooth normals. Connect Noise or AudioLink to Width, Opacity or Color. Hard/split normals can create gaps. Expand renderer bounds. PC only; no bloom required."); return true;
                 case "core.outline":
                     AddIndexedChoice(node,"widthMode","Width units",new[]{"World metres","Screen pixels"});
                     if(((int?)node.Properties["widthMode"]??0)==0) AddNumber(node,"width","Width (m)",.003f,"width");

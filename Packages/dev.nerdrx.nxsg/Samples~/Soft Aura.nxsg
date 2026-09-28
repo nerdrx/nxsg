@@ -1,0 +1,112 @@
+{
+  "format": "nxsg",
+  "schemaVersion": 1,
+  "graphId": "0007e2a0-7497-4ac4-af77-dcbf4c6c96e5",
+  "nodes": [
+    {
+      "id": "color",
+      "operation": "core.constant",
+      "version": 1,
+      "properties": {
+        "valueType": "color",
+        "value": [
+          0.06,
+          0.09,
+          0.16,
+          1
+        ]
+      }
+    },
+    {
+      "id": "surface",
+      "operation": "core.toonSurface",
+      "version": 1,
+      "properties": {
+        "lightingMode": 0,
+        "lightingMin": 0.25,
+        "useAlbedoAlpha": 0
+      }
+    },
+    {
+      "id": "aura",
+      "operation": "core.softOutline",
+      "version": 1,
+      "properties": {
+        "widthMode": 0,
+        "width": 0.045,
+        "opacity": 0.9,
+        "falloff": 1.4,
+        "color": [
+          0.47,
+          0.03,
+          1,
+          1
+        ]
+      }
+    },
+    {
+      "id": "output",
+      "operation": "core.output",
+      "version": 1,
+      "properties": {}
+    }
+  ],
+  "connections": [
+    {
+      "id": "color-surface-albedo",
+      "from": {
+        "nodeId": "color",
+        "portId": "value"
+      },
+      "to": {
+        "nodeId": "surface",
+        "portId": "albedo"
+      }
+    },
+    {
+      "id": "surface-aura-base",
+      "from": {
+        "nodeId": "surface",
+        "portId": "surface"
+      },
+      "to": {
+        "nodeId": "aura",
+        "portId": "base"
+      }
+    },
+    {
+      "id": "aura-output-surface",
+      "from": {
+        "nodeId": "aura",
+        "portId": "surface"
+      },
+      "to": {
+        "nodeId": "output",
+        "portId": "surface"
+      }
+    }
+  ],
+  "parameters": [],
+  "resources": [],
+  "patterns": [],
+  "layout": {
+    "nodes": {
+      "color": {
+        "x": 0,
+        "y": 100
+      },
+      "surface": {
+        "x": 275,
+        "y": 100
+      },
+      "aura": {
+        "x": 550,
+        "y": 100
+      },
+      "output": {
+        "x": 825,
+        "y": 100
+      }
+    }
+  }
+}

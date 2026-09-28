@@ -18,6 +18,9 @@ namespace NXSG.Editor
             var scroll = new ScrollView(); rootVisualElement.Add(scroll);
             scroll.Add(new Label("Start with a working material") { style = { fontSize = 20, marginTop = 12, marginLeft = 12 } });
             scroll.Add(new Label("Each button creates your own graph in Assets/NXSGExamples. Originals stay in the package. PC Built-In; test expensive effects on your avatar.") { style = { whiteSpace = WhiteSpace.Normal, marginLeft = 12, marginRight = 12, marginBottom = 12 } });
+            Add(scroll, "Soft Aura", "Soft outline", "Feathered silhouette fins in NX violet. No bloom; smooth mesh normals give the cleanest outline.");
+            Add(scroll, "Triangle Disintegration", "Geometry", "Triangles rotate, travel and shrink. Adjust Amount from 0 to 1; expand renderer bounds for the motion.");
+            Add(scroll, "Prismatic Gem", "Refraction", "Chromatic screen refraction with a tinted reflection probe. Needs visible surroundings; no internal ray tracing.");
             Add(scroll, "Showcase Warm Fur", "Fur", "Short shell fur with root/tip colors and gentle movement. 24 layers: start small and measure the cost.");
             Add(scroll, "Lacquered Surface", "Clearcoat", "A glossy coating with independent roughness over a textured PBR base. No external textures needed.");
             Add(scroll, "Velvet Fabric", "Sheen", "A woven fabric base with a soft colored sheen at grazing angles.");

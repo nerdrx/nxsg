@@ -25,6 +25,35 @@ namespace NXSG.Editor
                     AddBoundedNumber(node, "mask", "Mask", 0, 1, 1, "mask");
                     FeatureNote("Height uses signed object units: negative dents, positive bulges. Distance and bias use metres; falloff shapes the effect; mask is 0–1. Touch outputs proximity weight. Connect Displacement to surface Displacement. Needs a camera depth texture and enough mesh vertices. Skipped in mirrors and shadow/depth passes; not physics or contact detection.");
                     return true;
+                case "core.sdfFaceShadow":
+                    AddIndexedChoice(node, "basis", "Basis", new[] { "Object axes", "Custom head axes" });
+                    AddNumber(node, "sdfLeft", "Left SDF sample", .5f, "sdfLeft");
+                    AddNumber(node, "sdfRight", "Right SDF sample", .5f, "sdfRight");
+                    AddDirectionField(node, "headRight", "Head right", new Vector3(1, 0, 0));
+                    AddDirectionField(node, "headForward", "Head forward", new Vector3(0, 0, 1));
+                    AddNumber(node, "threshold", "SDF threshold", .5f, "threshold");
+                    AddBoundedNumber(node, "softness", "Shadow softness", 0, 1, .04f, "softness");
+                    AddBoundedNumber(node, "strength", "Mask strength", 0, 1, 1, "strength");
+                    AddBoundedNumber(node, "angleStrength", "Angle threshold shift", 0, 1, .3f, "angleStrength");
+                    AddNumber(node, "offset", "User offset", 0, "offset");
+                    FeatureNote("Connect two mirrored SDF texture samples as scalar values. Light angle shifts the threshold continuously. Custom head axes come from the graph; no bone is tracked.");
+                    return true;
+                case "core.depthRim":
+                    AddBoundedNumber(node, "width", "Width (pixels)", 0, 8, 2, "width");
+                    AddBoundedNumber(node, "softness", "Depth softness (m)", .001f, .5f, .02f, "softness");
+                    AddBoundedNumber(node, "bias", "Depth bias (m)", 0, .5f, .01f, "bias");
+                    AddBoundedNumber(node, "strength", "Strength", 0, 1, 1, "strength");
+                    FeatureNote("Camera-depth edge mask. Missing depth and oblique mirror projections return zero; this is not a mesh outline.");
+                    return true;
+                case "core.gem":
+                    AddColorField(node, "color", "Gem tint", Color.white, "color");
+                    AddBoundedNumber(node, "ior", "Index of refraction", 1, 4, 1.5f, "ior");
+                    AddBoundedNumber(node, "refraction", "Screen refraction", 0, .5f, .06f, "refraction");
+                    AddBoundedNumber(node, "reflection", "Probe reflection", 0, 1, .8f, "reflection");
+                    AddBoundedNumber(node, "dispersion", "Chromatic dispersion", 0, .1f, .015f, "dispersion");
+                    AddBoundedNumber(node, "roughness", "Reflection roughness", 0, 1, .15f, "roughness");
+                    FeatureNote("Chromatic GrabPass refraction plus the first reflection probe. This does not trace geometry or resolve internal reflections; stereo and mirrors need client validation.");
+                    return true;
                 case "core.parallaxUV": AddCoordinateChoice(node); AddNumber(node, "height", "Height", .5f, "height"); AddNumber(node, "strength", "Depth strength", .05f); AddNumber(node, "reference", "Reference height", .5f); return true;
                 case "core.avatarMotion": FeatureNote("Create an FX motion driver from the Create menu, then merge its layers into your avatar FX controller. Reads locomotion, not individual bones. Matching properties on other materials on this renderer are animated too.");return true;
                 case "core.motionResponse": AddNumber(node,"startSpeed","Start speed (m/s)",.1f);AddNumber(node,"fullSpeed","Full speed (m/s)",4);AddNumber(node,"curve","Response curve",1);return true;
@@ -79,12 +108,20 @@ namespace NXSG.Editor
                 case "core.stripes3D": AddNumber(node, "scale", "Stripe scale", 10); AddIndexedChoice(node, "axis", "Stripe axis", new[] { "X", "Y", "Z" }, 1, 0); AddBoundedNumber(node, "width", "Stripe width", 0, 1, .5f); return true;
                 case "core.snowMask": AddBoundedNumber(node, "coverage", "Snow coverage", 0, 1, .5f); AddBoundedNumber(node, "breakup", "Surface breakup", 0, 1, .3f); AddNumber(node, "scale", "Breakup scale", 10); return true;
                 case "core.wetnessColor": AddBoundedNumber(node, "strength", "Wet strength", 0, 1, .5f); AddBoundedNumber(node, "mask", "Wetness mask", 0, 1, 1, "mask"); return true;
-                case "core.anisotropicHighlight": AddBoundedNumber(node, "roughness", "Highlight roughness", 0, 1, .3f, "roughness"); return true;
+                case "core.anisotropicHighlight":
+                    AddBoundedNumber(node, "roughness", "Primary roughness", 0, 1, .3f, "roughness");
+                    AddBoundedNumber(node, "dualLobe", "Second lobe", 0, 1, 0, "dualLobe");
+                    AddBoundedNumber(node, "secondaryRoughness", "Second roughness", 0, 1, .6f, "secondaryRoughness");
+                    AddColorField(node, "secondaryTint", "Second tint", Color.white, "secondaryTint");
+                    AddBoundedNumber(node, "shift", "Primary tangent shift", -1, 1, 0, "shift");
+                    AddBoundedNumber(node, "secondaryShift", "Second lobe shift", -1, 1, 0, "secondaryShift");
+                    AddBoundedNumber(node, "tangentStrength", "Tangent strength", 0, 1, 1, "tangentStrength");
+                    return true;
                 case "core.iridescence": AddBoundedNumber(node, "thickness", "Film thickness", 0, 1, .5f, "thickness"); AddBoundedNumber(node, "strength", "Color strength", 0, 2, 1); AddNumber(node, "phase", "Phase", 0); return true;
                 case "core.refraction": AddBoundedNumber(node, "strength", "Refraction strength", 0, 1, .05f, "strength"); AddBoundedNumber(node, "ior", "Index of refraction", 1, 4, 1.33f, "ior"); FeatureNote("Uses a screen GrabPass. Refraction bends the captured screen and does not trace scene geometry."); return true;
                 case "core.interiorMapping": AddCoordinateChoice(node); AddTexturePicker(node, "Room atlas"); AddIntegerField(node, "roomsX", "Rooms across", 1, 32, 4); AddIntegerField(node, "roomsY", "Rooms down", 1, 32, 4); AddNumber(node, "depth", "Room depth", 1, "depth"); FeatureNote("Tangent view ray enters a box room and samples a UV atlas. No interior geometry is created."); return true;
                 case "core.textureBomb": AddCoordinateChoice(node); AddTexturePicker(node, "Texture"); AddIntegerField(node, "cells", "Cells", 1, 32, 4); AddBoundedNumber(node, "blend", "Cell blend", 0, 1, 1, "blend"); AddNumber(node, "seed", "Seed", 0); AddBoundedNumber(node, "rotation", "Rotation", 0, 1, 1); FeatureNote("Cell transforms are deterministic. Soft edge blending reduces seams."); return true;
-                case "core.subsurface": AddBoundedNumber(node, "thickness", "Thickness", 0, 1, .5f, "thickness"); AddBoundedNumber(node, "strength", "Scatter strength", 0, 2, .7f); AddColorField(node, "tint", "Scatter tint", new Color(1f, .35f, .2f, 1f), "tint"); FeatureNote("Wrapped and backlight terms approximate shallow scattering from the main light."); return true;
+                case "core.subsurface": AddBoundedNumber(node, "thickness", "Thickness", 0, 1, .5f, "thickness"); AddBoundedNumber(node, "strength", "Scatter strength", 0, 2, .7f, "strength"); AddColorField(node, "tint", "Scatter tint", new Color(1f, .35f, .2f, 1f), "tint"); AddBoundedNumber(node, "viewResponse", "View response", 0, 1, 0, "viewResponse"); AddBoundedNumber(node, "attenuation", "Thickness attenuation", 0, 1, 0, "attenuation"); FeatureNote("Wrapped and backlight terms approximate shallow scattering from the main light. View response and thickness attenuation default to neutral."); return true;
                 case "core.tessellation":
                     AddIntegerField(node, "factor", "Tessellation factor", 1, 63, 8);
                     AddIntegerField(node, "minFactor", "Minimum factor", 1, 63, 1);
@@ -109,6 +146,7 @@ namespace NXSG.Editor
             AddNumber(node, "displacement", "Displacement", 0, "displacement");
             AddBoundedNumber(node, "metallic", "Metallic", 0, 1, 0, "metallic");
             AddBoundedNumber(node, "roughness", "Roughness", 0, 1, .5f, "roughness");
+            AddBoundedNumber(node, "specularAa", "Specular anti-aliasing", 0, 1, 0, "specularAa", "Uses fragment normal derivatives to soften roughness where the normal changes rapidly. Zero leaves roughness unchanged.");
             AddInspectorSection("CLEARCOAT");
             AddBoundedNumber(node, "coat", "Coat weight", 0, 1, 0, "coat", "Glossy dielectric coating. 0 disables the layer; 1 gives full coverage. Connected inputs remain dynamic.");
             AddBoundedNumber(node, "coatRoughness", "Coat roughness", 0, 1, .1f, "coatRoughness", "Independent coating roughness. Low values make a sharp reflection; high values soften it.");
@@ -207,6 +245,15 @@ namespace NXSG.Editor
         void FeatureNote(string text)
         {
             inspector.Add(new Label(text) { style = { whiteSpace = WhiteSpace.Normal, marginTop = 4, marginBottom = 4 } });
+        }
+
+        void AddDirectionField(GraphNode node, string property, string label, Vector3 fallback)
+        {
+            var values = node.Properties[property] as JArray;
+            var field = new Vector3Field(label) { value = values != null && values.Count == 3 ? new Vector3((float)values[0], (float)values[1], (float)values[2]) : fallback };
+            field.SetEnabled(!graph.Connections.Any(edge => edge.To.NodeId == node.Id && edge.To.PortId == property));
+            field.RegisterValueChangedCallback(evt => Edit("Change " + label, () => node.Properties[property] = new JArray(evt.newValue.x, evt.newValue.y, evt.newValue.z)));
+            inspector.Add(field);
         }
 
         void AddColorField(GraphNode node, string property, string label, Color fallback, string inputPort = null)

@@ -1,0 +1,83 @@
+{
+  "format": "nxsg",
+  "schemaVersion": 1,
+  "graphId": "9e9e843a-b8e9-445b-add4-3b1ce3626d93",
+  "nodes": [
+    {
+      "id": "gem",
+      "operation": "core.gem",
+      "version": 1,
+      "properties": {
+        "ior": 1.7,
+        "refraction": 0.08,
+        "reflection": 0.8,
+        "dispersion": 0.09,
+        "roughness": 0.06,
+        "color": [
+          0.7,
+          0.4,
+          1,
+          1
+        ]
+      }
+    },
+    {
+      "id": "surface",
+      "operation": "core.unlitSurface",
+      "version": 1,
+      "properties": {
+        "useAlbedoAlpha": 0,
+        "opacity": 1
+      }
+    },
+    {
+      "id": "output",
+      "operation": "core.output",
+      "version": 1,
+      "properties": {}
+    }
+  ],
+  "connections": [
+    {
+      "id": "gem-surface-albedo",
+      "from": {
+        "nodeId": "gem",
+        "portId": "color"
+      },
+      "to": {
+        "nodeId": "surface",
+        "portId": "albedo"
+      }
+    },
+    {
+      "id": "surface-output-surface",
+      "from": {
+        "nodeId": "surface",
+        "portId": "surface"
+      },
+      "to": {
+        "nodeId": "output",
+        "portId": "surface"
+      }
+    }
+  ],
+  "parameters": [],
+  "resources": [],
+  "patterns": [],
+  "layout": {
+    "nodes": {
+      "gem": {
+        "x": 0,
+        "y": 100
+      },
+      "surface": {
+        "x": 275,
+        "y": 100
+      },
+      "output": {
+        "x": 550,
+        "y": 100
+      }
+    }
+  }
+}
