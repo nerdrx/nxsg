@@ -14,7 +14,9 @@ namespace NXSG.Core
         Color,
         Bool,
         Texture2D,
-        Surface
+        Surface,
+        Cubemap,
+        Texture2DArray
     }
 
     public enum GraphBindingKind

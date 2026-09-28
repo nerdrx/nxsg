@@ -1,6 +1,5 @@
 using System;
 using System.Linq;
-using Newtonsoft.Json.Linq;
 using NXSG.Backend;
 using NXSG.Core;
 using UnityEditor;
@@ -86,26 +85,7 @@ namespace NXSG.Editor
 
         private static void AssignTextures(ShaderGraph graph, EmissionResult emitted, Material material)
         {
-            var bindings = graph.Adapter?["textures"] as JObject;
-            foreach (var property in emitted.Properties)
-            {
-                if (property.ResourceId == null) continue;
-                var resource = (graph.Resources ?? new System.Collections.Generic.List<GraphResource>())
-                    .FirstOrDefault(r => r != null && r.Id == property.ResourceId);
-                var guid = (string)bindings?[property.ResourceId];
-                Texture2D texture;
-                if (string.IsNullOrEmpty(guid) && resource != null && resource.Uri == "builtin://white")
-                    texture = Texture2D.whiteTexture;
-                else
-                {
-                    texture = string.IsNullOrEmpty(guid)
-                        ? null
-                        : AssetDatabase.LoadAssetAtPath<Texture2D>(AssetDatabase.GUIDToAssetPath(guid));
-                    if (texture == null)
-                        throw new InvalidOperationException("Preview texture is missing for resource '" + property.ResourceId + "'. Assign a Unity texture in the graph.");
-                }
-                material.SetTexture(property.Name, texture);
-            }
+            TextureResourceUtility.Assign(graph, emitted.Properties, material, "Preview");
         }
 
         private static void Destroy(UnityEngine.Object value)

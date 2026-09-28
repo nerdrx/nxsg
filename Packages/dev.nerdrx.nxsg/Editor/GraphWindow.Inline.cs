@@ -172,7 +172,7 @@ namespace NXSG.Editor
                 DisposeThumbnail(state);
             }
             if (!active.Any(state => state.Pending)) return;
-            var graphHash = GraphJson.ComputeSemanticHash(graph);
+            var graphHash = GraphJson.ComputeSemanticHash(graph) + ":" + OptionalIntegrations.Fingerprint;
             foreach (var state in active)
             {
                 if (!state.Pending) continue;

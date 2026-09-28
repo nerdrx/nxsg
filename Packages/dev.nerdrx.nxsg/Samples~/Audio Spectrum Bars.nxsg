@@ -1,0 +1,24 @@
+{
+  "format":"nxsg",
+  "schemaVersion":1,
+  "graphId":"audio-spectrum-bars-study-v1",
+  "nodes":[
+    {"id":"base","operation":"core.constant","version":1,"properties":{"valueType":"color","value":[0.012,0.018,0.05,1]}},
+    {"id":"cyan","operation":"core.constant","version":1,"properties":{"valueType":"color","value":[0.08,0.82,1,1]}},
+    {"id":"spectrum","operation":"core.audioVisualizer","version":1,"properties":{"bars":48,"radial":0,"minFrequency":55,"maxFrequency":14000,"gain":1,"gap":0.12}},
+    {"id":"glow","operation":"core.emission","version":1,"properties":{"strength":1}},
+    {"id":"surface","operation":"core.unlitSurface","version":1,"properties":{"opacity":1,"displacement":0}},
+    {"id":"output","operation":"core.output","version":1,"properties":{}}
+  ],
+  "connections":[
+    {"id":"base-surface","from":{"nodeId":"base","portId":"value"},"to":{"nodeId":"surface","portId":"albedo"}},
+    {"id":"cyan-glow","from":{"nodeId":"cyan","portId":"value"},"to":{"nodeId":"glow","portId":"color"}},
+    {"id":"spectrum-glow","from":{"nodeId":"spectrum","portId":"value"},"to":{"nodeId":"glow","portId":"strength"}},
+    {"id":"glow-surface","from":{"nodeId":"glow","portId":"color"},"to":{"nodeId":"surface","portId":"emission"}},
+    {"id":"surface-output","from":{"nodeId":"surface","portId":"surface"},"to":{"nodeId":"output","portId":"surface"}}
+  ],
+  "parameters":[],
+  "resources":[],
+  "patterns":[],
+  "layout":{"nodes":{"base":{"x":0,"y":100},"cyan":{"x":0,"y":370},"spectrum":{"x":0,"y":610},"glow":{"x":350,"y":330},"surface":{"x":640,"y":180},"output":{"x":900,"y":180}}}
+}

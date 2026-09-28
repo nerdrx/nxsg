@@ -2,7 +2,6 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Collections.Generic;
-using Newtonsoft.Json.Linq;
 using NXSG.Backend;
 using NXSG.Core;
 using UnityEditor;
@@ -134,22 +133,7 @@ namespace NXSG.Editor
 
         static void AssignTextures(ShaderGraph graph, EmissionResult result, Material material)
         {
-            var bindings = graph.Adapter?["textures"] as JObject;
-            foreach (var property in result.Properties)
-            {
-                if (property.ResourceId == null) continue;
-                var guid = (string)bindings?[property.ResourceId];
-                if (guid != null)
-                {
-                    var texture = string.IsNullOrEmpty(guid) ? null : AssetDatabase.LoadAssetAtPath<Texture2D>(AssetDatabase.GUIDToAssetPath(guid));
-                    if (!string.IsNullOrEmpty(guid) && texture == null)
-                        throw new InvalidOperationException("Texture is missing for resource '" + property.ResourceId + "'. Reassign it in the graph.");
-                    material.SetTexture(property.Name, texture);
-                }
-                else if (property.ResourceUri == "builtin://white") material.SetTexture(property.Name,Texture2D.whiteTexture);
-                else if (property.ResourceUri != "builtin://white")
-                    throw new InvalidOperationException("Assign a Unity texture for resource '" + property.ResourceId + "' before building.");
-            }
+            TextureResourceUtility.Assign(graph, result.Properties, material, "Build");
         }
 
         static List<SavedProperty> CaptureProperties(Material material)

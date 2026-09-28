@@ -1,4 +1,6 @@
+using System.Linq;
 using UnityEditor;
+using UnityEngine;
 
 namespace NXSG.Editor
 {
@@ -8,7 +10,11 @@ namespace NXSG.Editor
     {
         public override void OnGUI(MaterialEditor materialEditor, MaterialProperty[] properties)
         {
+            EditorGUI.BeginChangeCheck();
             materialEditor.PropertiesDefaultGUI(properties);
+            if (!EditorGUI.EndChangeCheck()) return;
+            foreach (var material in materialEditor.targets.OfType<Material>())
+                TextureResourceUtility.SyncArrayLayerCounts(material);
         }
     }
 }

@@ -96,6 +96,50 @@ namespace NXSG.Core
             }
 
             ValidateCatalogProperties(node, path, diagnostics);
+            if (node.Operation == "core.output")
+            {
+                foreach (var key in new[] { "renderMode", "cull", "zWrite", "zTest", "queueOffset", "stencilEnabled", "stencilRef", "stencilReadMask", "stencilWriteMask", "stencilCompare", "stencilPass" })
+                {
+                    int min = key == "queueOffset" ? -50 : 0;
+                    int max = key == "renderMode" ? 4 : key == "cull" || key == "zWrite" ? 2 : key == "queueOffset" ? 50 : key == "stencilEnabled" ? 1 : key == "zTest" || key == "stencilCompare" || key == "stencilPass" ? 7 : 255;
+                    CheckIntegerRange(node.Properties[key], path + ".properties." + key, min, max, diagnostics);
+                }
+            }
+            if (node.Operation == "core.toonSurface")
+            {
+                CheckIntegerRange(node.Properties["lightingMode"], path + ".properties.lightingMode", 0, 2, diagnostics);
+                CheckIntegerRange(node.Properties["bands"], path + ".properties.bands", 2, 8, diagnostics);
+                foreach (var key in new[] { "shadeMap", "rampRow", "occlusion", "shadow" }) CheckNumber(node.Properties[key], path + ".properties." + key, diagnostics);
+                if (IsNumber(node.Properties["lightingMode"]) && (double)node.Properties["lightingMode"] == 2 && !resources.Any(r => r != null && r.Id == GraphTypes.StringValue(node.Properties["resourceId"]) && r.Kind == "texture2D"))
+                    Add(diagnostics, DiagnosticSeverity.Error, "resource.ramp", path, "Texture ramp mode needs a Texture2D ramp resource.");
+            }
+            if (node.Operation == "core.toonSurface" || node.Operation == "core.pbrSurface" || node.Operation == "core.layeredPbrSurface")
+            { CheckNumber(node.Properties["occlusion"],path+".properties.occlusion",diagnostics); CheckNumber(node.Properties["shadow"],path+".properties.shadow",diagnostics); }
+            if(node.Operation=="core.outline") CheckVector4(node.Properties["color"],path+".properties.color",diagnostics);
+            if(node.Operation=="core.toonSurface") CheckVector4(node.Properties["shadeColor"],path+".properties.shadeColor",diagnostics);
+            if (AudioDataNodes.IsKnown(node.Operation))
+            {
+                CheckIntegerRange(node.Properties["bars"],path+".properties.bars",4,128,diagnostics);
+                CheckIntegerRange(node.Properties["radial"],path+".properties.radial",0,1,diagnostics);
+                CheckIntegerRange(node.Properties["channel"],path+".properties.channel",0,2,diagnostics);
+                CheckIntegerRange(node.Properties["band"],path+".properties.band",0,3,diagnostics);
+                CheckIntegerRange(node.Properties["index"],path+".properties.index",0,node.Operation=="core.audioThemeColor"?3:7,diagnostics);
+                CheckIntegerRange(node.Properties["normalized"],path+".properties.normalized",0,1,diagnostics);
+                if(node.Operation=="core.audioThemeColor") CheckVector4(node.Properties["fallback"],path+".properties.fallback",diagnostics);
+            }
+            if (node.Operation == "core.cubemap" || node.Operation == "core.textureArray")
+            {
+                var resource=resources.FirstOrDefault(r=>r!=null && r.Id==GraphTypes.StringValue(node.Properties["resourceId"]));
+                if(resource!=null && resource.Kind!=(node.Operation=="core.cubemap"?"cubemap":"texture2DArray")) Add(diagnostics,DiagnosticSeverity.Error,"resource.kind",path,"Texture resource has the wrong dimension for this node.");
+            }
+            if (node.Operation=="core.ssao" || node.Operation=="core.contactShadow")
+            {
+                var samples=node.Properties["samples"];
+                CheckIntegerRange(samples,path+".properties.samples",4,32,diagnostics);
+                if(IsNumber(samples) && !new[]{4.0,8.0,16.0,32.0}.Contains((double)samples)) Add(diagnostics,DiagnosticSeverity.Error,"value.choice",path+".properties.samples","Samples must be 4, 8, 16 or 32.");
+            }
+            if (node.Operation == "core.uvTileDiscard") CheckIntegerRange(node.Properties["invert"], path + ".properties.invert", 0, 1, diagnostics);
+
             if (FeatureNodes.TryGet(node.Operation, out var feature))
             {
                 foreach (var name in FeatureNodes.Numeric(node.Operation)) CheckNumber(node.Properties[name], path + ".properties." + name, diagnostics);
@@ -147,7 +191,7 @@ namespace NXSG.Core
                         "Parameter node must reference a declared parameter.");
                 }
             }
-            else if (node.Operation == "core.texture2D" || node.Operation == "core.triplanarTexture" || node.Operation == "core.matcapTexture" || node.Operation == "core.parallaxOcclusion" || node.Operation == "core.chromaticTexture" || node.Operation == "core.interiorMapping" || node.Operation == "core.textureBomb")
+            else if (node.Operation == "core.cubemap" || node.Operation == "core.textureArray" || node.Operation == "core.texture2D" || node.Operation == "core.triplanarTexture" || node.Operation == "core.matcapTexture" || node.Operation == "core.parallaxOcclusion" || node.Operation == "core.chromaticTexture" || node.Operation == "core.interiorMapping" || node.Operation == "core.textureBomb")
             {
                 var resourceId = GraphTypes.StringValue(node.Properties["resourceId"]);
                 if (string.IsNullOrWhiteSpace(resourceId) || resources.All(item => item == null || item.Id != resourceId))

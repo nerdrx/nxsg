@@ -1,0 +1,26 @@
+{
+  "format":"nxsg",
+  "schemaVersion":1,
+  "graphId":"toon-outline-study-v1",
+  "nodes":[
+    {"id":"baseColor","operation":"core.constant","version":1,"properties":{"valueType":"color","value":[0.28,0.42,0.72,1]}},
+    {"id":"shadowTint","operation":"core.constant","version":1,"properties":{"valueType":"color","value":[0.055,0.035,0.14,1]}},
+    {"id":"shadeMap","operation":"core.constant","version":1,"properties":{"valueType":"float","value":0.58}},
+    {"id":"edge","operation":"core.constant","version":1,"properties":{"valueType":"color","value":[0.012,0.018,0.055,1]}},
+    {"id":"toon","operation":"core.toonSurface","version":1,"properties":{"lightingMode":1,"bands":3,"threshold":0.5,"softness":0.04,"shadowStrength":1}},
+    {"id":"outline","operation":"core.outline","version":1,"properties":{"width":0.003,"mask":1}},
+    {"id":"output","operation":"core.output","version":1,"properties":{}}
+  ],
+  "connections":[
+    {"id":"base-to-toon","from":{"nodeId":"baseColor","portId":"value"},"to":{"nodeId":"toon","portId":"albedo"}},
+    {"id":"tint-to-toon","from":{"nodeId":"shadowTint","portId":"value"},"to":{"nodeId":"toon","portId":"shadeColor"}},
+    {"id":"map-to-toon","from":{"nodeId":"shadeMap","portId":"value"},"to":{"nodeId":"toon","portId":"shadeMap"}},
+    {"id":"toon-to-outline","from":{"nodeId":"toon","portId":"surface"},"to":{"nodeId":"outline","portId":"base"}},
+    {"id":"edge-to-outline","from":{"nodeId":"edge","portId":"value"},"to":{"nodeId":"outline","portId":"color"}},
+    {"id":"outline-to-output","from":{"nodeId":"outline","portId":"surface"},"to":{"nodeId":"output","portId":"surface"}}
+  ],
+  "parameters":[],
+  "resources":[],
+  "patterns":[],
+  "layout":{"nodes":{"baseColor":{"x":0,"y":80},"shadowTint":{"x":0,"y":270},"shadeMap":{"x":0,"y":450},"edge":{"x":440,"y":460},"toon":{"x":460,"y":120},"outline":{"x":780,"y":180},"output":{"x":1040,"y":180}}}
+}

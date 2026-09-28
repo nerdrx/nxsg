@@ -5,8 +5,11 @@ namespace NXSG.Backend
         // Scene-depth proximity, not collision detection. Keep camera-dependent
         // deformation out of shadow/depth rendering to avoid a feedback loop.
         internal const string Hlsl = @"
-UNITY_DECLARE_DEPTH_TEXTURE(_CameraDepthTexture);
+#ifndef NXSG_CAMERA_DEPTH_DECLARED
+#define NXSG_CAMERA_DEPTH_DECLARED
+UNITY_DECLARE_SCREENSPACE_TEXTURE(_CameraDepthTexture);
 float4 _CameraDepthTexture_TexelSize;
+#endif
 float NX_DepthBulgeTouch(float3 worldPosition, float distance, float falloff, float bias)
 {
 #if defined(UNITY_PASS_SHADOWCASTER)
@@ -26,7 +29,12 @@ float NX_DepthBulgeTouch(float3 worldPosition, float distance, float falloff, fl
     float4 screenPosition = ComputeScreenPos(clipPosition);
     float2 uv = screenPosition.xy / screenPosition.w;
     if (any(uv < 0) || any(uv > 1)) return 0;
-    float rawDepth = SAMPLE_DEPTH_TEXTURE_LOD(_CameraDepthTexture, float4(uv, 0, 0));
+    float rawDepth;
+#if defined(UNITY_STEREO_INSTANCING_ENABLED) || defined(UNITY_STEREO_MULTIVIEW_ENABLED)
+    rawDepth = UNITY_SAMPLE_TEX2DARRAY_LOD(_CameraDepthTexture, float3(uv, (float)unity_StereoEyeIndex), 0).r;
+#else
+    rawDepth = SAMPLE_DEPTH_TEXTURE_LOD(_CameraDepthTexture, float4(uv, 0, 0));
+#endif
     float forwardDepth = rawDepth;
 #if defined(UNITY_REVERSED_Z)
     forwardDepth = 1 - rawDepth;

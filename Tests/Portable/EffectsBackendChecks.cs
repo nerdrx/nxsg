@@ -12,13 +12,13 @@ public static class EffectsBackendChecks
         {
             var graph=new ShaderGraph {GraphId="effects"};
             var node=NodeCatalog.Create(op); node.Id="effect";
-            if(op=="core.texture2D"||op=="core.sticker"||op=="core.triplanarTexture"||op=="core.matcapTexture"||op=="core.parallaxOcclusion"||op=="core.chromaticTexture"||op=="core.interiorMapping"||op=="core.textureBomb") {node.Properties["resourceId"]="texture";graph.Resources.Add(new GraphResource {Id="texture",Kind="texture2D",Uri="builtin://white"});}
+            if(op=="core.cubemap"||op=="core.textureArray"||op=="core.texture2D"||op=="core.sticker"||op=="core.triplanarTexture"||op=="core.matcapTexture"||op=="core.parallaxOcclusion"||op=="core.chromaticTexture"||op=="core.interiorMapping"||op=="core.textureBomb") {node.Properties["resourceId"]="texture";graph.Resources.Add(new GraphResource {Id="texture",Kind=op=="core.cubemap"?"cubemap":op=="core.textureArray"?"texture2DArray":"texture2D",Uri="builtin://white"});}
             graph.Nodes.Add(node);
-            if (op == "core.fur" || op == "core.tessellation") { var baseNode = NodeCatalog.Create("core.unlitSurface"); baseNode.Id = "base"; graph.Nodes.Add(baseNode); Connect(graph,"base","surface","effect","base"); }
+            if (op == "core.outline" || op == "core.fur" || op == "core.tessellation") { var baseNode = NodeCatalog.Create("core.unlitSurface"); baseNode.Id = "base"; graph.Nodes.Add(baseNode); Connect(graph,"base","surface","effect","base"); }
             var surface=NodeCatalog.Create("core.unlitSurface"); surface.Id="surface";graph.Nodes.Add(surface);
             var output=NodeCatalog.Create("core.output");output.Id="output";graph.Nodes.Add(output);
             var port=NodeCatalog.Ports(op,true).First();var type=NodeCatalog.PortType(node,port);
-            if(type=="surface") { if(op=="core.fur" || op=="core.tessellation" || op=="core.volumeSurface") Connect(graph,node.Id,port,"output","surface"); else { var color=NodeCatalog.Create("core.constant");color.Id="albedo";graph.Nodes.Add(color);Connect(graph,color.Id,"value",node.Id,"albedo");Connect(graph,node.Id,port,"output","surface"); } }
+            if(type=="surface") { if(op=="core.outline" || op=="core.fur" || op=="core.tessellation" || op=="core.volumeSurface") Connect(graph,node.Id,port,"output","surface"); else { var color=NodeCatalog.Create("core.constant");color.Id="albedo";graph.Nodes.Add(color);Connect(graph,color.Id,"value",node.Id,"albedo");Connect(graph,node.Id,port,"output","surface"); } }
             else
             {
                 if(type=="vector2")
@@ -31,7 +31,7 @@ public static class EffectsBackendChecks
                 else Connect(graph,node.Id,port,surface.Id,"albedo");
                 Connect(graph,surface.Id,"surface",output.Id,"surface");
             }
-            var before=GraphJson.Serialize(graph);var result=ShaderEmitter.Emit(graph, new EmitterOptions { LtcgiAvailable = true });
+            var before=GraphJson.Serialize(graph);var result=ShaderEmitter.Emit(graph, new EmitterOptions { LtcgiAvailable = true, LightVolumesAvailable = true });
             assert(result.Succeeded,op+" emits: "+string.Join(";",result.Diagnostics.Select(d=>d.Message)));
             if (op == "core.scanlines")
             {
@@ -39,7 +39,7 @@ public static class EffectsBackendChecks
                 assert(result.ShaderSource.Contains("hiIntegral-loIntegral"), "scanlines fragment uses periodic box integral");
             }
             assert(before==GraphJson.Serialize(graph),op+" emission preserves source");
-            graph.Nodes.Reverse();graph.Connections.Reverse();assert(result.ShaderSource==ShaderEmitter.Emit(graph, new EmitterOptions { LtcgiAvailable = true }).ShaderSource,op+" deterministic order");
+            graph.Nodes.Reverse();graph.Connections.Reverse();assert(result.ShaderSource==ShaderEmitter.Emit(graph, new EmitterOptions { LtcgiAvailable = true, LightVolumesAvailable = true }).ShaderSource,op+" deterministic order");
         }
         var nullable = new ShaderGraph { GraphId="optional-null", Parameters=null, Resources=null };
         nullable.Nodes.Add(new GraphNode { Id="unlit",Operation="core.unlitSurface",Properties=null });nullable.Nodes.Add(NodeCatalog.Create("core.output"));nullable.Nodes.Last().Id="out";

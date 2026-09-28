@@ -52,6 +52,9 @@ internal static class Program
         UtilityNodeChecks.Run(Assert);
         VisualNodeChecks.Run(Assert);
         FeatureNodeChecks.Run(Assert);
+        RenderingOptionsChecks.Run(Assert);
+        SurfaceRenderStateChecks.Run(Assert);
+        ScreenDepthShaderChecks.Run(Assert);
         TessellationChecks.Run(Assert);
         ShinyNodeChecks.Run(Assert);
         InsertionChecks.Run(Assert);
@@ -99,6 +102,7 @@ internal static class Program
         FurCardChecks.Run(Assert);
         LightingInfluenceChecks.Run(Assert);
         TraversalChecks.Run(Assert);
+        TypedTextureChecks.Run(Assert);
         var defaultGraph = Load(fixtures, "default-texture-toon-output.nxsg");
         Assert(GraphValidator.Validate(defaultGraph).IsValid, "default graph validates");
         Assert(GraphValidator.Validate(GraphJson.Parse(GraphJson.Serialize(defaultGraph))).IsValid, "default graph round trips");

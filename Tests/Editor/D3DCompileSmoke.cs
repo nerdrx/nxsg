@@ -87,7 +87,7 @@ public static class D3DCompileSmoke
 
     static Shader Emit(string json, string id)
     {
-        var result = ShaderEmitter.Emit(GraphJson.Parse(json), new EmitterOptions { ShaderName = "NXSG/D3DCompile/" + id });
+        var result = ShaderEmitter.Emit(GraphJson.Parse(json), new EmitterOptions { ShaderName = "NXSG/D3DCompile/" + id, LightVolumesAvailable = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>("Packages/red.sim.lightvolumes/Shaders/LightVolumes.cginc") != null });
         if (!result.Succeeded) throw new InvalidOperationException(id + ": " + string.Join("\n", result.Diagnostics.Select(d => d.Message)));
         var source = result.ShaderSource;
         if (Environment.GetEnvironmentVariable("NXSG_D3D_LEGACY") == "1") source = source.Replace("#pragma require interpolators32\n", string.Empty);

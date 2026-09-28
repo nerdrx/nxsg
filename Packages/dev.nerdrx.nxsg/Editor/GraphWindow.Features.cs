@@ -12,6 +12,7 @@ namespace NXSG.Editor
     {
         bool AddFeatureControls(GraphNode node)
         {
+            if (AddRenderingFeatureControls(node)) return true;
             switch (node.Operation)
             {
                 case "core.layeredPbrSurface": AddLayeredSurfaceControls(node); return true;
@@ -123,6 +124,8 @@ namespace NXSG.Editor
 
         void AddLightingControls(GraphNode node)
         {
+            AddBoundedNumber(node,"occlusion","Ambient occlusion",0,1,1,"occlusion","Visibility of ambient lighting and reflection probes. 1 is unoccluded; 0 blocks indirect light.");
+            AddBoundedNumber(node,"shadow","Direct light visibility",0,1,1,"shadow","Multiplies direct-light attenuation. Connect Contact Shadows here. Emission remains unchanged.");
             inspector.Add(new Label("Lighting influence") { style = { unityFontStyleAndWeight = FontStyle.Bold } });
             AddNumber(node, "lightingMin", "Minimum brightness", 0);
             AddNumber(node, "lightingMax", "Maximum brightness", 0);

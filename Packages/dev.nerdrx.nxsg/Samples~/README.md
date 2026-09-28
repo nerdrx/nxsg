@@ -16,6 +16,14 @@ Noise currently animates by moving through a smooth noise field. It is not true 
 
 `Interior Bomb.nxsg` combines room-atlas Interior Mapping with seeded Texture Bomb sampling. Assign a tiled atlas in the texture pickers to see room variation. The shipped `builtin://white` resource keeps the graph portable and valid before assignment.
 
+`Toon Outline.nxsg` connects a Shade Map and Shadow Tint to a three-band Toon Surface, then adds a separate outline pass. It uses colors defined in the graph and needs no external texture.
+
+`Depth Lighting.nxsg` connects screen-space AO and Contact Shadows to a PBR surface. The camera must provide depth; only camera-visible geometry contributes. See [rendering feature limits](../../../docs/RENDERING_FEATURES.md) and [screen-space lighting details](../../../docs/SCREEN_SPACE_LIGHTING.md).
+
+`Audio Spectrum Bars.nxsg` uses the AudioLink DFT to make horizontal bars drive emission. Select its Audio Spectrum Bars node and enable **Preview audio data** to preview a uniform magnitude without an AudioLink provider. A live AudioLink texture supplies frequency-specific levels. See [AudioLink nodes and modes](../../../docs/AUDIOLINK_DATA_NODES.md).
+
+These new examples use no external assets. Cubemap, texture-array, Toon texture-ramp, and Light Volumes features use project resources or optional integrations when enabled in a graph.
+
 These samples target Unity 2022.3.22f1, PC Built-In shader generation on Linux. They prove graph validation and emission paths when the portable checks pass; they do not prove native Windows, VR headset, VRChat client, or GPU performance behavior.
 
 ## Self-contained material studies

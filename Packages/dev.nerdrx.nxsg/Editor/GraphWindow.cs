@@ -110,6 +110,13 @@ namespace NXSG.Editor
 
         void OnFocus() { canvas?.Focus(); previewHash = null; QueueLivePreview(); }
 
+        void OnProjectChange()
+        {
+            if (!livePreview) return;
+            previewHash = null;
+            QueueLivePreview();
+        }
+
         public void CreateGUI()
         {
             rootVisualElement.Clear();
@@ -429,7 +436,7 @@ namespace NXSG.Editor
                 try
                 {
                     var previewGraph = PreparePreviewGraph();
-                    var hash = GraphJson.ComputeSemanticHash(graph) + ":" + previewNodeId + ":" + previewNodePort;
+                    var hash = GraphJson.ComputeSemanticHash(graph) + ":" + previewNodeId + ":" + previewNodePort + ":" + OptionalIntegrations.Fingerprint;
                     if (hash != previewHash)
                     {
                         previewHash = hash;
@@ -955,7 +962,8 @@ namespace NXSG.Editor
                     case "core.fresnel": AddNumber(node, "power", "Power", 5, "power"); break;
                     case "core.layer": AddNumber(node, "mask", "Mask", 1, "mask"); break;
                     case "core.pbrSurface": AddLightingControls(node); AddAlbedoAlphaToggle(node); AddNumber(node, "opacity", "Opacity", 1, "opacity"); AddNumber(node, "cutoff", "Cutoff", .001f); AddNumber(node, "displacement", "Displacement", 0, "displacement"); AddNumber(node, "metallic", "Metallic", 0, "metallic"); AddNumber(node, "roughness", "Roughness", .5f, "roughness"); break;
-                    case "core.toonSurface": AddLightingControls(node); AddAlbedoAlphaToggle(node); AddNumber(node, "opacity", "Opacity", 1, "opacity"); AddNumber(node, "cutoff", "Cutoff", .001f); AddNumber(node, "displacement", "Displacement", 0, "displacement"); break;
+                    case "core.output": AddOutputControls(node); break;
+                    case "core.toonSurface": AddToonLightingControls(node); AddLightingControls(node); AddAlbedoAlphaToggle(node); AddNumber(node, "opacity", "Opacity", 1, "opacity"); AddNumber(node, "cutoff", "Cutoff", .001f); AddNumber(node, "displacement", "Displacement", 0, "displacement"); break;
                     case "core.surfaceParticles":
                         AddInspectorSection("APPEARANCE");
                         var sourceUvToggle = new Toggle("Color from mesh UVs") { value = (int?)node.Properties["sourceUV"] == 1,
@@ -1133,7 +1141,7 @@ namespace NXSG.Editor
 
         void AddTexturePicker(GraphNode node, string label)
         {
-            var field = new ObjectField(label) { objectType = typeof(Texture2D), allowSceneObjects = false,
+            var field = new ObjectField(label) { objectType = node.Operation == "core.cubemap" ? typeof(Cubemap) : node.Operation == "core.textureArray" ? typeof(Texture2DArray) : typeof(Texture2D), allowSceneObjects = false,
                 tooltip = "Pick a project texture resource." };
             var resourceId = (string)node.Properties["resourceId"];
             var resource = graph.Resources.FirstOrDefault(r => r != null && r.Id == resourceId);
@@ -1145,7 +1153,7 @@ namespace NXSG.Editor
             inspector.Add(new Label("Material slot: " + TextureSlotLabels.DisplayName(graph, resourceId)));
             var map = graph.Adapter?["textures"] as JObject;
             var guid = (string)map?[resourceId ?? ""];
-            if (!string.IsNullOrEmpty(guid)) field.value = AssetDatabase.LoadAssetAtPath<Texture2D>(AssetDatabase.GUIDToAssetPath(guid));
+            if (!string.IsNullOrEmpty(guid)) field.value = AssetDatabase.LoadAssetAtPath<Texture>(AssetDatabase.GUIDToAssetPath(guid));
             field.SetEnabled(!string.IsNullOrEmpty(resourceId) && graph.Resources.Any(resource => resource != null && resource.Id == resourceId));
             field.RegisterValueChangedCallback(evt => Edit("Assign texture", () =>
             {
@@ -1185,6 +1193,7 @@ namespace NXSG.Editor
 
         void ApplyAudioLinkPreview()
         {
+            ApplyAudioDataPreview();
             if (preview == null) return;
             preview.SetFloat("_NXSG_AudioLinkPreview", audioPreviewEnabled ? 1 : 0);
             preview.SetFloat("_NXSG_AudioLinkValue", Mathf.Clamp01(audioPreviewValue));
@@ -1360,9 +1369,9 @@ namespace NXSG.Editor
                 }
                 node.Properties["parameterId"] = parameter.Id; selectedParameterId = parameter.Id;
             }
-            if (operation == "core.texture2D" || operation == "core.sticker" || operation == "core.triplanarTexture" || operation == "core.matcapTexture" || operation == "core.parallaxOcclusion" || operation == "core.chromaticTexture" || operation == "core.interiorMapping" || operation == "core.textureBomb")
+            if (operation == "core.cubemap" || operation == "core.textureArray" || operation == "core.texture2D" || operation == "core.sticker" || operation == "core.triplanarTexture" || operation == "core.matcapTexture" || operation == "core.parallaxOcclusion" || operation == "core.chromaticTexture" || operation == "core.interiorMapping" || operation == "core.textureBomb")
             {
-                var resource = new GraphResource { Id = "texture-" + node.Id, Kind = "texture2D", Uri = "builtin://white" };
+                var resource = new GraphResource { Id = "texture-" + node.Id, Kind = operation == "core.cubemap" ? "cubemap" : operation == "core.textureArray" ? "texture2DArray" : "texture2D", Uri = operation == "core.cubemap" || operation == "core.textureArray" ? "builtin://unassigned" : "builtin://white" };
                 graph.Resources.Add(resource); node.Properties["resourceId"] = resource.Id;
             }
             graph.Nodes.Add(node); selected = node.Id; selection.Clear(); selection.Add(node.Id);

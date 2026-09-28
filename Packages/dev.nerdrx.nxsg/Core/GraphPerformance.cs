@@ -111,6 +111,10 @@ namespace NXSG.Core
                     items.Add(Item(node, "Adaptive tessellation", "Triangle count grows roughly quadratically with tessellation factor and varies with distance."));
                     loops.Add("Tessellation: factor " + Int(node,"minFactor",1,1,63) + " to " + Int(node,"factor",8,1,63) + " with fractional-odd spacing; camera distance affects topology.");
                 }
+                else if (op == "core.ssao" || op == "core.contactShadow")
+                { loops.Add(NodeCatalog.Title(op)+": up to "+Int(node,"samples",8,4,32)+" depth samples per evaluated fragment."); items.Add(Item(node,"Screen depth loop","Cost grows with shaded pixels, sample count, lights and views. Only visible depth contributes.")); }
+                else if(op=="core.lightVolumes") unknown.Add("Light Volumes cost depends on the installed package, scene volume overlap and enabled point lights.");
+                else if(op=="core.outline") items.Add(Item(node,"1 hull pass","Expands mesh vertices and shades the silhouette in each view."));
                 else if (op == "core.depthBulge")
                     items.Add(Item(node, "One scene-depth sample per evaluation", "Displacement evaluates per vertex; Touch may evaluate per vertex or fragment depending on its connection. Mesh vertex count and pixel coverage determine work; mirrors and shadow/depth passes skip it."));
                 else if (op == "core.layeredPbrSurface")
@@ -148,6 +152,9 @@ namespace NXSG.Core
         static int PassBudget(GraphNode root, IDictionary<string, GraphNode> nodes, ILookup<string, GraphConnection> incoming, out string note)
         {
             if (root == null) { note = "Connect a surface to Output to calculate pass budget."; return 0; }
+            var outlinePass = root.Operation == "core.outline";
+            if (outlinePass) root = Source(root,"base",nodes,incoming);
+            if(root==null) { note="Outline Base is not connected."; return 0; }
             GraphNode fur = root.Operation == "core.fur" ? root : null;
             GraphNode baseRoot = root;
             if (root.Operation == "core.tessellation") baseRoot = Source(root, "base", nodes, incoming);
@@ -160,7 +167,7 @@ namespace NXSG.Core
             var leafSurfaces = new List<GraphNode>();
             var truncated = false;
             Flatten(baseRoot, nodes, incoming, new HashSet<string>(StringComparer.Ordinal), leafSurfaces, 0, ref truncated);
-            var total = 0;
+            var total = outlinePass ? 1 : 0;
             for (var i = 0; i < leafSurfaces.Count; i++)
             {
                 var surface = leafSurfaces[i];
@@ -196,12 +203,13 @@ namespace NXSG.Core
 
         static bool HasShadowPass(GraphNode firstSurface, IDictionary<string, GraphNode> nodes, ILookup<string, GraphConnection> incoming)
         {
+            if(nodes.Values.Any(n=>n.Operation=="core.output" && Int(n,"renderMode",0,0,4)==1)) return true;
             var followsAlpha = Int(firstSurface, "useAlbedoAlpha", 1, 0, 1) == 1;
             var pending = new Stack<GraphNode>();
             if (followsAlpha) PushSources(firstSurface, "albedo", nodes, incoming, pending);
             PushSources(firstSurface, "opacity", nodes, incoming, pending);
             var seen = new HashSet<string>(StringComparer.Ordinal);
-            var screenOps = new HashSet<string>(new[] { "core.refraction", "core.screenUV", "core.cameraDistance", "core.viewDirection", "core.fresnel", "core.rimGlow", "core.matcapTexture", "core.interiorMapping", "core.depthBulge" }, StringComparer.Ordinal);
+            var screenOps = new HashSet<string>(new[] { "core.refraction", "core.screenUV", "core.cameraDistance", "core.viewDirection", "core.fresnel", "core.rimGlow", "core.matcapTexture", "core.interiorMapping", "core.depthBulge", "core.ssao", "core.contactShadow", "core.lightVolumes" }, StringComparer.Ordinal);
             while (pending.Count > 0)
             {
                 var node = pending.Pop();
@@ -232,7 +240,9 @@ namespace NXSG.Core
         {
             switch (n.Operation)
             {
-                case "core.texture2D": case "core.sticker": case "core.matcapTexture": case "core.interiorMapping": case "core.depthBulge": return 1;
+                case "core.texture2D": case "core.sticker": case "core.matcapTexture": case "core.interiorMapping": case "core.depthBulge": case "core.cubemap": case "core.textureArray": case "core.ssao": case "core.contactShadow": case "core.audioThemeColor": case "core.audioChronotensity": return 1;
+                case "core.audioSpectrum": case "core.audioSpectrumBin": case "core.audioVisualizer": return 2;
+                case "core.toonSurface": return Int(n,"lightingMode",0,0,2)==2 ? 1 : 0;
                 case "core.chromaticTexture": return 3;
                 case "core.triplanarTexture": return 3;
                 case "core.parallaxOcclusion": return 1; // one sample site inside the loop; iteration budget is reported separately

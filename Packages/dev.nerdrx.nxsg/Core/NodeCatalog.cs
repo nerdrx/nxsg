@@ -51,9 +51,9 @@ namespace NXSG.Core
             ["core.wireframe"] = new string[0],
             ["core.constant"] = new string[0], ["core.parameter"] = new string[0],
             ["core.uv0"] = new string[0], ["core.texture2D"] = new[] { "uv" },
-            ["core.multiply"] = new[] { "a", "b" }, ["core.toonSurface"] = new[] { "albedo", "normal", "emission", "opacity", "displacement" },
+            ["core.multiply"] = new[] { "a", "b" }, ["core.toonSurface"] = new[] { "albedo", "normal", "emission", "opacity", "displacement", "shadeColor", "shadeMap", "occlusion", "shadow" },
             ["core.unlitSurface"] = new[] { "albedo", "emission", "opacity", "displacement" },
-            ["core.pbrSurface"] = new[] { "albedo", "emission", "opacity", "displacement", "normal", "metallic", "roughness" },
+            ["core.pbrSurface"] = new[] { "albedo", "emission", "opacity", "displacement", "normal", "metallic", "roughness", "occlusion", "shadow" },
             ["core.particleSurface"] = new[] { "albedo", "emission", "opacity" },
             ["core.particleColor"] = new string[0], ["core.particleInfo"] = new string[0],
             ["core.surfaceParticles"] = new[] { "base", "albedo", "emission", "opacity", "mask", "time", "density", "emissionRate", "size", "lifetime", "speed", "gravity", "spread", "edgeSharpness" },
@@ -461,8 +461,8 @@ namespace NXSG.Core
                 case "core.toonSurface": case "core.pbrSurface":
                     if (port == "surface") return "surface";
                     if (port == "normal") return "vector3";
-                    if (port == "albedo" || port == "emission") return "color";
-                    if (port == "opacity" || port == "displacement" || port == "metallic" || port == "roughness") return "float";
+                    if (port == "albedo" || port == "emission" || port == "shadeColor") return "color";
+                    if (port == "opacity" || port == "displacement" || port == "metallic" || port == "roughness" || port == "shadeMap" || port == "occlusion" || port == "shadow") return "float";
                     return null;
                 case "core.fresnel": return port == "value" ? "float" : (port == "power" ? "float" : null);
                 case "core.colorRamp": return port == "value" ? "float" : (port == "color" ? "color" : null);
