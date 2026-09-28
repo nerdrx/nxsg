@@ -32,6 +32,8 @@ public static class PixelLightChecks
             var programs = result.ShaderSource.Split(new[] { "CGPROGRAM\n" }, StringSplitOptions.None).Skip(1);
             assert(programs.All(program => program.StartsWith("#pragma require interpolators32\n")),
                 "advanced passes declare enough vertex outputs for D3D light/shadow and stereo variants");
+            assert(programs.All(program => program.Contains("#pragma target 4.5\n")),
+                "advanced passes select a stereo-capable D3D profile as well as the varying budget");
         }
 
         var unlit = Surface("core.unlitSurface");

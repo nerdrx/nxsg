@@ -970,3 +970,42 @@ is not covered. Bent normals approximate indirect visibility, and changing a
 light direction does not create new shadow maps. Two-sided transparency still
 uses Unity's object sorting. Vertex deformation samples the current mesh pose
 and may require expanded renderer bounds.
+
+## Stereo shader output regression — 2026-09-28
+
+Version 1.11.1 raises the advanced emitter's 3.5/4.0 targets to 4.5, retaining
+`interpolators32` and higher tessellation targets. Unity 2022.3 selected `vs_4_0`
+for affected stereo variants with `interpolators32` alone; those variants needed
+17 vertex outputs where that profile allowed 16. Moving the requirement after
+the target did not resolve the error. Raising the target did. Unity documents
+the target/feature relationship in its [shader compilation target reference](https://docs.unity3d.com/2022.3/Documentation/Manual/SL-ShaderCompileTargets.html).
+
+- **Reproduction:** private copies of nine user-generated shaders already had
+  `interpolators32`. Eight reproduced X4571 with stereo instancing enabled; the
+  remaining shader did not have the affected additional-light pass. This ruled
+  out an outdated generated pragma as the explanation. Log:
+  `work/unity/stereo-baseline-real-headers.log`.
+- **Harness correction:** `D3DCompileSmoke` now enables stereo before Unity's
+  headers in an HLSL test fixture. An initial experiment defined stereo too
+  late in a CG include and caused an artificial depth-texture sampler mismatch;
+  that result was discarded. No production Depth Bulge change was needed.
+  The harness also fails on logged shader errors even if Unity returns a
+  successful asset-bundle manifest.
+- **Windows-target stereo compilation:** 70 shaders passed with zero shader
+  errors: nine corrected private copies, 42 advanced-control fixtures and 19
+  existing regression shaders. Coverage includes additional lights, particles,
+  fur, tessellation, depth, volumes, text, and the clock. Log:
+  `work/unity/stereo-fixed-70.log`.
+- **Portable suite:** passed, including assertions for the advanced target and
+  vertex-output requirement. Log: `work/stereo-portable-final.log`.
+- **Packaging:** 11 Python tests passed. Log: `work/packaging-1111.log`.
+- **Surface foldouts:** `SurfaceSocketFoldoutSmoke` passed common/connected
+  socket visibility, expanded socket alignment, state persistence, immediate
+  hidden-socket hit rejection, empty-header suppression and PBR common inputs.
+  Checked in the isolated Unity editor under headless Gamescope. Log:
+  `work/unity/surface-foldouts-final.log`. [Editor capture](images/surface-socket-foldouts.png).
+
+Windows-target compilation on Linux does not establish native Windows rendering,
+VRChat upload/client behavior, headset output, or mirror appearance. After
+updating NXSG, rebuild existing graphs with **Build for VRChat**: changing the
+package does not rewrite previously generated shader assets.

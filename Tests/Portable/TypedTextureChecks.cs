@@ -37,7 +37,7 @@ public static class TypedTextureChecks
             assert(result.ShaderSource.Contains("\", 2DArray) =") && result.ShaderSource.Contains("UNITY_DECLARE_TEX2DARRAY(" + binding.Name + ")") && result.ShaderSource.Contains("UNITY_SAMPLE_TEX2DARRAY_LOD(" + binding.Name), "Texture Array emits typed property and explicit LOD sample");
             assert(result.ShaderSource.Contains(binding.Name + "_Layers (\"\", Float) = 1") && result.ShaderSource.Contains(binding.Name + "_Layers-1))") && !result.ShaderSource.Contains(".GetDimensions("), "Texture Array clamps from the editor-assigned asset layer count");
         }
-        assert(result.ShaderSource.Contains("#pragma target 3.5"), operation + " emits with shader model 3.5 support");
+        assert(result.ShaderSource.Contains("#pragma target 4.5"), operation + " uses the advanced stereo-capable shader target");
 
         if (type == GraphValueType.Texture2DArray)
         {

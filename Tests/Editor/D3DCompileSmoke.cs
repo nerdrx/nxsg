@@ -45,6 +45,10 @@ public static class D3DCompileSmoke
             if (!string.IsNullOrEmpty(graphDirectory))
                 foreach (var path in Directory.GetFiles(graphDirectory, "*.nxsg"))
                     shaders.Add(Emit(File.ReadAllText(path), "reported_" + shaders.Count));
+            var rawDirectory = Environment.GetEnvironmentVariable("NXSG_D3D_RAW_SHADERS");
+            if (!string.IsNullOrEmpty(rawDirectory))
+                foreach (var path in Directory.GetFiles(rawDirectory, "*.shader"))
+                    shaders.Add(ImportSource(File.ReadAllText(path), "raw_" + shaders.Count));
             var dynamicParticles = GraphJson.Parse(File.ReadAllText(Path.Combine(sampleRoot, "Surface Sparkles.nxsg")));
             var emitter = dynamicParticles.Nodes.First(n => n.Operation == "core.surfaceParticles");
             foreach (var port in new[] { "density", "emissionRate", "size", "lifetime", "speed", "gravity", "spread" }) {
@@ -65,6 +69,11 @@ public static class D3DCompileSmoke
             var previousApis = PlayerSettings.GetGraphicsAPIs(BuildTarget.StandaloneWindows64);
             PlayerSettings.SetUseDefaultGraphicsAPIs(BuildTarget.StandaloneWindows64, false);
             PlayerSettings.SetGraphicsAPIs(BuildTarget.StandaloneWindows64, new[] { GraphicsDeviceType.Direct3D11 });
+            var compileErrors = new System.Collections.Concurrent.ConcurrentQueue<string>();
+            Application.LogCallback onCompileLog = (message, stack, type) => {
+                if (message.StartsWith("Shader error in 'NXSG/D3DCompile/", StringComparison.Ordinal)) compileErrors.Enqueue(message);
+            };
+            Application.logMessageReceivedThreaded += onCompileLog;
             try
             {
                 var output = "Temp/NXSGD3DBuild";
@@ -73,8 +82,12 @@ public static class D3DCompileSmoke
                     new AssetBundleBuild { assetBundleName = "nxsg-d3d-smoke", assetNames = shaders.Select(AssetDatabase.GetAssetPath).ToArray() }
                 }, BuildAssetBundleOptions.ForceRebuildAssetBundle | BuildAssetBundleOptions.StrictMode, BuildTarget.StandaloneWindows64);
                 if (manifest == null) throw new InvalidOperationException("Windows/D3D shader bundle build failed.");
+                if (!compileErrors.IsEmpty) throw new InvalidOperationException("D3D shader variants failed even though Unity produced a bundle: " + string.Join("; ", compileErrors.Distinct().Take(4)));
+                foreach (var shader in shaders)
+                    if (ShaderUtil.ShaderHasError(shader)) throw new InvalidOperationException("D3D shader errors remain: " + shader.name);
             }
             finally {
+                Application.logMessageReceivedThreaded -= onCompileLog;
                 included.arraySize = previousCount; graphics.ApplyModifiedPropertiesWithoutUndo();
                 PlayerSettings.SetGraphicsAPIs(BuildTarget.StandaloneWindows64, previousApis);
                 PlayerSettings.SetUseDefaultGraphicsAPIs(BuildTarget.StandaloneWindows64, previousAuto);
@@ -89,10 +102,25 @@ public static class D3DCompileSmoke
     {
         var result = ShaderEmitter.Emit(GraphJson.Parse(json), new EmitterOptions { ShaderName = "NXSG/D3DCompile/" + id, LightVolumesAvailable = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>("Packages/red.sim.lightvolumes/Shaders/LightVolumes.cginc") != null });
         if (!result.Succeeded) throw new InvalidOperationException(id + ": " + string.Join("\n", result.Diagnostics.Select(d => d.Message)));
-        var source = result.ShaderSource;
+        return ImportSource(result.ShaderSource, id);
+    }
+
+    static Shader ImportSource(string source, string id)
+    {
+        source = System.Text.RegularExpressions.Regex.Replace(source, @"Shader ""[^""]+""", $"Shader \"NXSG/D3DCompile/{id}\"");
+        // Force the actual D3D stereo code path even when the fixture has no XR
+        // provider. Merely building for Windows can strip these variants.
+        if (Environment.GetEnvironmentVariable("NXSG_D3D_STEREO") == "1")
+        {
+            // CGPROGRAM implicitly includes Unity headers before authored code.
+            // HLSLPROGRAM lets us set stereo before those same headers, so texture
+            // arrays and matrices agree with the stereo vertex output contract.
+            source = source.Replace("CGPROGRAM\n", "HLSLPROGRAM\n").Replace("ENDCG", "ENDHLSL")
+                .Replace("CGINCLUDE\n", "HLSLINCLUDE\n#if defined(SHADER_API_D3D11)\n#define STEREO_INSTANCING_ON 1\n#endif\n#include \"HLSLSupport.cginc\"\n#include \"UnityShaderVariables.cginc\"\n");
+        }
         if (Environment.GetEnvironmentVariable("NXSG_D3D_LEGACY") == "1") source = source.Replace("#pragma require interpolators32\n", string.Empty);
         // Keep the complete declared vertex payload live, as in unoptimized build variants.
-        if (id == "unoptimized_pbr") source = source.Replace("CGPROGRAM\n", "CGPROGRAM\n#pragma skip_optimizations d3d11\n");
+        if (id == "unoptimized_pbr") source = source.Replace("CGPROGRAM\n", "CGPROGRAM\n#pragma skip_optimizations d3d11\n").Replace("HLSLPROGRAM\n", "HLSLPROGRAM\n#pragma skip_optimizations d3d11\n");
         var path = Root + "/" + id + ".shader";
         File.WriteAllText(path, source);
         AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate);

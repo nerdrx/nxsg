@@ -21,6 +21,7 @@ namespace NXSG.Editor
         [SerializeField] List<string> selection = new List<string>();
         [SerializeField] string nodeSearch = "";
         [SerializeField] List<string> expandedNodeCategories = new List<string> { "Coordinates" };
+        [SerializeField] List<string> expandedSurfaceSocketGroups = new List<string>();
         readonly Dictionary<string, Vector2> dragOrigins = new Dictionary<string, Vector2>();
         VisualElement marquee;
         bool boxSelecting;
@@ -558,7 +559,11 @@ namespace NXSG.Editor
                         session.json = GraphJson.Serialize(graph, true); hasUnsavedChanges = true; EditorUtility.SetDirty(session);
                         canvas.Focus(); evt.StopPropagation();
                     });
-                    foreach (var port in VisibleInputPorts(node)) AddSocket(box, node, port, false);
+                    var visibleInputs = VisibleInputPorts(node).ToList();
+                    if (node.Operation == "core.toonSurface" || node.Operation == "core.pbrSurface")
+                        AddSurfaceSockets(box, node, visibleInputs);
+                    else
+                        foreach (var port in visibleInputs) AddSocket(box, node, port, false);
                     foreach (var port in Ports(node.Operation, true)) AddSocket(box, node, port, true);
                     AddInlineControls(node, box);
                     box.RegisterCallback<FocusInEvent>(_ => { if (!selection.Contains(node.Id)) SelectNode(node.Id); });
@@ -717,6 +722,84 @@ namespace NXSG.Editor
             }
         }
 
+        void AddSurfaceSockets(VisualElement box, GraphNode node, List<string> ports)
+        {
+            var connected = new HashSet<string>(graph.Connections.Where(e => e.To.NodeId == node.Id).Select(e => e.To.PortId));
+            var groups = new List<(string title, string key, List<string> ports)>
+            {
+                ("Lighting & shadows", "lighting", new List<string>()),
+                ("Rim & border", "rim", new List<string>()),
+                ("Advanced lighting", "advanced", new List<string>())
+            };
+            var common = new HashSet<string> { "albedo", "normal", "emission", "opacity", "displacement" };
+            foreach (var port in ports)
+            {
+                if (common.Contains(port) || node.Operation == "core.pbrSurface" && (port == "metallic" || port == "roughness"))
+                {
+                    AddSocket(box, node, port, false);
+                    continue;
+                }
+                var group = SurfaceSocketGroup(node.Operation, port);
+                if (group < 0) { AddSocket(box, node, port, false); continue; }
+                groups[group].ports.Add(port);
+            }
+
+            foreach (var group in groups)
+            {
+                if (group.ports.Count == 0) continue;
+                if (group.ports.All(connected.Contains))
+                {
+                    foreach (var port in group.ports) AddSocket(box, node, port, false);
+                    continue;
+                }
+                var stateKey = graph.GraphId + ":" + node.Id + ":" + group.key;
+                var foldout = new Foldout
+                {
+                    name = "surface-sockets-" + group.key,
+                    text = group.title,
+                    value = expandedSurfaceSocketGroups.Contains(stateKey),
+                    style = { marginLeft = 0, marginRight = 0, marginTop = 3, marginBottom = 2 }
+                };
+                foldout.contentContainer.style.marginLeft = 0;
+                foldout.contentContainer.style.paddingLeft = 0;
+                foldout.contentContainer.style.width = Length.Percent(100);
+                foldout.RegisterValueChangedCallback(evt =>
+                {
+                    if (evt.newValue)
+                    {
+                        if (!expandedSurfaceSocketGroups.Contains(stateKey)) expandedSurfaceSocketGroups.Add(stateKey);
+                    }
+                    else expandedSurfaceSocketGroups.Remove(stateKey);
+                    insertionNodeId = null;
+                    insertionEdge = null;
+                    layer?.MarkDirtyRepaint();
+                });
+                box.Add(foldout);
+                foreach (var port in group.ports)
+                {
+                    if (connected.Contains(port)) AddSocket(box, node, port, false);
+                    else AddSocket(foldout, node, port, false);
+                }
+            }
+        }
+
+        static int SurfaceSocketGroup(string operation, string port)
+        {
+            if (port == "bentNormal" || port == "bentStrength" || port == "lightDirection" || port == "lightDirectionStrength") return 2;
+            if (operation == "core.toonSurface" && (port.StartsWith("rim", StringComparison.Ordinal) || port.StartsWith("border", StringComparison.Ordinal))) return 1;
+            if (operation == "core.toonSurface" && (port.StartsWith("shade", StringComparison.Ordinal) || port.StartsWith("threshold", StringComparison.Ordinal) || port.StartsWith("softness", StringComparison.Ordinal) || port.StartsWith("shadowStrength", StringComparison.Ordinal) || port.StartsWith("normalStrength", StringComparison.Ordinal) || port == "shadow" || port == "occlusion" || port.StartsWith("receiveShadow", StringComparison.Ordinal) || port.StartsWith("layerReceiveShadow", StringComparison.Ordinal))) return 0;
+            if (operation == "core.pbrSurface" && (port == "occlusion" || port == "shadow" || port == "specularAa")) return 0;
+            return -1;
+        }
+
+        static bool IsSocketDropTarget(SocketView socket)
+        {
+            if (socket?.hit == null || !socket.hit.enabledInHierarchy || !socket.hit.visible) return false;
+            for (var parent = socket.hit.parent; parent != null; parent = parent.parent)
+                if (parent is Foldout foldout && !foldout.value) return false;
+            return socket.hit.worldBound.width > 0 && socket.hit.worldBound.height > 0;
+        }
+
         static string PortLabel(string port)
         {
             if(port.EndsWith("2",StringComparison.Ordinal) || port.EndsWith("3",StringComparison.Ordinal))
@@ -732,6 +815,14 @@ namespace NXSG.Editor
             {
                 case "shadeColor": return "Shadow tint"; case "shadeMap": return "Shade map";
                 case "shadowStrength": return "Shadow strength"; case "normalStrength": return "Normal influence";
+                case "receiveShadow": return "Receive shadows"; case "layerReceiveShadow": return "Layer shadows";
+                case "occlusion": return "Occlusion"; case "shadow": return "Shadow";
+                case "borderColor": return "Border color"; case "borderWidth": return "Border width"; case "borderStrength": return "Border strength";
+                case "rimColor": return "Rim color"; case "rimStrength": return "Rim strength"; case "rimWidth": return "Rim width";
+                case "rimSoftness": return "Rim softness"; case "rimLightAlignment": return "Rim light alignment";
+                case "bentNormal": return "Bent normal"; case "bentStrength": return "Bent strength";
+                case "lightDirection": return "Light direction"; case "lightDirectionStrength": return "Light direction strength";
+                case "metallic": return "Metallic"; case "roughness": return "Roughness"; case "specularAa": return "Specular anti-aliasing";
                 case "pixelWidth": return "Pixel width"; case "depthBias": return "Depth bias"; case "directionStrength": return "Direction influence";
                 case "coat": return "Coat weight"; case "coatRoughness": return "Coat roughness"; case "coatNormal": return "Coat normal";
                 case "sheen": return "Sheen weight"; case "sheenColor": return "Sheen color"; case "sheenRoughness": return "Sheen roughness";
@@ -1703,7 +1794,7 @@ namespace NXSG.Editor
             {
                 wiring = false;
                 canvas.ReleasePointer(evt.pointerId);
-                var target = sockets.FirstOrDefault(s => s.output != pendingOutput && s.hit.worldBound.Contains(evt.position));
+                var target = sockets.FirstOrDefault(s => s.output != pendingOutput && IsSocketDropTarget(s) && s.hit.worldBound.Contains(evt.position));
                 if (target != null) { Connect(target.node, target.port, target.output); CancelWire(); }
                 else if (wireMoved)
                 {
@@ -1731,7 +1822,7 @@ namespace NXSG.Editor
             socketLookup.TryGetValue((pendingNode, pendingPort, pendingOutput), out var pending);
             if (pending != null)
             {
-                var target = sockets.FirstOrDefault(s => s.output != pendingOutput && s.hit.worldBound.Contains(layer.LocalToWorld(wirePosition)));
+                var target = sockets.FirstOrDefault(s => s.output != pendingOutput && IsSocketDropTarget(s) && s.hit.worldBound.Contains(layer.LocalToWorld(wirePosition)));
                 painter.strokeGradient = pendingOutput ? WireGradient(pending.type, target?.type ?? pending.type)
                     : WireGradient(target?.type ?? pending.type, pending.type);
                 var socketPosition = layer.WorldToLocal(pending.hit.worldBound.center);

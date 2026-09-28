@@ -2,6 +2,8 @@
 
 This guide covers the added surface, lighting, timing, and texture controls. The node inspectors show the same controls and explain their socket behavior.
 
+Toon and PBR cards keep common inputs visible and group less-used sockets into collapsed sections. Expand a section to connect another control. Connected sockets remain visible when their section is collapsed.
+
 ## 1. Face inputs and two-sided rendering
 
 Use **Front Face** to read rasterized face orientation. `Is Front` is 1 for front-facing fragments and 0 for back-facing fragments; connect it to a `Mix` factor to choose front and back colors or UV branches. `Normal World` outputs a geometric world-space normal. It does not replace the tangent-space normal expected by surface normal inputs. The material must render both sides: set **Output → Visible faces → Both**.

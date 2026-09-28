@@ -372,10 +372,11 @@ namespace NXSG.Backend
             if (furNode != null && !cardsOnly) diagnostics.Add(new Diagnostic(DiagnosticSeverity.Warning, "cost.fur", furNode.Id, "Fur emits " + IntProp(furNode, "layers", 16, 4, 32) + " transparent shell passes per view. Distance LOD reduces active shell coverage but does not remove draw calls; expand renderer bounds for strand length."));
             if (particle && root.Properties["softDistance"] != null && (double)root.Properties["softDistance"] > 0)
                 diagnostics.Add(new Diagnostic(DiagnosticSeverity.Warning, "cost.particleDepth", root.Id, "Soft intersections require a camera depth texture. Set soft distance to 0 when unavailable; transparent overdraw and depth sampling add cost."));
-            // NXInput can exceed SM4's 16 vertex outputs once light/shadow and stereo fields are present.
-            // Declare the actual varying budget in every pass, including geometry and tessellation passes.
+            // Unity 2022.3 still selects vs_4_0 for stereo variants with only
+            // interpolators32. Target 4.5 also selects a D3D profile that can carry
+            // NXInput plus lighting/shadow and stereo outputs; retain tessellation targets.
             if (geometryDissolveActive) diagnostics.Add(new Diagnostic(DiagnosticSeverity.Warning,"cost.geometryDissolve",geometryDissolve.Id,"Geometry Dissolve transforms each triangle in base, additional light and shadow passes. Expand renderer bounds. It follows the current pose, without stored particle history."));
-            return b.ToString().Replace("#pragma target 4.0", geometryDissolveActive ? "#pragma target 4.5" : "#pragma target 4.0").Replace("CGPROGRAM\n", "CGPROGRAM\n#pragma require interpolators32\n");
+            return b.ToString().Replace("#pragma target 3.5", "#pragma target 4.5").Replace("#pragma target 4.0", "#pragma target 4.5").Replace("CGPROGRAM\n", "CGPROGRAM\n#pragma require interpolators32\n");
         }
 
         void Visit(GraphNode node, HashSet<string> live)
