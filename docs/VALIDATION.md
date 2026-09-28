@@ -870,3 +870,53 @@ Outline image in the guide is an actual fixture render, not a concept image.
 No true delayed-pose afterimage node ships. The material-only requirement lacks
 a supported skinned-pose capture/history path; see
 [the investigation](research/AFTERIMAGE_HISTORY.md).
+
+## Hair, Gem and lighting completion — 2026-09-28
+
+Version 1.10.0 was checked in the isolated Unity 2022.3.22f1 fixture on Linux,
+using headless Gamescope and OpenGL.
+
+- **Portable suite:** passed, including neutral-path pruning, connected numeric
+  controls, JSON round trips, malformed properties, and fragment-stage guards.
+  Log: `work/completion-portable-final.log`.
+- **Hair:** `HairDetailSmoke` passed independent highlight widths, shift noise,
+  stretched reflection-probe response, inspector edits and connected-input
+  disabling. Connected neutral widths matched the original shifted dual-lobe
+  helper with a nonorthogonal custom normal/tangent basis. Widths from zero to
+  1000 stayed finite; reflection strength above one increased the response.
+  Log: `work/unity/completion-hair2.log`.
+- **Gem:** `GemSparkleSmoke` passed exact neutral output at zero strength,
+  rendered color/strength/density/size/depth changes, and finite degenerate
+  inputs. A known orthographic camera translation was reprojected to compare
+  the same surface points, confirming view-dependent internal sparkle changes.
+  Log: `work/unity/completion-gem2.log`.
+- **Toon:** `ToonCompletionSmoke` passed neutral pixel equivalence, independent
+  layer shadow reception under a real caster, wired versus authored zero/one
+  reception, preserved point-light falloff and cookie masking, and rim response
+  to light direction. `ToonCompletionInspectorSmoke` passed availability and
+  connected-input behavior for all new numeric fields. Logs:
+  `work/unity/completion-toon2.log` and `work/unity/completion-toon-ui.log`.
+- **Subsurface:** `SubsurfaceCompletionSmoke` passed neutral pixel equivalence,
+  spread/distortion changes, and received shadows suppressing added scattering
+  without darkening the base color. No-shadow fallback and finite endpoints
+  also passed. Log: `work/unity/completion-sss.log`.
+- **Editor and lighting regression:** `LightingDetailSmoke` and
+  `MaterialDetailSmoke` passed existing controls plus the new Subsurface and Gem
+  fields, edit persistence, and disabling connected properties. Logs:
+  `work/unity/completion-lighting-regression.log` and
+  `work/unity/completion-material-ui.log`.
+- **Windows-target compilation:** strict D3D11 asset-bundle compilation passed
+  for **66 shaders**: 47 completion fixtures and 19 existing regression shaders,
+  including particles, fur, tessellation, volumes, depth, Toon and PBR.
+  Log: `work/unity/completion-d3d.log`.
+- **Packaging:** 11 Python tests passed. The package's 131 metadata GUIDs were
+  unique and required source/sample metadata was present.
+  Log: `work/completion-packaging.log`.
+
+These are Linux render tests and Windows-target cross-compilation, not native
+Windows, VRChat upload/client, headset/stereo, mirror, or GPU performance
+validation. Gem sparkles use four procedural samples along a refracted ray;
+they do not trace internal mesh geometry. Received-shadow controls use the
+scene's existing shadow maps and do not create self-shadowing for lights that
+do not cast shadows. True delayed-pose afterimages remain unavailable under the
+strict material-only requirement.

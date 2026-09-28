@@ -52,7 +52,12 @@ namespace NXSG.Editor
                     AddBoundedNumber(node, "reflection", "Probe reflection", 0, 1, .8f, "reflection");
                     AddBoundedNumber(node, "dispersion", "Chromatic dispersion", 0, .1f, .015f, "dispersion");
                     AddBoundedNumber(node, "roughness", "Reflection roughness", 0, 1, .15f, "roughness");
-                    FeatureNote("Chromatic GrabPass refraction plus the first reflection probe. This does not trace geometry or resolve internal reflections; stereo and mirrors need client validation.");
+                    AddColorField(node, "sparkleColor", "Interior sparkle color", Color.white, "sparkleColor");
+                    AddBoundedNumber(node, "sparkleStrength", "Interior sparkle strength", 0, 8, 0, "sparkleStrength");
+                    AddBoundedNumber(node, "sparkleDensity", "Interior sparkle density", 0, 1, .35f, "sparkleDensity");
+                    AddBoundedNumber(node, "sparkleSize", "Interior sparkle size", 0, .5f, .2f, "sparkleSize");
+                    AddBoundedNumber(node, "sparkleDepth", "Interior path depth", 0, 2, .35f, "sparkleDepth");
+                    FeatureNote("Screen refraction and first-probe reflection remain approximations. Optional sparkles sample four points along the refracted object-space view path; they do not trace geometry or internal bounces.");
                     return true;
                 case "core.parallaxUV": AddCoordinateChoice(node); AddNumber(node, "height", "Height", .5f, "height"); AddNumber(node, "strength", "Depth strength", .05f); AddNumber(node, "reference", "Reference height", .5f); return true;
                 case "core.avatarMotion": FeatureNote("Create an FX motion driver from the Create menu, then merge its layers into your avatar FX controller. Reads locomotion, not individual bones. Matching properties on other materials on this renderer are animated too.");return true;
@@ -116,12 +121,28 @@ namespace NXSG.Editor
                     AddBoundedNumber(node, "shift", "Primary tangent shift", -1, 1, 0, "shift");
                     AddBoundedNumber(node, "secondaryShift", "Second lobe shift", -1, 1, 0, "secondaryShift");
                     AddBoundedNumber(node, "tangentStrength", "Tangent strength", 0, 1, 1, "tangentStrength");
+                    AddBoundedNumber(node, "shiftNoise", "Primary shift noise", -1, 1, 0, "shiftNoise");
+                    AddBoundedNumber(node, "secondaryShiftNoise", "Second shift noise", -1, 1, 0, "secondaryShiftNoise");
+                    AddNumber(node, "longitudinalWidth", "Longitudinal width", 1, "longitudinalWidth", "Width scale; 1 preserves current lobe.");
+                    AddNumber(node, "azimuthalWidth", "Azimuthal width", 1, "azimuthalWidth", "Width scale; 1 uses full width; values below 1 narrow around the strand.");
+                    AddBoundedNumber(node, "reflectionStrength", "Probe reflection", 0, 1, 0, "reflectionStrength");
+                    AddNumber(node, "reflectionStretch", "Probe stretch", 0, "reflectionStretch");
+                    AddBoundedNumber(node, "reflectionRoughness", "Probe roughness", 0, 1, .3f, "reflectionRoughness");
                     return true;
                 case "core.iridescence": AddBoundedNumber(node, "thickness", "Film thickness", 0, 1, .5f, "thickness"); AddBoundedNumber(node, "strength", "Color strength", 0, 2, 1); AddNumber(node, "phase", "Phase", 0); return true;
                 case "core.refraction": AddBoundedNumber(node, "strength", "Refraction strength", 0, 1, .05f, "strength"); AddBoundedNumber(node, "ior", "Index of refraction", 1, 4, 1.33f, "ior"); FeatureNote("Uses a screen GrabPass. Refraction bends the captured screen and does not trace scene geometry."); return true;
                 case "core.interiorMapping": AddCoordinateChoice(node); AddTexturePicker(node, "Room atlas"); AddIntegerField(node, "roomsX", "Rooms across", 1, 32, 4); AddIntegerField(node, "roomsY", "Rooms down", 1, 32, 4); AddNumber(node, "depth", "Room depth", 1, "depth"); FeatureNote("Tangent view ray enters a box room and samples a UV atlas. No interior geometry is created."); return true;
                 case "core.textureBomb": AddCoordinateChoice(node); AddTexturePicker(node, "Texture"); AddIntegerField(node, "cells", "Cells", 1, 32, 4); AddBoundedNumber(node, "blend", "Cell blend", 0, 1, 1, "blend"); AddNumber(node, "seed", "Seed", 0); AddBoundedNumber(node, "rotation", "Rotation", 0, 1, 1); FeatureNote("Cell transforms are deterministic. Soft edge blending reduces seams."); return true;
-                case "core.subsurface": AddBoundedNumber(node, "thickness", "Thickness", 0, 1, .5f, "thickness"); AddBoundedNumber(node, "strength", "Scatter strength", 0, 2, .7f, "strength"); AddColorField(node, "tint", "Scatter tint", new Color(1f, .35f, .2f, 1f), "tint"); AddBoundedNumber(node, "viewResponse", "View response", 0, 1, 0, "viewResponse"); AddBoundedNumber(node, "attenuation", "Thickness attenuation", 0, 1, 0, "attenuation"); FeatureNote("Wrapped and backlight terms approximate shallow scattering from the main light. View response and thickness attenuation default to neutral."); return true;
+                case "core.subsurface":
+                    AddBoundedNumber(node, "thickness", "Thickness", 0, 1, .5f, "thickness");
+                    AddBoundedNumber(node, "strength", "Scatter strength", 0, 2, .7f, "strength");
+                    AddColorField(node, "tint", "Scatter tint", new Color(1f, .35f, .2f, 1f), "tint");
+                    AddBoundedNumber(node, "spread", "Additional spread", 0, 2, 0, "spread");
+                    AddBoundedNumber(node, "distortion", "Light distortion", -1, 1, 0, "distortion");
+                    AddBoundedNumber(node, "viewResponse", "View response", 0, 1, 0, "viewResponse");
+                    AddBoundedNumber(node, "attenuation", "Thickness attenuation", 0, 1, 0, "attenuation");
+                    AddBoundedNumber(node, "shadowResponse", "Scene shadow response", 0, 1, 0, "shadowResponse");
+                    FeatureNote("Additional spread widens the wrapped light without changing thickness. Distortion bends the scattering light toward the normal. Scene shadow response affects the added scattering only; it needs a shadow-casting scene light. These controls default to 0 to preserve existing materials."); return true;
                 case "core.tessellation":
                     AddIntegerField(node, "factor", "Tessellation factor", 1, 63, 8);
                     AddIntegerField(node, "minFactor", "Minimum factor", 1, 63, 1);

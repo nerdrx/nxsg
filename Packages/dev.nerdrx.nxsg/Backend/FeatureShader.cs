@@ -15,6 +15,35 @@ namespace NXSG.Backend
             string Pos() => p("position","input.local","vector3");
             string Center() => "float3("+prop("x",0)+","+prop("y",0)+","+prop("z",0)+")";
             string Pattern(string name,params string[] args) => name+"("+U()+","+string.Join(",",args)+")";
+            string Anisotropic()
+            {
+                var normal = p("normal", "input.n", "vector3");
+                var tangent = p("tangent", "input.tangent", "vector3");
+                var color = p("color", "float4(1,1,1,1)", "color");
+                var roughness = s("roughness", .3);
+                var dual = s("dualLobe", 0);
+                var secondaryRoughness = s("secondaryRoughness", .6);
+                var shift = s("shift", 0);
+                var secondaryShift = s("secondaryShift", 0);
+                var shiftNoise = s("shiftNoise", 0);
+                var secondaryShiftNoise = s("secondaryShiftNoise", 0);
+                var tangentStrength = s("tangentStrength", 1);
+                var longitudinal = s("longitudinalWidth", 1);
+                var azimuthal = s("azimuthalWidth", 1);
+                var secondaryTint = p("secondaryTint", colorProp("secondaryTint", 1, 1, 1, 1), "color");
+                var legacyNeutral = longitudinal == "1" && azimuthal == "1" && shiftNoise == "0" && secondaryShiftNoise == "0";
+                var body = legacyNeutral
+                    ? "float4 result=NX_AnisoLegacy(input," + normal + "," + tangent + "," + color + "," + roughness + "," + dual + "," + secondaryRoughness + "," + shift + "," + secondaryShift + "," + tangentStrength + "," + secondaryTint + "); "
+                    : "float4 result=NX_Aniso(input," + normal + "," + tangent + "," + color + "," + roughness + "," + dual + "," + secondaryRoughness + "," + shift + "," + secondaryShift + "," + shiftNoise + "," + secondaryShiftNoise + "," + tangentStrength + "," + longitudinal + "," + azimuthal + "," + secondaryTint + "); ";
+                var reflectionStrength = s("reflectionStrength", 0);
+                // An unconnected zero property emits no probe lookup at all. A routed input stays dynamic.
+                if (reflectionStrength != "0")
+                {
+                    if (vertex) throw new InvalidOperationException("Anisotropic reflection probes are fragment-only; disable reflection or connect the highlight to a color input.");
+                    body += "float3 n=NX_AnisoUnit(" + normal + "); float3 v=NX_AnisoUnit(_WorldSpaceCameraPos-input.ws); float3 tangent=NX_AnisoUnit(" + tangent + "); float3 t0=tangent-n*dot(tangent,n); float3 t=dot(t0,t0)>1e-8?normalize(t0):normalize(cross(n,abs(n.y)<.999?float3(0,1,0):float3(1,0,0))); float3 reflected=reflect(-v,n); float stretch=" + s("reflectionStretch", 0) + "; float stretchScale=max(1,abs(stretch)); float3 stretched=NX_AnisoUnit(reflected/stretchScale+t*dot(reflected,t)*(stretch/stretchScale)); float4 probe=UNITY_SAMPLE_TEXCUBE_LOD(unity_SpecCube0,stretched,saturate(" + s("reflectionRoughness", .3) + ")*6); result.rgb+=DecodeHDR(probe,unity_SpecCube0_HDR).rgb*max(0," + reflectionStrength + "); ";
+                }
+                return body + "return result;";
+            }
             switch(node.Operation)
             {
                 case "core.motionResponse": return "pow(saturate((abs("+s("speed",0)+")-"+prop("startSpeed",.1)+")/max("+prop("fullSpeed",4)+"-"+prop("startSpeed",.1)+",.0001)),max("+prop("curve",1)+",.001))";
@@ -66,7 +95,7 @@ namespace NXSG.Backend
                 case "core.stripes3D": return "step(frac(("+Pos()+")["+prop("axis",1)+"]*"+prop("scale",10)+"),saturate("+prop("width",.5)+"))";
                 case "core.snowMask": return "saturate((NX_SafeNormal("+p("normal","input.n","vector3")+").y-(1-"+prop("coverage",.5)+")+(NX_Noise(("+p("position","input.ws","vector3")+").xz*"+prop("scale",10)+")-.5)*"+prop("breakup",.3)+")*5+.5)";
                 case "core.wetnessColor": return "float4 c="+p("color","float4(.5,.5,.5,1)","color")+"; c.rgb*=1-saturate("+s("mask",1)+")*saturate("+prop("strength",.5)+")*.7; return c;";
-                case "core.anisotropicHighlight": return "NX_Aniso(input,"+p("normal","input.n","vector3")+","+p("tangent","input.tangent","vector3")+","+p("color","float4(1,1,1,1)","color")+","+s("roughness",.3)+","+s("dualLobe",0)+","+s("secondaryRoughness",.6)+","+s("shift",0)+","+s("secondaryShift",0)+","+s("tangentStrength",1)+","+p("secondaryTint",colorProp("secondaryTint",1,1,1,1),"color")+")";
+                case "core.anisotropicHighlight": return Anisotropic();
                 case "core.iridescence": return "float4 base="+p("color","float4(1,1,1,1)","color")+"; float ndv=saturate(dot(NX_SafeNormal("+p("normal","input.n","vector3")+"),NX_SafeNormal(_WorldSpaceCameraPos-input.ws))); float film=saturate("+s("thickness",.5)+")*6.2831853+"+prop("phase",0)+"; float3 shift=float3(.5+.5*cos(film+ndv*5.2),.5+.5*cos(film+ndv*5.2+2.094),.5+.5*cos(film+ndv*5.2+4.188)); return float4(base.rgb*lerp(1,shift,"+prop("strength",1)+"),base.a);";
                 case "core.refraction":
                     if (vertex) throw new InvalidOperationException("Refraction uses GrabPass screen pixels; connect it to a surface color, not vertex motion.");
@@ -80,10 +109,38 @@ namespace NXSG.Backend
                 {
                     var viewResponse = s("viewResponse", 0);
                     var attenuation = s("attenuation", 0);
-                    var prefix = "float4 base=" + p("color", "float4(1,1,1,1)", "color") + "; float3 n=NX_SafeNormal(" + p("normal", "input.n", "vector3") + "); float3 l=NX_SafeNormal(UnityWorldSpaceLightDir(input.ws)); float thickness=saturate(" + s("thickness", .5) + "); float wrap=saturate((dot(n,l)+thickness)/max(1+thickness,.0001)); float back=saturate(dot(-n,l)); float3 tint=" + p("tint", colorProp("tint", 1, .35, .2, 1), "color") + ".rgb; float3 light=_LightColor0.rgb; ";
-                    if (viewResponse == "0" && attenuation == "0")
-                        return prefix + "return float4(base.rgb*(1+" + s("strength", .7) + "*(wrap*.65+back*.35)*tint*light),base.a);";
-                    return prefix + "float3 v=NX_SafeNormal(_WorldSpaceCameraPos-input.ws); float view=lerp(1,saturate(1-dot(n,v)),saturate(" + viewResponse + ")); float attenuation=exp(-max(0," + attenuation + ")*thickness*8); return float4(base.rgb*(1+" + s("strength", .7) + "*(wrap*.65+back*.35)*view*attenuation*tint*light),base.a);";
+                    var spread = s("spread", 0);
+                    var distortion = s("distortion", 0);
+                    var shadowResponse = s("shadowResponse", 0);
+                    if (vertex && shadowResponse != "0")
+                        throw new InvalidOperationException("Subsurface Scene shadow response samples fragment shadows. Use it for surface color or emission, not displacement or particle emitter inputs.");
+                    var prefix = "float4 base=" + p("color", "float4(1,1,1,1)", "color") + "; float3 n=NX_SafeNormal(" + p("normal", "input.n", "vector3") + "); float3 l=NX_SafeNormal(UnityWorldSpaceLightDir(input.ws)); float thickness=saturate(" + s("thickness", .5) + "); ";
+                    if (distortion != "0") prefix += "l=NX_SafeNormal(l+n*(" + distortion + ")); ";
+                    var wrapWidth = "thickness";
+                    if (spread != "0")
+                    {
+                        prefix += "float scatterSpread=thickness+max(0," + spread + "); ";
+                        wrapWidth = "scatterSpread";
+                    }
+                    prefix += "float wrap=saturate((dot(n,l)+" + wrapWidth + ")/max(1+" + wrapWidth + ",.0001)); float back=saturate(dot(-n,l)); float3 tint=" + p("tint", colorProp("tint", 1, .35, .2, 1), "color") + ".rgb; float3 light=_LightColor0.rgb; ";
+                    var factors = "";
+                    if (viewResponse != "0")
+                    {
+                        prefix += "float3 v=NX_SafeNormal(_WorldSpaceCameraPos-input.ws); float view=lerp(1,saturate(1-dot(n,v)),saturate(" + viewResponse + ")); ";
+                        factors += "*view";
+                    }
+                    if (attenuation != "0")
+                    {
+                        prefix += "float attenuation=exp(-max(0," + attenuation + ")*thickness*8); ";
+                        factors += "*attenuation";
+                    }
+                    if (shadowResponse != "0")
+                    {
+                        // Only shaded forward fragments have valid received-shadow coordinates.
+                        prefix += "\n#if defined(UNITY_PASS_FORWARDBASE) || defined(UNITY_PASS_FORWARDADD)\nfloat nxScatterShadow=UNITY_SHADOW_ATTENUATION(input,input.ws);\n#else\nfloat nxScatterShadow=1;\n#endif\n";
+                        factors += "*lerp(1,nxScatterShadow,saturate(" + shadowResponse + "))";
+                    }
+                    return prefix + "return float4(base.rgb*(1+" + s("strength", .7) + "*(wrap*.65+back*.35)" + factors + "*tint*light),base.a);";
                 }
                 default: throw new InvalidOperationException("Unsupported feature operation: "+node.Operation);
             }
@@ -103,7 +160,9 @@ float NX_Fbm(float2 p){return (NX_Noise(p)*.5+NX_Noise(p*2.03+17)*.25+NX_Noise(p
 float NX_Sparkles(float2 uv,float scale,float time,float density,float size){float2 p=uv*scale;float2 id=floor(p);float2 q=frac(p)-.5;float phase=NX_Hash(id+31.3);float pulse=pow(saturate(sin(time+phase*6.2831853)),8);float shape=NX_ShapeEdge(length(q)-max(0,size),.01);return shape*pulse*step(NX_Hash(id),saturate(density));}
 float2 NX_Kaleidoscope(float2 uv,float segments,float rotation){float2 q=uv-.5;float sector=6.2831853/max(1,segments);float a=atan2(q.y,q.x)+radians(rotation);a=abs((frac(a/sector+.5)-.5)*sector);return .5+length(q)*float2(cos(a),sin(a));}
 float3 NX_HeightNormal(float height,float2 uv,float strength){float2 dx=ddx(uv),dy=ddy(uv);float det=dx.x*dy.y-dx.y*dy.x;float safe=(det<0?-1:1)*max(abs(det),.00000001);float hu=(ddx(height)*dy.y-ddy(height)*dx.y)/safe;float hv=(ddy(height)*dx.x-ddx(height)*dy.x)/safe;return NX_SafeNormal(float3(-hu*strength,-hv*strength,1));}
-float4 NX_Aniso(NXInput input,float3 normal,float3 tangent,float4 color,float roughness,float dualLobe,float secondaryRoughness,float shift,float secondaryShift,float tangentStrength,float4 secondaryTint){float3 n=NX_SafeNormal(normal);float3 t=NX_SafeNormal(tangent);t=NX_SafeNormal(t+n*shift);float3 secondaryT=NX_SafeNormal(t+n*secondaryShift);float3 l=NX_SafeNormal(UnityWorldSpaceLightDir(input.ws));float3 h=NX_SafeNormal(l+NX_SafeNormal(_WorldSpaceCameraPos-input.ws));float nl=saturate(dot(n,l));float tr=max(roughness*roughness,.001);float sr=max(secondaryRoughness*secondaryRoughness,.001);float anisotropic=pow(saturate(1-pow(dot(t,h),2)),2/tr)*nl;float isotropic=pow(saturate(dot(n,h)),2/tr)*nl;float primary=lerp(isotropic,anisotropic,saturate(tangentStrength));float secondAnisotropic=pow(saturate(1-pow(dot(secondaryT,h),2)),2/sr)*nl;float secondIsotropic=pow(saturate(dot(n,h)),2/sr)*nl;float secondary=lerp(secondIsotropic,secondAnisotropic,saturate(tangentStrength));float dual=saturate(dualLobe);float3 specular=primary*(1-dual)+secondaryTint.rgb*secondary*dual;return float4(color.rgb*specular*_LightColor0.rgb,color.a);}
+float3 NX_AnisoUnit(float3 v){float m=max(abs(v.x),max(abs(v.y),abs(v.z)));return NX_SafeNormal(v/max(m,.00000001));}
+float4 NX_AnisoLegacy(NXInput input,float3 normal,float3 tangent,float4 color,float roughness,float dualLobe,float secondaryRoughness,float shift,float secondaryShift,float tangentStrength,float4 secondaryTint){float3 n=NX_SafeNormal(normal);float3 t=NX_SafeNormal(tangent);t=NX_SafeNormal(t+n*shift);float3 secondaryT=NX_SafeNormal(t+n*secondaryShift);float3 l=NX_SafeNormal(UnityWorldSpaceLightDir(input.ws));float3 h=NX_SafeNormal(l+NX_SafeNormal(_WorldSpaceCameraPos-input.ws));float nl=saturate(dot(n,l));float tr=max(roughness*roughness,.001);float sr=max(secondaryRoughness*secondaryRoughness,.001);float anisotropic=pow(saturate(1-pow(dot(t,h),2)),2/tr)*nl;float isotropic=pow(saturate(dot(n,h)),2/tr)*nl;float primary=lerp(isotropic,anisotropic,saturate(tangentStrength));float secondAnisotropic=pow(saturate(1-pow(dot(secondaryT,h),2)),2/sr)*nl;float secondIsotropic=pow(saturate(dot(n,h)),2/sr)*nl;float secondary=lerp(secondIsotropic,secondAnisotropic,saturate(tangentStrength));float dual=saturate(dualLobe);float3 specular=primary*(1-dual)+secondaryTint.rgb*secondary*dual;return float4(color.rgb*specular*_LightColor0.rgb,color.a);}
+float4 NX_Aniso(NXInput input,float3 normal,float3 tangent,float4 color,float roughness,float dualLobe,float secondaryRoughness,float shift,float secondaryShift,float shiftNoise,float secondaryShiftNoise,float tangentStrength,float longitudinalWidth,float azimuthalWidth,float4 secondaryTint){float3 n=NX_AnisoUnit(normal);float3 t=NX_AnisoUnit(tangent);float ps=max(1,max(abs(shift),abs(shiftNoise)));float3 primaryT=NX_AnisoUnit(t/ps+n*(shift/ps+shiftNoise/ps));float ss=max(1,max(abs(secondaryShift),abs(secondaryShiftNoise)));float3 secondaryT=NX_AnisoUnit(primaryT/ss+n*(secondaryShift/ss+secondaryShiftNoise/ss));float3 l=NX_AnisoUnit(UnityWorldSpaceLightDir(input.ws));float3 h=NX_AnisoUnit(l+NX_AnisoUnit(_WorldSpaceCameraPos-input.ws));float nl=saturate(dot(n,l));float pr=max(roughness*roughness,.001);float sr=max(secondaryRoughness*secondaryRoughness,.001);float lw=max(abs(longitudinalWidth),.001);float aw=max(abs(azimuthalWidth),.001);float3 b=NX_AnisoUnit(cross(n,t));float azimuthExponent=max(0,1/(aw*aw)-1);float anisotropic=pow(saturate(1-pow(dot(primaryT,h),2)),2/(pr*lw*lw))*pow(max(1-pow(dot(b,h),2),.000001),azimuthExponent*2/pr)*nl;float isotropic=pow(saturate(dot(n,h)),2/pr)*nl;float primary=lerp(isotropic,anisotropic,saturate(tangentStrength));float secondAnisotropic=pow(saturate(1-pow(dot(secondaryT,h),2)),2/(sr*lw*lw))*pow(max(1-pow(dot(b,h),2),.000001),azimuthExponent*2/sr)*nl;float secondIsotropic=pow(saturate(dot(n,h)),2/sr)*nl;float secondary=lerp(secondIsotropic,secondAnisotropic,saturate(tangentStrength));float dual=saturate(dualLobe);float3 specular=primary*(1-dual)+secondaryTint.rgb*secondary*dual;return float4(color.rgb*specular*_LightColor0.rgb,color.a);}
 float2 NX_BombUV(float2 uv,float cells,float seed,float rotate,float2 id){float2 q=uv*cells-id-.5;float h=NX_Hash(id+seed);float a=(h-.5)*rotate*6.2831853;float2 r=float2(cos(a)*q.x-sin(a)*q.y,sin(a)*q.x+cos(a)*q.y);float2 off=float2(NX_Hash(id+17.1+seed),NX_Hash(id+43.7+seed));return r+off+.5;}
 ";
     }

@@ -32,6 +32,7 @@ namespace NXSG.Backend
         bool depthBulgeEnabled;
         bool screenDepthEnabled;
         bool coatEnabled, sheenEnabled;
+        bool gemSparklesEnabled;
         int depth;
 
         sealed class SurfacePass
@@ -66,6 +67,7 @@ namespace NXSG.Backend
                 edge?.From != null && edge.To != null && connected.Contains(edge.From.NodeId) &&
                 liveById.TryGetValue(edge.From.NodeId, out var textureNode) && textureNode.Operation == "core.texture2D" && edge.From.PortId == "alpha");
             return live.Any(n => n.Operation == "core.output" && n.Properties != null && n.Properties.Count > 0 || n.Operation == "core.toonSurface" && (new[]{"lightingMode","shadeMap","shadeColor","occlusion","shadow","receiveShadow","borderColor","borderWidth","borderStrength"}.Any(key=>n.Properties?[key]!=null) || incoming[n.Id].Any(e => !new[]{"albedo","normal","emission","opacity","displacement"}.Contains(e.To.PortId)))) || live.Any(n => ops.Contains(n.Operation) || FeatureNodes.IsKnown(n.Operation)) || live.Any(n => (n.Operation == "core.noise" || n.Operation == "core.uv0" || n.Operation == "core.polarUV" || n.Operation == "core.texture2D") && IsAdvancedCoordinates(n, incoming[n.Id])) || live.Count(n => n.Operation == "core.texture2D") > 1 ||
+                live.Any(n => n.Operation == "core.toonSurface" && LightingValueDiffers(n, "rimStrength", 0)) ||
                 hasColorScalarEdge ||
                 hasTextureAlphaEdge ||
                 live.Any(n => n.Operation == "core.toonSurface" && (n.Properties?["useAlbedoAlpha"] != null || n.Properties?["opacity"] != null || n.Properties?["displacement"] != null || incoming[n.Id].Any(e => e.To.PortId == "opacity" || e.To.PortId == "displacement" || e.To.PortId == "normal") || HasLightingControls(n)));
@@ -315,6 +317,7 @@ namespace NXSG.Backend
             if (live.Any(id => nodes[id].Operation == "core.sdfFaceShadow" || nodes[id].Operation == "core.gem")) b.AppendLine(DetailShader.CommonHelpers);
             if (live.Any(id => nodes[id].Operation == "core.depthRim")) b.AppendLine(DetailShader.DepthRimHelpers);
             if (live.Any(id => nodes[id].Operation == "core.gem")) b.AppendLine(DetailShader.GemHelpers);
+            if (gemSparklesEnabled) b.AppendLine(DetailShader.GemSparkleHelpers);
             if (lightVolumes) b.AppendLine(LightVolumesShader.Hlsl + LightVolumeGraphHelper);
             if (needsVolumeHelpers) b.AppendLine(VolumeShader.Helpers);
             if (needsProceduralHelpers) b.AppendLine(ProceduralShader.Hlsl);
@@ -452,7 +455,8 @@ namespace NXSG.Backend
                     body = DetailShader.DepthRim(vertex, S);
                     break;
                 case "core.gem":
-                    body = DetailShader.Gem(vertex, P, S, ColorProp(n, "color", 1, 1, 1, 1));
+                    body = DetailShader.Gem(vertex, P, S, ColorProp(n, "color", 1, 1, 1, 1), ColorProp(n, "sparkleColor", 1, 1, 1, 1));
+                    gemSparklesEnabled |= body.StartsWith("NX_GemWithSparkles(", StringComparison.Ordinal);
                     break;
                 case "core.previewVector": body = Source(n,"normal") != null ? "float4(" + P("normal","float3(0,0,1)","vector3") + "*.5+.5,1)" : "float4(" + P("uv",uv,"vector2") + ",0,1)"; break;
                 case "core.particleColor": body = port == "alpha" ? "input.color.a" : "input.color"; break;

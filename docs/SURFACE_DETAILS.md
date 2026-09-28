@@ -52,6 +52,19 @@ world light that does not cast them.
 Width and strength are connectable. It works with threshold, multiple-band,
 and layered-shadow modes; texture-ramp mode defines its own transitions.
 
+In **Layered shadows** mode, each layer also has **Receive scene shadows**.
+At 1, its shade color receives the global scene-shadow contribution as before.
+Reducing it lifts the cast shadow on that layer's shaded contribution, while
+the other layers and lit regions retain their own shadow response. These
+controls do not change the layer's normal-based threshold or generate new
+shadows. Point/spot falloff, cookies, and the graph's Shadow input still apply.
+
+**Rim shading** blends a color into the Toon response at grazing view angles.
+Width and softness shape the rim, and light alignment restricts it to the
+side facing the light. It follows direct lighting and received shadows;
+connect a separate Rim Glow to Emission for an independently glowing edge.
+Rim strength defaults to 0 and omits the extra calculation until enabled.
+
 ### SDF Face Shadow
 
 Feed two mirrored samples from an authored face SDF into **SDF left/right**.
@@ -73,15 +86,30 @@ roughness where screen-space normals change rapidly, including clearcoat
 normals, to reduce small highlight shimmer. Zero preserves the existing shader.
 It does not replace texture mipmaps or solve every source of aliasing.
 
-**Anisotropic Highlight** now supports a second lobe, independently shifted
-highlights, second-lobe roughness and tint, and tangent strength. The default
-second-lobe weight is zero. It remains an artistic color contribution; connect
-it where that contribution belongs in your material.
+**Anisotropic Highlight** supports two lobes, second-lobe roughness and tint,
+tangent strength, and separate longitudinal and azimuthal width controls.
+Shift-noise inputs accept procedural or texture signals. Optional probe
+reflections have their own strength, roughness, and tangent stretch.
+An unwired reflection strength of 0 omits the probe lookup.
+This is an artistic color contribution; connect it where that contribution
+belongs in your material. Normals and tangents are world space.
+Longitudinal width 1 preserves the original lobe; higher values broaden it.
+Azimuthal width 1 is fully open, and values below 1 narrow it around the strand.
+The second shift remains relative to the primary shifted tangent for existing
+graph compatibility. A probe-enabled highlight is fragment-only.
 
-**Subsurface** adds connectable strength, view response, light attenuation,
-and a working scatter tint. Neutral values retain the previous response.
-This estimates scattering from light direction and thickness; it does not
-trace light through the mesh.
+**Subsurface** provides connectable strength, tint, thickness, view response,
+and thickness attenuation. **Additional spread** widens the wrapped light
+without changing thickness; **Light distortion** bends the scattering light
+toward the normal. Negative distortion bends it in the opposite direction.
+**Scene shadow response** controls how much received shadow suppresses the
+added scattering, leaving the base color alone. It needs a shadow-casting
+scene light and is inactive outside forward lighting passes. When enabled or
+wired, it cannot feed displacement or particle emitter inputs.
+
+Spread, distortion, and scene shadow response default to 0, preserving older
+graphs. These are light-direction and thickness approximations; they do not
+trace light through the mesh or create self-shadowing in an unshadowed world.
 
 ## Depth Rim
 
@@ -103,9 +131,16 @@ probe. Connect it to Unlit albedo for a starting point. **IOR**, refraction,
 reflection, dispersion, roughness, and tint are connectable. A custom normal
 input is world space.
 
+**Interior sparkles** add a procedural pattern sampled at four points along
+the refracted view direction in object space. Strength, density, size, depth,
+and color are connectable. Depth changes the sampled interior path and its
+parallax, rather than measuring the back face of the mesh. Strength defaults
+to 0; when unwired, this removes the additional helper and evaluation.
+
 This adds a named GrabPass and multiple texture samples. It does not simulate
 internal bounces, thickness, caustics, or raytraced scene geometry. Screen
-contents and transparency sorting affect the result. Reflection needs an
+contents and transparency sorting affect the result. Interior sparkles are
+an artistic approximation, not internal reflection rays. Reflection needs an
 appropriate environment/probe. See **Prismatic Gem** in the gallery.
 
 ## Delayed-pose afterimages

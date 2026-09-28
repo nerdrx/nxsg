@@ -32,12 +32,21 @@ namespace NXSG.Backend
         }
 
         internal static string Gem(bool vertex, Func<string, string, string, string> input,
-            Func<string, double, string> scalar, string colorFallback)
+            Func<string, double, string> scalar, string colorFallback, string sparkleColorFallback)
         {
             if (vertex) throw new InvalidOperationException("Gem refraction and probe reflection are fragment-only; connect Gem to a surface color input.");
             var color = input("color", colorFallback, "color");
             var normal = "NX_DetailSafeNormal(" + input("normal", "input.n", "vector3") + ")";
-            return "NX_Gem(input," + color + "," + normal + "," + scalar("ior", 1.5) + "," + scalar("refraction", .06) + "," + scalar("reflection", .8) + "," + scalar("dispersion", .015) + "," + scalar("roughness", .15) + ")";
+            var ior = scalar("ior", 1.5);
+            var refraction = scalar("refraction", .06);
+            var reflection = scalar("reflection", .8);
+            var dispersion = scalar("dispersion", .015);
+            var roughness = scalar("roughness", .15);
+            var sparkleStrength = scalar("sparkleStrength", 0);
+            var baseArgs = "input," + color + "," + normal + "," + ior + "," + refraction + "," + reflection + "," + dispersion + "," + roughness;
+            if (sparkleStrength == "0") return "NX_Gem(" + baseArgs + ")";
+            var sparkleColor = input("sparkleColor", sparkleColorFallback, "color");
+            return "NX_GemWithSparkles(" + baseArgs + "," + sparkleColor + "," + sparkleStrength + "," + scalar("sparkleDensity", .35) + "," + scalar("sparkleSize", .2) + "," + scalar("sparkleDepth", .35) + ")";
         }
 
         internal const string CommonHelpers = @"
@@ -111,6 +120,44 @@ float4 NX_Gem(NXInput input,float4 tint,float3 worldNormal,float ior,float refra
     float fresnel=f0+(1-f0)*pow(1-saturate(dot(worldNormal,worldView)),5);
     float3 result=lerp(scene,probe,saturate(reflection)*fresnel)*tint.rgb;
     return float4(result,tint.a);
+}
+";
+
+        internal const string GemSparkleHelpers = @"
+float NX_GemHash3(float3 p){return frac(sin(dot(p,float3(127.1,311.7,74.7)))*43758.5453);}
+float NX_GemInteriorSparkle(float3 origin,float3 direction,float depth,float density,float size)
+{
+    if(depth<=0||density<=0||size<=0)return 0;
+    float sparkle=0;
+    float safeDepth=max(0,depth);
+    float3 ray=NX_DetailSafeNormal(direction);
+    [unroll] for(int i=0;i<4;i++)
+    {
+        float3 p=(origin+ray*(safeDepth*((i+.5)*.25)))*24;
+        float3 cell=floor(p);
+        float3 jitter=float3(NX_GemHash3(cell+float3(1.7,3.1,5.3)),NX_GemHash3(cell+float3(7.9,2.3,11.1)),NX_GemHash3(cell+float3(13.7,17.3,19.1)));
+        float3 delta=abs(frac(p)-jitter);
+        delta=min(delta,1-delta);
+        float radius=max(.015,min(size,.5))*.5;
+        float spot=1-smoothstep(radius*.35,radius,length(delta));
+        float present=step(NX_GemHash3(cell+float3(23.9,29.3,31.7)),saturate(density));
+        sparkle=max(sparkle,spot*present);
+    }
+    return sparkle;
+}
+float4 NX_GemWithSparkles(NXInput input,float4 tint,float3 worldNormal,float ior,float refraction,float reflection,float dispersion,float roughness,float4 sparkleColor,float sparkleStrength,float sparkleDensity,float sparkleSize,float sparkleDepth)
+{
+    float4 result=NX_Gem(input,tint,worldNormal,ior,refraction,reflection,dispersion,roughness);
+    if(sparkleStrength>0)
+    {
+        float3 worldView=NX_DetailSafeNormal(_WorldSpaceCameraPos-input.ws);
+        float3 refractedWorld=refract(-worldView,worldNormal,1/max(ior,1));
+        if(dot(refractedWorld,refractedWorld)<.000001)refractedWorld=-worldView;
+        float3 sparkleLocal=NX_DetailSafeNormal(mul((float3x3)unity_WorldToObject,refractedWorld));
+        float sparkle=NX_GemInteriorSparkle(input.local,sparkleLocal,sparkleDepth,sparkleDensity,sparkleSize);
+        result.rgb+=max(0,sparkleStrength)*sparkleColor.rgb*sparkle;
+    }
+    return result;
 }
 ";
     }

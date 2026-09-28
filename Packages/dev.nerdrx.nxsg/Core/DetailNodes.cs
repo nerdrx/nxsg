@@ -24,10 +24,10 @@ namespace NXSG.Core
 
             nodes.Add("core.gem", new FeatureNode(
                 "Gem", "Color",
-                "Stylized gem color using chromatic GrabPass refraction and a roughness-filtered first reflection probe. This is a screen and probe approximation: it does not trace scene geometry or resolve internal reflections.",
-                "color:color,normal:vector3,ior:float,refraction:float,reflection:float,dispersion:float,roughness:float",
+                "Stylized gem color using chromatic screen refraction, a first-probe reflection, and optional bounded procedural interior sparkles along the refracted object-space view path. Sparkles do not trace gem geometry or internal reflections.",
+                "color:color,normal:vector3,ior:float,refraction:float,reflection:float,dispersion:float,roughness:float,sparkleColor:color,sparkleStrength:float,sparkleDensity:float,sparkleSize:float,sparkleDepth:float",
                 "color:color", false,
-                new JObject { ["color"] = new JArray(1,1,1,1), ["ior"] = 1.5, ["refraction"] = .06, ["reflection"] = .8, ["dispersion"] = .015, ["roughness"] = .15 }));
+                new JObject { ["color"] = new JArray(1,1,1,1), ["ior"] = 1.5, ["refraction"] = .06, ["reflection"] = .8, ["dispersion"] = .015, ["roughness"] = .15, ["sparkleColor"] = new JArray(1,1,1,1), ["sparkleStrength"] = 0, ["sparkleDensity"] = .35, ["sparkleSize"] = .2, ["sparkleDepth"] = .35 }));
         }
     }
 }

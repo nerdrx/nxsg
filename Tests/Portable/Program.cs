@@ -54,11 +54,15 @@ internal static class Program
         FeatureNodeChecks.Run(Assert);
         RenderingOptionsChecks.Run(Assert);
         ToonLayerChecks.Run(Assert);
+        ToonCompletionChecks.Run(Assert);
         OutlineDetailChecks.Run(Assert);
         SoftOutlineChecks.Run(Assert);
         GeometryDetailChecks.Run(Assert);
         LightingDetailChecks.Run(Assert);
+        HairDetailChecks.Run(Assert);
+        SubsurfaceCompletionChecks.Run(Assert);
         MaterialDetailChecks.Run(Assert);
+        GemSparkleChecks.Run(Assert);
         SurfaceRenderStateChecks.Run(Assert);
         ScreenDepthShaderChecks.Run(Assert);
         TessellationChecks.Run(Assert);

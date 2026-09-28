@@ -39,6 +39,16 @@ public static class MaterialDetailSmoke
                 Require(inspector.Query<FloatField>().ToList().Count > 0, operation + " numeric controls missing");
                 Require(inspector.Query<Button>().ToList().Any(button => button.text == "Preview selected node"), operation + " preview action missing");
             }
+            Invoke("SelectNode", "core.gem", false);
+            var gemInspector = (VisualElement)Field("inspector");
+            foreach (var property in new[] { "sparkleStrength", "sparkleDensity", "sparkleSize", "sparkleDepth" })
+                Require(gemInspector.Q<FloatField>("node-property-" + property) != null, "Missing Gem sparkle control: " + property);
+            gemInspector.Q<FloatField>("node-property-sparkleStrength").value = 2.5f;
+            Require((double)graph.Nodes.Single(n => n.Id == "core.gem").Properties["sparkleStrength"] == 2.5, "Gem strength edit did not save");
+            var sparkleInput = NodeCatalog.Create("core.value"); sparkleInput.Id = "sparkle-input"; graph.Nodes.Add(sparkleInput);
+            graph.Connections.Add(new GraphConnection { Id = "sparkle-edge", From = new GraphPortRef { NodeId = sparkleInput.Id, PortId = "value" }, To = new GraphPortRef { NodeId = "core.gem", PortId = "sparkleStrength" } });
+            Invoke("Rebuild"); Invoke("SelectNode", "core.gem", false);
+            Require(!((VisualElement)Field("inspector")).Q<FloatField>("node-property-sparkleStrength").enabledInHierarchy, "Connected Gem strength field stays editable");
             Invoke("SelectNode", "core.sdfFaceShadow", false);
             var face = (VisualElement)Field("inspector");
             Require(face.Query<PopupField<string>>().ToList().Any(field => field.label == "Basis"), "Face basis selector missing");

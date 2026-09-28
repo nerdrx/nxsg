@@ -115,8 +115,10 @@ namespace NXSG.Core
                     foreach (var key in new[] { "shadeMap", "threshold", "softness", "shadowStrength", "normalStrength" }) CheckNumber(node.Properties[key + suffix], path + ".properties." + key + suffix, diagnostics);
                 }
                 CheckVector4(node.Properties["borderColor"], path + ".properties.borderColor", diagnostics);
+                CheckVector4(node.Properties["rimColor"], path + ".properties.rimColor", diagnostics);
                 CheckIntegerRange(node.Properties["bands"], path + ".properties.bands", 2, 8, diagnostics);
                 foreach (var key in new[] { "shadeMap", "rampRow", "occlusion", "shadow", "receiveShadow", "borderWidth", "borderStrength" }) CheckNumber(node.Properties[key], path + ".properties." + key, diagnostics);
+                foreach (var key in new[] { "layerReceiveShadow", "layerReceiveShadow2", "layerReceiveShadow3", "rimStrength", "rimWidth", "rimSoftness", "rimLightAlignment" }) CheckNumber(node.Properties[key], path + ".properties." + key, diagnostics);
                 if (IsNumber(node.Properties["lightingMode"]) && (double)node.Properties["lightingMode"] == 2 && !resources.Any(r => r != null && r.Id == GraphTypes.StringValue(node.Properties["resourceId"]) && r.Kind == "texture2D"))
                     Add(diagnostics, DiagnosticSeverity.Error, "resource.ramp", path, "Texture ramp mode needs a Texture2D ramp resource.");
             }
@@ -182,6 +184,7 @@ namespace NXSG.Core
                 if (node.Operation == "core.gem")
                 {
                     CheckVector4(node.Properties["color"], path + ".properties.color", diagnostics);
+                    CheckVector4(node.Properties["sparkleColor"], path + ".properties.sparkleColor", diagnostics);
                 }
                 if (node.Operation == "core.tessellation")
                 {
@@ -285,7 +288,7 @@ namespace NXSG.Core
                 case "core.polarUV": vectors = new[] { "center" }; numeric = new[] { "radialScale", "angleScale" }; break;
                 case "core.uvRotate": vectors = new[] { "center" }; numeric = new[] { "angle" }; break;
                 case "core.uvScroll": vectors = new[] { "speed" }; break;
-                case "core.toonSurface": numeric = new[] { "opacity", "displacement", "cutoff", "threshold", "softness", "shadowStrength" }; break;
+                case "core.toonSurface": numeric = new[] { "opacity", "displacement", "cutoff", "threshold", "softness", "shadowStrength", "layerReceiveShadow", "layerReceiveShadow2", "layerReceiveShadow3", "rimStrength", "rimWidth", "rimSoftness", "rimLightAlignment" }; break;
                 case "core.unlitSurface": numeric = new[] { "opacity", "displacement", "cutoff" }; break;
                 case "core.layeredPbrSurface": numeric = new[] { "opacity", "displacement", "metallic", "roughness", "cutoff", "coat", "coatRoughness", "sheen", "sheenRoughness" }; CheckVector4(node.Properties["sheenColor"], path + ".properties.sheenColor", diagnostics); break;
                 case "core.pbrSurface": numeric = new[] { "opacity", "displacement", "metallic", "roughness", "specularAa", "cutoff" }; break;

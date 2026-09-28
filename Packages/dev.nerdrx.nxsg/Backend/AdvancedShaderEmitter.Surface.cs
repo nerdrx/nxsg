@@ -23,9 +23,12 @@ return float4((outputMode==1?diffuse:outputMode==2?specular:diffuse+specular)*ma
             var strength = ToonSetting(surface,"shadowStrength",passIndex);
             var threshold = ToonSetting(surface,"threshold",passIndex);
             var softness = ToonSetting(surface,"softness",passIndex);
+            var perLayerSceneShadow = mode == 3 && HasLayerShadowOverride(surface);
             if (mode == 3)
             {
-                AppendLayeredToonResponse(b, surface, passIndex);
+                if (perLayerSceneShadow)
+                    b.AppendLine("float nxToonGlobalScene=lerp(1,saturate(nxSceneShadow),saturate("+Scalar(surface,"receiveShadow",1)+"));");
+                AppendLayeredToonResponse(b, surface, passIndex, perLayerSceneShadow);
             }
             else
             {
@@ -41,6 +44,7 @@ return float4((outputMode==1?diffuse:outputMode==2?specular:diffuse+specular)*ma
                     AppendToonBorder(b, surface, mode == 1 ? "frac(lightCoordinate*bands)" : "lightCoordinate", mode == 1 ? ".5" : threshold);
                 }
             }
+            AppendToonRim(b, surface, perLayerSceneShadow ? "nxToonGlobalScene" : null);
             b.AppendLine("float3 direct=_LightColor0.rgb*atten*toonResponse;");
             if (HasLightingControls(surface)) b.AppendLine("direct=NX_LightingContribution(direct,"+Prop(surface,"lightingSaturation",1)+","+Prop(surface,"lightingMax",0)+");");
             if (additional) b.AppendLine("return float4(c.rgb*direct,alpha);");
@@ -54,10 +58,10 @@ return float4((outputMode==1?diffuse:outputMode==2?specular:diffuse+specular)*ma
             return b.ToString();
         }
 
-        void AppendLayeredToonResponse(StringBuilder b, GraphNode surface, int passIndex)
+        void AppendLayeredToonResponse(StringBuilder b, GraphNode surface, int passIndex, bool perLayerSceneShadow)
         {
             var layerCount = IntProp(surface, "shadowLayers", 3, 1, 3);
-            b.AppendLine("float3 toonResponse=float3(1,1,1);");
+            b.AppendLine(perLayerSceneShadow ? "float3 toonResponse=float3(1,1,1)*nxToonGlobalScene;" : "float3 toonResponse=float3(1,1,1);");
             for (var layer = 1; layer <= layerCount; layer++)
             {
                 var suffix = layer == 1 ? string.Empty : layer.ToString(CultureInfo.InvariantCulture);
@@ -80,24 +84,58 @@ return float4((outputMode==1?diffuse:outputMode==2?specular:diffuse+specular)*ma
                 var blue = layer == 1 ? 0 : layer == 2 ? .5 : .15;
                 var shadeColor = Input(surface, "shadeColor" + suffix, ColorProp(surface, "shadeColor" + suffix, red, green, blue, 1), "color");
                 var strength = layer == 1 ? ToonSetting(surface, "shadowStrength", passIndex) : Scalar(surface, strengthPort, 1);
-                b.AppendLine("toonResponse=lerp(toonResponse,(" + shadeColor + ").rgb,(1-toonLayer" + layer + "Lit)*saturate(" + strength + ")); ");
-                AppendToonBorder(b, surface, "toonLayer" + layer + "Coordinate", threshold);
+                if (perLayerSceneShadow)
+                {
+                    var layerReceive = Scalar(surface, "layerReceiveShadow" + (layer == 1 ? string.Empty : suffix), 1);
+                    var layerTarget = "toonLayer" + layer + "ShadeTarget";
+                    b.AppendLine("float3 " + layerTarget + "=(" + shadeColor + ").rgb*lerp(1,saturate(nxSceneShadow),saturate(" + Scalar(surface, "receiveShadow", 1) + ")*saturate(" + layerReceive + ")); toonResponse=lerp(toonResponse," + layerTarget + ",(1-toonLayer" + layer + "Lit)*saturate(" + strength + ")); ");
+                }
+                else b.AppendLine("toonResponse=lerp(toonResponse,(" + shadeColor + ").rgb,(1-toonLayer" + layer + "Lit)*saturate(" + strength + ")); ");
+                AppendToonBorder(b, surface, "toonLayer" + layer + "Coordinate", threshold, perLayerSceneShadow ? "nxToonGlobalScene" : null);
             }
         }
 
-        void AppendToonBorder(StringBuilder b, GraphNode surface, string coordinate, string threshold)
+        void AppendToonBorder(StringBuilder b, GraphNode surface, string coordinate, string threshold, string sceneFactor = null)
         {
             if (Source(surface,"borderStrength") == null && (double?)surface.Properties["borderStrength"] != null && (double)surface.Properties["borderStrength"] == 0) return;
             if (Source(surface,"borderStrength") == null && surface.Properties["borderStrength"] == null) return;
             var strength = Scalar(surface,"borderStrength",0);
             var width = Scalar(surface,"borderWidth",.05);
             var color = Input(surface,"borderColor",ColorProp(surface,"borderColor",1,.3,.15,1),"color");
-            b.AppendLine("toonResponse=lerp(toonResponse,("+color+").rgb,(1-smoothstep(0,max(.0001,"+width+"),abs("+coordinate+"-("+threshold+"))))*saturate("+strength+"));");
+            var target = "(" + color + ").rgb" + (sceneFactor == null ? string.Empty : "*" + sceneFactor);
+            b.AppendLine("toonResponse=lerp(toonResponse,"+target+",(1-smoothstep(0,max(.0001,"+width+"),abs("+coordinate+"-("+threshold+"))))*saturate("+strength+"));");
+        }
+
+        void AppendToonRim(StringBuilder b, GraphNode surface, string sceneFactor)
+        {
+            var amount = Source(surface, "rimStrength");
+            var authoredStrength = (double?)surface.Properties["rimStrength"];
+            if (amount == null && (!authoredStrength.HasValue || authoredStrength.Value == 0)) return;
+            var strength = Scalar(surface, "rimStrength", 0);
+            var width = Scalar(surface, "rimWidth", .2);
+            var softness = Scalar(surface, "rimSoftness", .05);
+            var alignment = Scalar(surface, "rimLightAlignment", 1);
+            var color = Input(surface, "rimColor", ColorProp(surface, "rimColor", 1, 1, 1, 1), "color");
+            var rimTarget = "(" + color + ").rgb" + (sceneFactor == null ? string.Empty : "*" + sceneFactor);
+            b.AppendLine("float nxRimViewEdge=1-saturate(dot(n,view)); float nxRimMask=smoothstep(1-saturate("+width+")-max(.001,"+softness+"),1-saturate("+width+")+max(.001,"+softness+"),nxRimViewEdge); float nxRimLight=lerp(1,saturate(dot(n,lightDir)),saturate("+alignment+")); toonResponse=lerp(toonResponse,"+rimTarget+",nxRimMask*nxRimLight*saturate("+strength+"));");
+        }
+
+        bool HasLayerShadowOverride(GraphNode surface)
+        {
+            foreach (var port in new[] { "layerReceiveShadow", "layerReceiveShadow2", "layerReceiveShadow3" })
+            {
+                if (Source(surface, port) != null) return true;
+                var value = (double?)surface.Properties[port];
+                if (value.HasValue && value.Value != 1) return true;
+            }
+            return false;
         }
 
         string LightAttenuation(GraphNode surface)
         {
             const string standard = "UNITY_LIGHT_ATTENUATION(atten,input,input.ws);";
+            if (surface.Operation == "core.toonSurface" && IntProp(surface, "lightingMode", 0, 0, 3) == 3 && HasLayerShadowOverride(surface))
+                return "float nxSceneShadow=saturate(UNITY_SHADOW_ATTENUATION(input,input.ws));\n#undef UNITY_SHADOW_ATTENUATION\n#define UNITY_SHADOW_ATTENUATION(a,b) 1\n" + standard + "\n#undef UNITY_SHADOW_ATTENUATION\n";
             if (surface.Operation != "core.toonSurface" || Source(surface,"receiveShadow") == null && (surface.Properties["receiveShadow"] == null || (double)surface.Properties["receiveShadow"] == 1)) return standard;
             // Preserve Unity's distance/cookie attenuation. Replace only its scene-shadow factor in this pass.
             return "float nxSceneShadow=UNITY_SHADOW_ATTENUATION(input,input.ws);\n#undef UNITY_SHADOW_ATTENUATION\n#define UNITY_SHADOW_ATTENUATION(a,b) lerp(1,nxSceneShadow,saturate("+Scalar(surface,"receiveShadow",1)+"))\n"+standard;

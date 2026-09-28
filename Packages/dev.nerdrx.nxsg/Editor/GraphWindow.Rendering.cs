@@ -90,6 +90,15 @@ namespace NXSG.Editor
             }));
             inspector.Add(choice);
             AddBoundedNumber(node,"receiveShadow","Receive scene shadows",0,1,1,"receiveShadow","Adjust scene-shadow strength while keeping light distance and cookie attenuation.");
+            FurSection("Integrated rim shading",()=>
+            {
+                AddBoundedNumber(node,"rimStrength","Strength",0,1,0,"rimStrength");
+                AddColorField(node,"rimColor","Rim tint",Color.white,"rimColor");
+                AddBoundedNumber(node,"rimWidth","Width",0,1,.2f,"rimWidth");
+                AddBoundedNumber(node,"rimSoftness","Softness",0,1,.05f,"rimSoftness");
+                AddBoundedNumber(node,"rimLightAlignment","Light alignment",0,1,1,"rimLightAlignment");
+                FeatureNote("Rim tint blends into direct toon shading. Width and softness shape the camera-facing edge; light alignment makes the rim follow the main light. Strength 0 disables rim shading.");
+            });
             if (((int?)node.Properties["lightingMode"]??0)!=2) FurSection("Shadow border tint",()=>
             {
                 AddBoundedNumber(node,"borderStrength","Tint strength",0,1,0,"borderStrength");
@@ -127,6 +136,8 @@ namespace NXSG.Editor
             AddBoundedNumber(node,"shadowStrength"+suffix,"Strength / mask",0,1,1,"shadowStrength"+suffix);
             AddBoundedNumber(node,"shadeMap"+suffix,"Shade map",0,1,.5f,"shadeMap"+suffix);
             AddBoundedNumber(node,"normalStrength"+suffix,"Normal influence",0,1,1,"normalStrength"+suffix);
+            var receiveShadowPort=layer==1?"layerReceiveShadow":"layerReceiveShadow"+layer;
+            AddBoundedNumber(node,receiveShadowPort,"Receive scene shadows",0,1,1,receiveShadowPort,"Controls this layer's response to the scene shadow map. 1 follows the global receive-shadow setting; 0 keeps this layer's shade tint unattenuated by cast shadows.");
         }
 
         bool AddRenderingFeatureControls(GraphNode node)

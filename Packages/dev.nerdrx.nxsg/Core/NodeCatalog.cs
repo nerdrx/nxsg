@@ -51,7 +51,7 @@ namespace NXSG.Core
             ["core.wireframe"] = new string[0],
             ["core.constant"] = new string[0], ["core.parameter"] = new string[0],
             ["core.uv0"] = new string[0], ["core.texture2D"] = new[] { "uv" },
-            ["core.multiply"] = new[] { "a", "b" }, ["core.toonSurface"] = new[] { "albedo", "normal", "emission", "opacity", "displacement", "shadeColor", "shadeMap", "occlusion", "shadow", "threshold", "softness", "shadowStrength", "normalStrength", "shadeColor2", "shadeMap2", "threshold2", "softness2", "shadowStrength2", "normalStrength2", "shadeColor3", "shadeMap3", "threshold3", "softness3", "shadowStrength3", "normalStrength3", "receiveShadow", "borderColor", "borderWidth", "borderStrength" },
+            ["core.multiply"] = new[] { "a", "b" }, ["core.toonSurface"] = new[] { "albedo", "normal", "emission", "opacity", "displacement", "shadeColor", "shadeMap", "occlusion", "shadow", "threshold", "softness", "shadowStrength", "normalStrength", "shadeColor2", "shadeMap2", "threshold2", "softness2", "shadowStrength2", "normalStrength2", "shadeColor3", "shadeMap3", "threshold3", "softness3", "shadowStrength3", "normalStrength3", "receiveShadow", "layerReceiveShadow", "layerReceiveShadow2", "layerReceiveShadow3", "borderColor", "borderWidth", "borderStrength", "rimColor", "rimStrength", "rimWidth", "rimSoftness", "rimLightAlignment" },
             ["core.unlitSurface"] = new[] { "albedo", "emission", "opacity", "displacement" },
             ["core.pbrSurface"] = new[] { "albedo", "emission", "opacity", "displacement", "normal", "metallic", "roughness", "occlusion", "shadow", "specularAa" },
             ["core.particleSurface"] = new[] { "albedo", "emission", "opacity" },
@@ -297,7 +297,7 @@ namespace NXSG.Core
                 case "core.uv0": return "Choose mesh UV0–UV3, object/world mapping, polar or explicitly camera-relative mapping.";
                 case "core.texture2D": return "Read an image using texture coordinates. Color supplies RGBA; Alpha reads only its transparency channel (0–1).";
                 case "core.multiply": return "Multiply numbers or colors. Use colors to tint or darken. White keeps the other color unchanged.";
-                case "core.toonSurface": return "Cartoon lighting with a threshold, bands, a texture ramp, or up to three shadow layers. Includes normal, emission, opacity, and displacement inputs.";
+                case "core.toonSurface": return "Cartoon lighting with a threshold, bands, a texture ramp, or up to three shadow layers. Includes per-layer cast-shadow response and integrated light-aware rim shading.";
                 case "core.unlitSurface": return "Build a surface with color and emission without lighting.";
                 case "core.pbrSurface": return "Build a physically based surface with color, normal, metallic, and roughness controls.";
                 case "core.surfaceParticles": return "Emit shader-driven particles from the mesh wearing this material. Connect your surface to Base. PC geometry pass; particles follow the current mesh pose.";
@@ -382,7 +382,7 @@ namespace NXSG.Core
                 case "core.replaceColor": return "recolor recolour colour swap replace target";
                 case "core.constant": return "rgb rgba colour";
                 case "core.multiply": return "tint darken blend";
-                case "core.toonSurface": return "anime cel cartoon shading shadow layers ramp";
+                case "core.toonSurface": return "anime cel cartoon shading shadow layers ramp rim light-aware cast shadow";
                 case "core.unlitSurface": return "flat no lighting"; case "core.pbrSurface": return "physically based lit material";
                 case "core.surfaceParticles": return "gpu particles mesh emitter sparkles surface embers aura geometry";
                 case "core.particleSurface": return "sparkles embers smoke fluff transparent additive billboard shuriken";
@@ -461,9 +461,9 @@ namespace NXSG.Core
                 case "core.toonSurface": case "core.pbrSurface":
                     if (port == "surface") return "surface";
                     if (port == "normal") return "vector3";
-                    if (port == "albedo" || port == "emission" || port == "shadeColor" || port == "shadeColor2" || port == "shadeColor3" || port == "borderColor") return "color";
+                    if (port == "albedo" || port == "emission" || port == "shadeColor" || port == "shadeColor2" || port == "shadeColor3" || port == "borderColor" || port == "rimColor") return "color";
                     if (port == "specularAa") return "float";
-                    if (node.Operation == "core.toonSurface" && new[] { "threshold", "softness", "shadowStrength", "normalStrength", "shadeMap2", "threshold2", "softness2", "shadowStrength2", "normalStrength2", "shadeMap3", "threshold3", "softness3", "shadowStrength3", "normalStrength3", "receiveShadow", "borderWidth", "borderStrength" }.Contains(port)) return "float";
+                    if (node.Operation == "core.toonSurface" && new[] { "threshold", "softness", "shadowStrength", "normalStrength", "shadeMap2", "threshold2", "softness2", "shadowStrength2", "normalStrength2", "shadeMap3", "threshold3", "softness3", "shadowStrength3", "normalStrength3", "receiveShadow", "layerReceiveShadow", "layerReceiveShadow2", "layerReceiveShadow3", "borderWidth", "borderStrength", "rimStrength", "rimWidth", "rimSoftness", "rimLightAlignment" }.Contains(port)) return "float";
                     if (port == "opacity" || port == "displacement" || port == "metallic" || port == "roughness" || port == "shadeMap" || port == "occlusion" || port == "shadow") return "float";
                     return null;
                 case "core.fresnel": return port == "value" ? "float" : (port == "power" ? "float" : null);
@@ -556,6 +556,10 @@ namespace NXSG.Core
                 case "core.emission": node.Properties["strength"] = 1.0; break;
                 case "core.constant": node.Properties["valueType"] = "color"; node.Properties["value"] = new JArray(1, 1, 1, 1); break;
                 case "core.multiply": node.Properties["valueType"] = "color"; break;
+                case "core.toonSurface":
+                    node.Properties["layerReceiveShadow"] = 1.0; node.Properties["layerReceiveShadow2"] = 1.0; node.Properties["layerReceiveShadow3"] = 1.0;
+                    node.Properties["rimColor"] = new JArray(1, 1, 1, 1); node.Properties["rimStrength"] = 0.0; node.Properties["rimWidth"] = .2; node.Properties["rimSoftness"] = .05; node.Properties["rimLightAlignment"] = 1.0;
+                    break;
                 case "core.fresnel": node.Properties["power"] = 5.0; break;
                 case "core.colorRamp": node.Properties["stops"] = new JArray(new JArray(0, 0, 0, 0, 1), new JArray(1, 1, 1, 1, 1)); break;
                 case "core.sticker": node.Properties["resourceId"] = ""; node.Properties["position"] = Vector(0, 0); node.Properties["size"] = Vector(1, 1); node.Properties["rotation"] = 0.0; break;

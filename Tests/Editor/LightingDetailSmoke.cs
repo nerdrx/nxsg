@@ -73,8 +73,13 @@ public static class LightingDetailSmoke
             else if (ticksPhase == 1)
             {
                 Inspect("subsurface"); var inspector = (VisualElement)Field("inspector");
-                foreach (var name in new[] { "thickness", "strength", "viewResponse", "attenuation" })
+                foreach (var name in new[] { "thickness", "strength", "viewResponse", "attenuation", "spread", "distortion", "shadowResponse" })
                     Require(inspector.Q<FloatField>("node-property-" + name) != null, "Subsurface control missing: " + name);
+                inspector.Q<FloatField>("node-property-spread").value = 1.25f;
+                Require((double)Graph.Nodes.Single(node => node.Id == "subsurface").Properties["spread"] == 1.25, "Subsurface spread edit did not save");
+                var scatterValue = NodeCatalog.Create("core.value"); scatterValue.Id = "scatter-control"; Graph.Nodes.Add(scatterValue);
+                Edge(Graph, scatterValue.Id, "value", "subsurface", "shadowResponse"); Invoke("Rebuild"); Inspect("subsurface");
+                Require(!((VisualElement)Field("inspector")).Q<FloatField>("node-property-shadowResponse").enabledInHierarchy, "Connected scatter shadow response remains editable");
                 Require(inspector.Query<UnityEditor.UIElements.ColorField>().ToList().Any(field => field.label == "Scatter tint"), "Subsurface tint control missing");
                 Inspect("layered"); inspector = (VisualElement)Field("inspector");
                 Require(inspector.Q<FloatField>("node-property-specularAa") != null, "Layered PBR specular AA control missing");
@@ -194,6 +199,7 @@ public static class LightingDetailSmoke
     {
         EditorApplication.update -= Tick;
         RenderTexture.active = null;
+        if (camera != null) camera.targetTexture = null;
         if (target != null) { target.Release(); UnityEngine.Object.DestroyImmediate(target); }
         if (lightObject != null) UnityEngine.Object.DestroyImmediate(lightObject);
         if (camera != null) UnityEngine.Object.DestroyImmediate(camera.gameObject);
