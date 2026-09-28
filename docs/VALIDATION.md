@@ -920,3 +920,53 @@ they do not trace internal mesh geometry. Received-shadow controls use the
 scene's existing shadow maps and do not create self-shadowing for lights that
 do not cast shadows. True delayed-pose afterimages remain unavailable under the
 strict material-only requirement.
+
+## Face, spatial and display controls — 2026-09-28
+
+Version 1.11.0 was checked in the isolated Unity 2022.3.22f1 fixture on Linux,
+using headless Gamescope and OpenGL.
+
+- **Portable suite:** passed new node contracts, typed sockets, neutral-path
+  pruning, validation, resource bindings and shader generation, alongside the
+  existing regression suite. Log: `work/portable-111-final.log`.
+- **Faces and transparency:** `FaceControlSmoke` passed inspector and generated
+  render-state checks. `FaceRenderSmoke` passed front/back colors, ordered
+  two-sided alpha blending, premultiplied equivalence, cutout endpoints and
+  partial coverage with 4x MSAA. Soft Outline, fur and Surface Particles also
+  compiled and rendered with face controls. Logs:
+  `work/unity/face-controls-111b.log` and `work/unity/face-render-111b.log`.
+- **Vertex controls:** `SpatialSmoke` passed Vector3 inspector Z persistence,
+  connected-field disabling, neutral pixel equivalence and moved geometry.
+  Deformation compiled through tessellation, fur, Surface Particles, outline
+  and geometry-dissolve variants, including their shadow passes. Log:
+  `work/unity/spatial-111-parallaxb.log`.
+- **Infinity Parallax:** a repeating color/alpha texture verified that Mask 0
+  matches the front texture, depth/view offsets change the image, and deeper
+  layers remain visible through translucent front texels. Composite, Additive
+  and Maximum modes rendered finite output. This caught and fixed alpha being
+  multiplied by the front layer twice. Log:
+  `work/unity/spatial-111-parallaxb.log`.
+- **Indirect lighting:** `IndirectLightingSmoke` passed inspector controls,
+  finite AO/roughness endpoints, object/world direction differences, visible
+  direction overrides and unchanged emission-only output. Log:
+  `work/unity/indirect-111c.log`.
+- **Text and timing:** `UtilitySmoke` rendered positive/negative decimal values,
+  checked minus and decimal glyphs and transparent blank slots, and verified
+  generated SDF atlas import settings. The network-clock editor override matched
+  Unity preview time. Viewer Stats drove numeric text; a synthetic distance-field
+  circle checked MSDF fill/outline changes and finite pixels. Log:
+  `work/unity/utility-111b.log`.
+- **Windows-target compilation:** strict D3D11 asset-bundle compilation passed
+  for **61 shaders**: 42 new face, lighting, deformation, parallax and display
+  fixtures plus 19 existing regression shaders. Log:
+  `work/unity/advanced-111-d3d-final.log`.
+- **Packaging:** 11 Python tests passed; all 145 package metadata GUIDs were
+  unique and every C# source had metadata. Log: `work/packaging-111-final.log`.
+
+These checks do not establish native Windows rendering, live VRChat clock
+synchronization, headset/stereo or mirror behavior, or GPU performance. The
+MSDF smoke uses equal RGB distance channels; arbitrary third-party atlas quality
+is not covered. Bent normals approximate indirect visibility, and changing a
+light direction does not create new shadow maps. Two-sided transparency still
+uses Unity's object sorting. Vertex deformation samples the current mesh pose
+and may require expanded renderer bounds.

@@ -16,7 +16,7 @@ NX_LightVolumes(input.ws,normal,normalize(_WorldSpaceCameraPos-input.ws),albedo.
 return float4((outputMode==1?diffuse:outputMode==2?specular:diffuse+specular)*max(0,strength),1);
 #endif
 }";
-        string ToonLighting(GraphNode surface, int passIndex, bool additional)
+        string ToonLighting(GraphNode surface, int passIndex, bool additional, bool premultiplied = false)
         {
             var b = new StringBuilder();
             var mode = IntProp(surface,"lightingMode",0,0,3);
@@ -50,10 +50,10 @@ return float4((outputMode==1?diffuse:outputMode==2?specular:diffuse+specular)*ma
             if (additional) b.AppendLine("return float4(c.rgb*direct,alpha);");
             else
             {
-                b.AppendLine("float3 ambient=max(0,ShadeSH9(float4(n,1)))*saturate("+Scalar(surface,"occlusion",1)+");");
+                b.AppendLine("float3 ambient=max(0,ShadeSH9(float4("+IndirectNormal(surface)+",1)))*saturate("+Scalar(surface,"occlusion",1)+");");
                 if (HasLightingControls(surface))
-                    b.AppendLine("ambient=NX_LightingContribution(ambient,"+Prop(surface,"lightingSaturation",1)+","+Prop(surface,"lightingMax",0)+"); return float4(c.rgb*NX_LightingBase(ambient+direct,"+Prop(surface,"lightingMin",0)+","+Prop(surface,"lightingMax",0)+")+emission,alpha);");
-                else b.AppendLine("return float4(c.rgb*(ambient+direct)+emission,alpha);");
+                    b.AppendLine("ambient=NX_LightingContribution(ambient,"+Prop(surface,"lightingSaturation",1)+","+Prop(surface,"lightingMax",0)+"); return float4((c.rgb*NX_LightingBase(ambient+direct,"+Prop(surface,"lightingMin",0)+","+Prop(surface,"lightingMax",0)+")+emission)"+(premultiplied?"*alpha":"")+",alpha);");
+                else b.AppendLine("return float4((c.rgb*(ambient+direct)+emission)"+(premultiplied?"*alpha":"")+",alpha);");
             }
             return b.ToString();
         }

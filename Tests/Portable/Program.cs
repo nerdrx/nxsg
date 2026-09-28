@@ -43,6 +43,10 @@ internal static class Program
 
     private static int Main()
     {
+        UtilityChecks.Run(Assert);
+        FaceControlChecks.Run();
+        SpatialChecks.Run(Assert);
+        IndirectLightingChecks.Run(Assert);
         FurShadowChecks.Run(Assert);
         MotionChecks.Run(Assert);
         NodePackChecks.Run(Assert);

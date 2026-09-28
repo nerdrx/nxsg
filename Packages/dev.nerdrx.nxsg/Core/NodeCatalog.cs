@@ -51,9 +51,9 @@ namespace NXSG.Core
             ["core.wireframe"] = new string[0],
             ["core.constant"] = new string[0], ["core.parameter"] = new string[0],
             ["core.uv0"] = new string[0], ["core.texture2D"] = new[] { "uv" },
-            ["core.multiply"] = new[] { "a", "b" }, ["core.toonSurface"] = new[] { "albedo", "normal", "emission", "opacity", "displacement", "shadeColor", "shadeMap", "occlusion", "shadow", "threshold", "softness", "shadowStrength", "normalStrength", "shadeColor2", "shadeMap2", "threshold2", "softness2", "shadowStrength2", "normalStrength2", "shadeColor3", "shadeMap3", "threshold3", "softness3", "shadowStrength3", "normalStrength3", "receiveShadow", "layerReceiveShadow", "layerReceiveShadow2", "layerReceiveShadow3", "borderColor", "borderWidth", "borderStrength", "rimColor", "rimStrength", "rimWidth", "rimSoftness", "rimLightAlignment" },
+            ["core.multiply"] = new[] { "a", "b" }, ["core.toonSurface"] = new[] { "albedo", "normal", "emission", "opacity", "displacement", "shadeColor", "shadeMap", "occlusion", "shadow", "threshold", "softness", "shadowStrength", "normalStrength", "shadeColor2", "shadeMap2", "threshold2", "softness2", "shadowStrength2", "normalStrength2", "shadeColor3", "shadeMap3", "threshold3", "softness3", "shadowStrength3", "normalStrength3", "receiveShadow", "layerReceiveShadow", "layerReceiveShadow2", "layerReceiveShadow3", "borderColor", "borderWidth", "borderStrength", "rimColor", "rimStrength", "rimWidth", "rimSoftness", "rimLightAlignment", "bentNormal", "bentStrength", "lightDirection", "lightDirectionStrength" },
             ["core.unlitSurface"] = new[] { "albedo", "emission", "opacity", "displacement" },
-            ["core.pbrSurface"] = new[] { "albedo", "emission", "opacity", "displacement", "normal", "metallic", "roughness", "occlusion", "shadow", "specularAa" },
+            ["core.pbrSurface"] = new[] { "albedo", "emission", "opacity", "displacement", "normal", "metallic", "roughness", "occlusion", "shadow", "specularAa", "bentNormal", "bentStrength", "lightDirection", "lightDirectionStrength" },
             ["core.particleSurface"] = new[] { "albedo", "emission", "opacity" },
             ["core.particleColor"] = new string[0], ["core.particleInfo"] = new string[0],
             ["core.surfaceParticles"] = new[] { "base", "albedo", "emission", "opacity", "mask", "time", "density", "emissionRate", "size", "lifetime", "speed", "gravity", "spread", "edgeSharpness" },
@@ -460,9 +460,9 @@ namespace NXSG.Core
                 case "core.multiply": return port == "a" || port == "b" || port == "value" ? TypeName(node.Properties == null ? null : node.Properties["valueType"]) : null;
                 case "core.toonSurface": case "core.pbrSurface":
                     if (port == "surface") return "surface";
-                    if (port == "normal") return "vector3";
+                    if (port == "normal" || port == "bentNormal" || port == "lightDirection") return "vector3";
                     if (port == "albedo" || port == "emission" || port == "shadeColor" || port == "shadeColor2" || port == "shadeColor3" || port == "borderColor" || port == "rimColor") return "color";
-                    if (port == "specularAa") return "float";
+                    if (port == "specularAa" || port == "bentStrength" || port == "lightDirectionStrength") return "float";
                     if (node.Operation == "core.toonSurface" && new[] { "threshold", "softness", "shadowStrength", "normalStrength", "shadeMap2", "threshold2", "softness2", "shadowStrength2", "normalStrength2", "shadeMap3", "threshold3", "softness3", "shadowStrength3", "normalStrength3", "receiveShadow", "layerReceiveShadow", "layerReceiveShadow2", "layerReceiveShadow3", "borderWidth", "borderStrength", "rimStrength", "rimWidth", "rimSoftness", "rimLightAlignment" }.Contains(port)) return "float";
                     if (port == "opacity" || port == "displacement" || port == "metallic" || port == "roughness" || port == "shadeMap" || port == "occlusion" || port == "shadow") return "float";
                     return null;

@@ -1407,7 +1407,7 @@ namespace NXSG.Editor
                 }
                 node.Properties["parameterId"] = parameter.Id; selectedParameterId = parameter.Id;
             }
-            if (operation == "core.cubemap" || operation == "core.textureArray" || operation == "core.texture2D" || operation == "core.sticker" || operation == "core.triplanarTexture" || operation == "core.matcapTexture" || operation == "core.parallaxOcclusion" || operation == "core.chromaticTexture" || operation == "core.interiorMapping" || operation == "core.textureBomb")
+            if (FeatureNodes.NeedsResource(operation) || operation == "core.texture2D" || operation == "core.sticker" || operation == "core.triplanarTexture" || operation == "core.matcapTexture")
             {
                 var resource = new GraphResource { Id = "texture-" + node.Id, Kind = operation == "core.cubemap" ? "cubemap" : operation == "core.textureArray" ? "texture2DArray" : "texture2D", Uri = operation == "core.cubemap" || operation == "core.textureArray" ? "builtin://unassigned" : "builtin://white" };
                 graph.Resources.Add(resource); node.Properties["resourceId"] = resource.Id;

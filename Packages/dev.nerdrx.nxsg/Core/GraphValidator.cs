@@ -105,6 +105,31 @@ namespace NXSG.Core
                     CheckIntegerRange(node.Properties[key], path + ".properties." + key, min, max, diagnostics);
                 }
             }
+            if (node.Operation == "core.output")
+            {
+                foreach(var key in new[]{"alphaToCoverage","twoPassTransparency","flipBackfaceNormals"}) CheckIntegerRange(node.Properties[key],path+".properties."+key,0,1,diagnostics);
+                foreach(var face in new[]{"back","front"}) {
+                    CheckIntegerRange(node.Properties[face+"PassBlend"],path+".properties."+face+"PassBlend",0,3,diagnostics);
+                    CheckIntegerRange(node.Properties[face+"PassZWrite"],path+".properties."+face+"PassZWrite",0,2,diagnostics);
+                }
+                CheckNumber(node.Properties["alphaEdgeSharpness"],path+".properties.alphaEdgeSharpness",diagnostics);
+            }
+            if (node.Operation == "core.frontFace") CheckIntegerRange(node.Properties["flipBackfaceNormal"],path+".properties.flipBackfaceNormal",0,1,diagnostics);
+            if (node.Operation == "core.vertexDeform") {
+                foreach(var key in new[]{"translation","rotation","scale","pivot"}) CheckVector3(node.Properties[key],path+".properties."+key,diagnostics);
+                CheckIntegerRange(node.Properties["space"],path+".properties.space",0,1,diagnostics);
+                CheckIntegerRange(node.Properties["shape"],path+".properties.shape",0,2,diagnostics);
+            }
+            if (node.Operation == "core.infinityParallax") {
+                CheckIntegerRange(node.Properties["steps"],path+".properties.steps",1,32,diagnostics);
+                CheckIntegerRange(node.Properties["blend"],path+".properties.blend",0,2,diagnostics);
+                CheckVector4(node.Properties["tint"],path+".properties.tint",diagnostics);
+            }
+            if(node.Operation == "core.msdfDecal" || node.Operation == "core.numericText") {
+                CheckVector4(node.Properties["color"],path+".properties.color",diagnostics);
+                if(node.Operation == "core.msdfDecal") CheckVector4(node.Properties["outlineColor"],path+".properties.outlineColor",diagnostics);
+            }
+            UtilityNodes.Validate(node,(key,message)=>Add(diagnostics,DiagnosticSeverity.Error,"value.utility",path+".properties."+key,message));
             if (node.Operation == "core.toonSurface")
             {
                 CheckIntegerRange(node.Properties["lightingMode"], path + ".properties.lightingMode", 0, 3, diagnostics);
@@ -123,7 +148,11 @@ namespace NXSG.Core
                     Add(diagnostics, DiagnosticSeverity.Error, "resource.ramp", path, "Texture ramp mode needs a Texture2D ramp resource.");
             }
             if (node.Operation == "core.toonSurface" || node.Operation == "core.pbrSurface" || node.Operation == "core.layeredPbrSurface")
-            { CheckNumber(node.Properties["occlusion"],path+".properties.occlusion",diagnostics); CheckNumber(node.Properties["shadow"],path+".properties.shadow",diagnostics); }
+            {
+                foreach(var key in new[]{"occlusion","shadow","bentStrength","lightDirectionStrength"}) CheckNumber(node.Properties[key],path+".properties."+key,diagnostics);
+                CheckVector3(node.Properties["lightDirection"],path+".properties.lightDirection",diagnostics);
+                CheckIntegerRange(node.Properties["lightDirectionSpace"],path+".properties.lightDirectionSpace",0,1,diagnostics);
+            }
             if(node.Operation=="core.outline" || node.Operation=="core.softOutline")
             {
                 CheckVector4(node.Properties["color"],path+".properties.color",diagnostics);

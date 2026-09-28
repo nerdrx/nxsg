@@ -12,13 +12,13 @@ public static class EffectsBackendChecks
         {
             var graph=new ShaderGraph {GraphId="effects"};
             var node=NodeCatalog.Create(op); node.Id="effect";
-            if(op=="core.cubemap"||op=="core.textureArray"||op=="core.texture2D"||op=="core.sticker"||op=="core.triplanarTexture"||op=="core.matcapTexture"||op=="core.parallaxOcclusion"||op=="core.chromaticTexture"||op=="core.interiorMapping"||op=="core.textureBomb") {node.Properties["resourceId"]="texture";graph.Resources.Add(new GraphResource {Id="texture",Kind=op=="core.cubemap"?"cubemap":op=="core.textureArray"?"texture2DArray":"texture2D",Uri="builtin://white"});}
+            if(FeatureNodes.NeedsResource(op)||op=="core.texture2D"||op=="core.sticker"||op=="core.triplanarTexture"||op=="core.matcapTexture") {node.Properties["resourceId"]="texture";graph.Resources.Add(new GraphResource {Id="texture",Kind=op=="core.cubemap"?"cubemap":op=="core.textureArray"?"texture2DArray":"texture2D",Uri="builtin://white"});}
             graph.Nodes.Add(node);
-            if (op == "core.outline" || op == "core.softOutline" || op == "core.geometryDissolve" || op == "core.fur" || op == "core.tessellation") { var baseNode = NodeCatalog.Create("core.unlitSurface"); baseNode.Id = "base"; graph.Nodes.Add(baseNode); Connect(graph,"base","surface","effect","base"); }
+            if (op == "core.vertexDeform" || op == "core.outline" || op == "core.softOutline" || op == "core.geometryDissolve" || op == "core.fur" || op == "core.tessellation") { var baseNode = NodeCatalog.Create("core.unlitSurface"); baseNode.Id = "base"; graph.Nodes.Add(baseNode); Connect(graph,"base","surface","effect","base"); }
             var surface=NodeCatalog.Create("core.unlitSurface"); surface.Id="surface";graph.Nodes.Add(surface);
             var output=NodeCatalog.Create("core.output");output.Id="output";graph.Nodes.Add(output);
             var port=NodeCatalog.Ports(op,true).First();var type=NodeCatalog.PortType(node,port);
-            if(type=="surface") { if(op=="core.outline" || op=="core.softOutline" || op=="core.geometryDissolve" || op=="core.fur" || op=="core.tessellation" || op=="core.volumeSurface") Connect(graph,node.Id,port,"output","surface"); else { var color=NodeCatalog.Create("core.constant");color.Id="albedo";graph.Nodes.Add(color);Connect(graph,color.Id,"value",node.Id,"albedo");Connect(graph,node.Id,port,"output","surface"); } }
+            if(type=="surface") { if(op=="core.vertexDeform" || op=="core.outline" || op=="core.softOutline" || op=="core.geometryDissolve" || op=="core.fur" || op=="core.tessellation" || op=="core.volumeSurface") Connect(graph,node.Id,port,"output","surface"); else { var color=NodeCatalog.Create("core.constant");color.Id="albedo";graph.Nodes.Add(color);Connect(graph,color.Id,"value",node.Id,"albedo");Connect(graph,node.Id,port,"output","surface"); } }
             else
             {
                 if(type=="vector2")

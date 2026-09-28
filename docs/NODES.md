@@ -4,6 +4,24 @@ The canvas offers a library of visible nodes, including authored Float/Color Par
 
 See [Surface details](SURFACE_DETAILS.md) for feathered silhouette fins, triangle breakup, face-shadow masks, depth rims, gems, and the new lighting controls.
 
+## Face, lighting, geometry and display controls
+
+| Node or setting | Use |
+| --- | --- |
+| **Front Face** | Choose colors, masks or coordinates for the front and back of a mesh with a Mix node. Includes an optional oriented world normal. |
+| **Output: Alpha to coverage** | Convert alpha into MSAA sample coverage; optional derivative-based edge sharpening. |
+| **Output: Two-sided transparency** | Render back faces, then front faces, with separate blend and depth-write settings. |
+| **Lit surfaces: Bent Normal** | Connect a decoded tangent-space bent-normal map to guide ambient light and PBR reflection occlusion. |
+| **Lit surfaces: Light direction override** | Blend toward an object- or world-space direction while retaining real attenuation and scene shadows. |
+| **Vertex Deform** | Apply XYZ translation, rotation, scale, pivot, snapping or sphere/cylinder warping to a surface chain. |
+| **Infinity Parallax** | Stack texture layers with depth, tint, fade, mask and composite/add/max blending. |
+| **Network Clock** | Unity time or VRChat's synchronized millisecond counter, with Seconds, Phase and Cycle outputs. |
+| **MSDF Decal** | Sample a prepared RGB distance-field decal with antialiased fill and outline. |
+| **Numeric Text** | Display a number using a generated SDF digit atlas. |
+| **Viewer Stats** | Current viewer render-frame estimate, delta time, camera distance, world position and clocks. |
+
+[Controls, wiring examples and limits](ADVANCED_CONTROLS.md). These features are optional; existing graphs retain their defaults.
+
 ## Motion and placement
 
 Avatar Motion provides locomotion speed and signed velocity components through a generated FX driver. Motion Response shapes effect strength; Motion Sway adds procedural flutter; Motion Stretch UVs deforms texture coordinates with speed. Sticker now has mesh placement and UV handles. [Setup and limits](MOTION_AND_HANDLES.md).

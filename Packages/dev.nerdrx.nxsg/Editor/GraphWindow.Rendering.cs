@@ -63,6 +63,7 @@ namespace NXSG.Editor
             AddIndexedChoice(node,"zTest","Depth test",new[]{"Less or equal","Less","Equal","Greater","Greater or equal","Always","Not equal","Never"});
             AddIntegerField(node,"queueOffset","Queue offset",-50,50,0);
             FeatureNote("Automatic preserves the surface's rendering mode. Alpha blend and Additive disable depth writes by default. Particle and Volume surfaces require Automatic.");
+            AddFaceOutputControls(node);
             FurSection("Stencil",()=>
             {
                 AddIndexedChoice(node,"stencilEnabled","Stencil",new[]{"Disabled","Enabled"});
