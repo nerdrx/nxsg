@@ -30,3 +30,25 @@ Inspector v2 capture: default-change markers, compact Toon controls, and full-wi
 `EditorPolishCapture` exercises wide and 850×500 layouts, numeric field bounds, preview collapse, and a picker opened at the bottom-right canvas edge. `InspectorPolishSmoke` checks fresh defaults across 181 nodes, live default markers, Undo, and section state. `SurfaceSocketFoldoutSmoke` checks grouped sockets and connected-input visibility for Layered PBR and Surface Particles. Packaging checks also pass.
 
 These checks cover the Linux editor fixture and its current display scale, not every OS/theme/DPI combination. Dense inspectors still scroll; the preview is collapsible to reclaim space. Existing user graph positions are not rearranged.
+
+## Canvas organization and snapping
+
+The Tools menu can organize the whole graph or a selection. Layout uses measured
+node bounds, preserves complete groups, and records one Undo step. The View menu
+has optional 24-unit grid snapping, with Alt for free movement. Group drags use a
+shared offset. Expanded frame backgrounds now draw behind their wires.
+
+Verified on Unity 2022.3.22f1 Linux in an isolated headless Gamescope session:
+
+- `GraphOrganizeSmoke`: varied node sizes, disconnected branches, cycles,
+  repeatable layout, a 500-node chain, group preservation, unchanged shader
+  semantics/connections, selected-only movement, and Undo/Redo.
+- `GridDragSmoke`: pointer events at 150% zoom, grid snapping, Alt bypass,
+  click without a dirty edit, repeated collapsed Pattern drags, visible frame
+  member movement, and single-step Undo. The test restores the snapping preference.
+- Actual editor capture reviewed for spacing and visible wires inside frames.
+
+![Auto-organize in the Unity editor](images/auto-organize.png)
+
+Organization runs only when requested. These checks do not establish Windows,
+VRChat, or every display-scale behavior.

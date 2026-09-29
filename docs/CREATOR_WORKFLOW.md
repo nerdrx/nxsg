@@ -36,6 +36,29 @@ the normal map; the graph inspector's **Flip green (DirectX/OpenGL)** option
 handles green-channel orientation. NXSG does not change Unity importer
 settings for you.
 
+## Organizing the canvas
+
+Choose **Tools → Auto-organize graph** to arrange nodes from inputs on the
+left toward outputs on the right. The layout uses node heights, leaves room
+between branches, and reduces wire crossings. Complex graphs can still have
+crossing wires.
+
+**Tools → Auto-organize selection** arranges two or more selected nodes and
+keeps other nodes in place. If the result needs more room, it moves below
+nearby nodes. Complete frames and Patterns move together; expanded groups
+also get an internal layout, while folded Patterns retain their internal
+positions. Group names, membership, and collapsed state are preserved.
+
+Each organization is one **Undo** step. Save the graph to retain the layout.
+Organizing changes positions without changing connections or shader values.
+
+Enable **View → Grid snapping** to snap drags to the canvas's 24-unit grid.
+Hold **Alt** while dragging for free movement. Multiple selected nodes, frames,
+and Patterns share one movement offset so their internal spacing stays intact.
+Snapping starts off and remembers your preference across editor sessions.
+
+![Organized branches, a frame and a collapsed Pattern in the Unity editor](images/auto-organize.png)
+
 ## AudioLink and lighting checks
 
 Select an AudioLink node to enable its graph preview toggle and single value

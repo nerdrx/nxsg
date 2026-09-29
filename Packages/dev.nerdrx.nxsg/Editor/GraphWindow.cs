@@ -63,7 +63,7 @@ namespace NXSG.Editor
         string selectedPreviewPort;
         Material preview;
         UnityEditor.Editor previewEditor;
-        bool dragging, panning;
+        bool dragging, dragMoved, panning;
         Vector2 pointerStart, origin;
 
         [MenuItem("Tools/NXSG/Open Graph Editor")]
@@ -502,13 +502,13 @@ namespace NXSG.Editor
                 {
                     var position = Position(node.Id);
                     var box = new VisualElement { focusable = true, style = { position = UnityEngine.UIElements.Position.Absolute, left = position.x, top = position.y, width = 175, backgroundColor = new Color(.161f, .173f, .188f), borderLeftWidth = 2, borderRightWidth = 2, borderTopWidth = 2, borderBottomWidth = 2, borderTopLeftRadius = 3, borderTopRightRadius = 3, borderBottomLeftRadius = 3, borderBottomRightRadius = 3, paddingBottom = 8 } };
-                    var title = new Label(NodeTitle(node)) { tooltip = Title(node.Operation), style = { paddingLeft = 12, paddingTop = 10, paddingBottom = 10, unityFontStyleAndWeight = FontStyle.Bold, whiteSpace = WhiteSpace.NoWrap, overflow = Overflow.Hidden, textOverflow = TextOverflow.Ellipsis, backgroundColor = Color.Lerp(new Color(.07f, .08f, .10f), NodeColor(node.Operation), .48f) } };
+                    var title = new Label(NodeTitle(node)) { tooltip = Title(node.Operation) + " Drag to move. Hold Alt to bypass grid snapping.", style = { paddingLeft = 12, paddingTop = 10, paddingBottom = 10, unityFontStyleAndWeight = FontStyle.Bold, whiteSpace = WhiteSpace.NoWrap, overflow = Overflow.Hidden, textOverflow = TextOverflow.Ellipsis, backgroundColor = Color.Lerp(new Color(.07f, .08f, .10f), NodeColor(node.Operation), .48f) } };
                     var alternatives = OperationAlternatives(node.Operation);
                     if (alternatives.Length > 0)
                     {
                         title.text += " ▾";
                         title.focusable = true;
-                        title.tooltip = "Click to change operation. Drag to move this node. Compatible wires are kept; unavailable inputs are disconnected. Undo restores them.";
+                        title.tooltip = "Click to change operation. Drag to move this node. Hold Alt to bypass grid snapping. Compatible wires are kept; unavailable inputs are disconnected. Undo restores them.";
                         title.RegisterCallback<KeyDownEvent>(evt =>
                         {
                             if (evt.keyCode != KeyCode.Return && evt.keyCode != KeyCode.Space) return;
@@ -520,7 +520,7 @@ namespace NXSG.Editor
                     {
                         if (evt.button != 0) return;
                         SelectNode(node.Id, evt.shiftKey || selection.Contains(node.Id));
-                        dragging = true; pointerStart = evt.position;
+                        dragging = true; dragMoved = false; pointerStart = evt.position;
                         insertionNodeId = null;
                         insertionEdge = null;
                         dragOrigins.Clear();
@@ -530,7 +530,12 @@ namespace NXSG.Editor
                     title.RegisterCallback<PointerMoveEvent>(evt =>
                     {
                         if (!dragging || selected != node.Id || !title.HasPointerCapture(evt.pointerId)) return;
-                        var delta = ((Vector2)evt.position - pointerStart) / zoom;
+                        var pointerDelta = (Vector2)evt.position - pointerStart;
+                        if (pointerDelta.sqrMagnitude > 16) dragMoved = true;
+                        if (!dragMoved) { evt.StopPropagation(); return; }
+                        var delta = pointerDelta / zoom;
+                        if (dragMoved && dragOrigins.TryGetValue(node.Id, out var anchor))
+                            delta = SnapDragDelta(anchor, delta, GridSnappingEnabled, evt.altKey);
                         foreach (var pair in dragOrigins)
                         {
                             var point = pair.Value + delta;
@@ -543,16 +548,13 @@ namespace NXSG.Editor
                     {
                         if (!title.HasPointerCapture(evt.pointerId)) return;
                         dragging = false; title.ReleasePointer(evt.pointerId);
-                        if (alternatives.Length > 0 && ((Vector2)evt.position - pointerStart).sqrMagnitude < 16)
+                        if (!dragMoved)
                         {
-                            foreach (var pair in dragOrigins)
-                            {
-                                SetPosition(pair.Key, pair.Value);
-                                nodes[pair.Key].style.left = pair.Value.x; nodes[pair.Key].style.top = pair.Value.y;
-                            }
-                            layer.MarkDirtyRepaint();
-                            ShowOperationMenu(node.Id); evt.StopPropagation(); return;
+                            dragMoved = false;
+                            if (alternatives.Length > 0) ShowOperationMenu(node.Id);
+                            evt.StopPropagation(); return;
                         }
+                        dragMoved = false;
                         Undo.IncrementCurrentGroup();
                         if (InsertOnHighlightedWire(node.Id)) { evt.StopPropagation(); return; }
                         Undo.RegisterCompleteObjectUndo(session, "Move node");
@@ -1733,8 +1735,10 @@ namespace NXSG.Editor
 
         Vector2 Position(string id)
         {
+            // Leave room for long organized graphs while bounding imported coordinates.
+            const double coordinateLimit = 10000000;
             if (graph.Layout?.Nodes != null && graph.Layout.Nodes.TryGetValue(id, out var value) && value != null)
-                return new Vector2((float)Math.Max(-100000, Math.Min(100000, double.IsNaN(value.X) ? 0 : value.X)), (float)Math.Max(-100000, Math.Min(100000, double.IsNaN(value.Y) ? 0 : value.Y)));
+                return new Vector2((float)Math.Max(-coordinateLimit, Math.Min(coordinateLimit, double.IsNaN(value.X) ? 0 : value.X)), (float)Math.Max(-coordinateLimit, Math.Min(coordinateLimit, double.IsNaN(value.Y) ? 0 : value.Y)));
             return new Vector2(graph.Nodes.FindIndex(n => n.Id == id) * 215, 80);
         }
         void SetPosition(string id, Vector2 position)
@@ -1834,6 +1838,7 @@ namespace NXSG.Editor
         {
             if (graph == null) return;
             var painter = context.painter2D; painter.lineWidth = 3;
+            DrawFrameBackgrounds(painter);
             foreach (var edge in graph.Connections)
             {
                 socketLookup.TryGetValue((edge.From.NodeId, edge.From.PortId, true), out var from);

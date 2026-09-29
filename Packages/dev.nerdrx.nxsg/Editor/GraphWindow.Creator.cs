@@ -15,6 +15,7 @@ namespace NXSG.Editor
         void AddCreatorMenu(Toolbar toolbar)
         {
             var tools = new ToolbarMenu { text="Tools", tooltip="Preview, manage materials and textures, and organize your graph view." };
+            AddOrganizeMenu(tools);
             tools.menu.AppendAction("Preview/Material playground and comparison", _ => OpenMaterialPlayground());
             tools.menu.AppendAction("Preview/Why does the scene look different?", _ => ShowPreviewDiagnostics());
             tools.menu.AppendAction("Textures/Review selected textures…", _ => TextureSetReviewWindow.Open(this, Selection.GetFiltered<Texture2D>(SelectionMode.Assets)));

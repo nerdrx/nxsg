@@ -81,10 +81,10 @@ namespace NXSG.Editor
                 var boundsMax = positions.Length == 0 ? point : positions.Aggregate(Vector2.Max);
                 var frameWidth = Mathf.Max(300, boundsMax.x - point.x + 210);
                 var frameHeight = Mathf.Max(100, boundsMax.y - point.y + 170);
-                var card = new VisualElement { name = isFrame ? "frame-card" : "pattern-card", style = { position = UnityEngine.UIElements.Position.Absolute,
+                var card = new VisualElement { name = isFrame ? "frame-card" : "pattern-card", userData = group, style = { position = UnityEngine.UIElements.Position.Absolute,
                     left = isFrame && !collapsed ? point.x - 16 : point.x, top = collapsed ? point.y : point.y - 38, width = collapsed ? 240 : isFrame ? frameWidth : 300,
                     height = isFrame && !collapsed ? frameHeight : StyleKeyword.Auto,
-                    backgroundColor = isFrame ? new Color(.20f, .14f, .25f) : new Color(.12f, .18f, .21f), borderTopLeftRadius = 7, borderTopRightRadius = 7,
+                    backgroundColor = isFrame ? (collapsed ? new Color(.20f, .14f, .25f) : Color.clear) : new Color(.12f, .18f, .21f), borderTopLeftRadius = 7, borderTopRightRadius = 7,
                     borderBottomLeftRadius = 7, borderBottomRightRadius = 7, paddingBottom = 6 } };
                 var header = new VisualElement { style = { flexDirection = FlexDirection.Row } };
                 var title = new TextField { value = (string)group["name"] ?? "Pattern", isDelayed = true, maxLength = 80, style = { flexGrow = 1 } };
@@ -120,47 +120,56 @@ namespace NXSG.Editor
                                 !graph.Connections.Any(e => e.From.NodeId == node.Id && e.From.PortId == port))
                                 AddPatternSocket(card, node, port, true);
                     }
-                    var grip = new Label("⋮⋮  " + members.Count + " nodes · drag to move") { style = { paddingLeft = 10, paddingTop = 6, paddingBottom = 4 } };
+                    var grip = new Label("⋮⋮  " + members.Count + " nodes · drag to move") { tooltip = "Hold Alt while dragging to bypass grid snapping.", style = { paddingLeft = 10, paddingTop = 6, paddingBottom = 4 } };
                     card.Add(grip);
                     Vector2 start = Vector2.zero;
+                    Vector2 anchor = point;
                     Dictionary<string, Vector2> starts = null;
+                    var moved = false;
                     grip.RegisterCallback<PointerDownEvent>(evt =>
                     {
                         if (evt.button != 0) return;
                         selection = members.ToList(); selected = selection.LastOrDefault(); UpdateSelectionOutline(); RebuildInspector();
-                        start = evt.position; starts = members.ToDictionary(id => id, Position);
+                        start = evt.position; starts = members.ToDictionary(id => id, Position); anchor = starts.Values.Aggregate(Vector2.Min); moved = false;
                         grip.CapturePointer(evt.pointerId); evt.StopPropagation();
                     });
                     grip.RegisterCallback<PointerMoveEvent>(evt =>
                     {
                         if (!grip.HasPointerCapture(evt.pointerId) || starts == null) return;
-                        var delta = ((Vector2)evt.position - start) / zoom;
+                        var pointerDelta = (Vector2)evt.position - start;
+                        if (pointerDelta.sqrMagnitude > 16) moved = true;
+                        if (!moved) { evt.StopPropagation(); return; }
+                        var delta = pointerDelta / zoom;
+                        delta = SnapDragDelta(anchor, delta, GridSnappingEnabled, evt.altKey);
                         foreach (var pair in starts) SetPosition(pair.Key, pair.Value + delta);
-                        card.style.left = point.x + delta.x; card.style.top = point.y + delta.y;
+                        card.style.left = anchor.x + delta.x; card.style.top = anchor.y + delta.y;
                         layer.MarkDirtyRepaint(); evt.StopPropagation();
                     });
                     grip.RegisterCallback<PointerUpEvent>(evt =>
                     {
                         if (!grip.HasPointerCapture(evt.pointerId)) return;
                         grip.ReleasePointer(evt.pointerId);
+                        if (!moved) { starts = null; canvas.Focus(); evt.StopPropagation(); return; }
+                        Undo.IncrementCurrentGroup();
                         Undo.RegisterCompleteObjectUndo(session, "Move Pattern");
                         session.json = GraphJson.Serialize(graph, true); hasUnsavedChanges = true; EditorUtility.SetDirty(session);
-                        starts = null; canvas.Focus(); evt.StopPropagation();
+                        starts = null; moved = false; canvas.Focus(); evt.StopPropagation();
                     });
                 }
                 else if (isFrame)
                 {
-                    var grip = new Label("⋮⋮  " + members.Count + " nodes · drag to move") { style = { paddingLeft = 10, paddingTop = 6, paddingBottom = 4 } };
-                    Vector2 start = Vector2.zero; Dictionary<string, Vector2> starts = null;
-                    grip.RegisterCallback<PointerDownEvent>(evt => { if (evt.button != 0) return; selection = members.ToList(); selected = selection.LastOrDefault(); start = evt.position; starts = members.ToDictionary(id => id, Position); grip.CapturePointer(evt.pointerId); evt.StopPropagation(); });
-                    grip.RegisterCallback<PointerMoveEvent>(evt => { if (!grip.HasPointerCapture(evt.pointerId) || starts == null) return; var delta = ((Vector2)evt.position - start) / zoom; foreach (var pair in starts) SetPosition(pair.Key, pair.Value + delta); layer.MarkDirtyRepaint(); evt.StopPropagation(); });
-                    grip.RegisterCallback<PointerUpEvent>(evt => { if (!grip.HasPointerCapture(evt.pointerId)) return; grip.ReleasePointer(evt.pointerId); Undo.RegisterCompleteObjectUndo(session, "Move Frame"); session.json = GraphJson.Serialize(graph, true); hasUnsavedChanges = true; EditorUtility.SetDirty(session); starts = null; canvas.Focus(); evt.StopPropagation(); });
+                    var grip = new Label("⋮⋮  " + members.Count + " nodes · drag to move") { tooltip = "Hold Alt while dragging to bypass grid snapping.", style = { paddingLeft = 10, paddingTop = 6, paddingBottom = 4 } };
+                    Vector2 start = Vector2.zero, anchor = point; Dictionary<string, Vector2> starts = null; var moved = false;
+                    grip.RegisterCallback<PointerDownEvent>(evt => { if (evt.button != 0) return; selection = members.ToList(); selected = selection.LastOrDefault(); start = evt.position; starts = members.ToDictionary(id => id, Position); anchor = starts.Values.Aggregate(Vector2.Min); moved = false; grip.CapturePointer(evt.pointerId); evt.StopPropagation(); });
+                    grip.RegisterCallback<PointerMoveEvent>(evt => { if (!grip.HasPointerCapture(evt.pointerId) || starts == null) return; var pointerDelta = (Vector2)evt.position - start; if (pointerDelta.sqrMagnitude > 16) moved = true; if (!moved) { evt.StopPropagation(); return; } var delta = SnapDragDelta(anchor, pointerDelta / zoom, GridSnappingEnabled, evt.altKey); foreach (var pair in starts) { var position = pair.Value + delta; SetPosition(pair.Key, position); if (nodes.TryGetValue(pair.Key, out var box)) { box.style.left = position.x; box.style.top = position.y; } } layer.MarkDirtyRepaint(); evt.StopPropagation(); });
+                    grip.RegisterCallback<PointerUpEvent>(evt => { if (!grip.HasPointerCapture(evt.pointerId)) return; grip.ReleasePointer(evt.pointerId); if (!moved) { starts = null; canvas.Focus(); evt.StopPropagation(); return; } Undo.IncrementCurrentGroup(); Undo.RegisterCompleteObjectUndo(session, "Move Frame"); session.json = GraphJson.Serialize(graph, true); hasUnsavedChanges = true; EditorUtility.SetDirty(session); starts = null; moved = false; canvas.Focus(); evt.StopPropagation(); });
                     card.Add(grip);
                 }
                 card.RegisterCallback<PointerDownEvent>(evt => evt.StopPropagation());
                 if (isFrame && !collapsed)
                 {
                     card.pickingMode = PickingMode.Ignore;
+                    card.RegisterCallback<GeometryChangedEvent>(_ => layer.MarkDirtyRepaint());
                     layer.Insert(0, card);
                     Action updateBounds = () =>
                     {
@@ -184,6 +193,25 @@ namespace NXSG.Editor
                     foreach(var id in members) if(nodes.TryGetValue(id,out var box)) box.RegisterCallback<GeometryChangedEvent>(_ => updateBounds());
                 }
                 else layer.Add(card);
+            }
+        }
+
+        void DrawFrameBackgrounds(Painter2D painter)
+        {
+            // Frame backdrops belong below the wires; their controls remain above them.
+            painter.fillColor = new Color(.20f, .14f, .25f);
+            foreach (var card in layer.Children())
+            {
+                if (card.name != "frame-card" || !(card.userData is JObject group) ||
+                    (group["collapsed"]?.Type == JTokenType.Boolean && (bool)group["collapsed"])) continue;
+                var rect = card.layout;
+                if (!ValidOrganizeSize(rect.width) || !ValidOrganizeSize(rect.height)) continue;
+                painter.BeginPath();
+                painter.MoveTo(new Vector2(rect.xMin, rect.yMin));
+                painter.LineTo(new Vector2(rect.xMax, rect.yMin));
+                painter.LineTo(new Vector2(rect.xMax, rect.yMax));
+                painter.LineTo(new Vector2(rect.xMin, rect.yMax));
+                painter.ClosePath(); painter.Fill();
             }
         }
 

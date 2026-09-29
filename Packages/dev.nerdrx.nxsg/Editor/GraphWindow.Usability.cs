@@ -51,6 +51,12 @@ namespace NXSG.Editor
             view.menu.AppendAction("Fit graph  Home", _ => FrameNodes(false));
             view.menu.AppendAction("Frame selection  F", _ => FrameNodes(true));
             view.menu.AppendAction("Reset view", _ => { pan = new Vector2(30, 70); zoom = 1; TransformCanvas(); });
+            view.menu.AppendAction("Grid snapping · Alt bypass", _ =>
+            {
+                GridSnappingEnabled = !GridSnappingEnabled;
+                SetStatus(GridSnappingEnabled ? "Grid snapping on. Hold Alt while dragging to bypass." : "Grid snapping off.");
+            },
+                _ => GridSnappingEnabled ? DropdownMenuAction.Status.Checked : DropdownMenuAction.Status.Normal);
             view.menu.AppendAction("Problems", _ => ShowSidebarTab(2));
             view.menu.AppendAction("Performance estimates", _ => ShowSidebarTab(3));
             toolbar.Add(view);
