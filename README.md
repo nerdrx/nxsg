@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <code>2.2.0</code> &nbsp; <code>Unity 2022.3.22f1</code> &nbsp; <code>Built-In</code> &nbsp; <code>PC VRChat</code>
+  <code>2.3.0</code> &nbsp; <code>Unity 2022.3.22f1</code> &nbsp; <code>Built-In</code> &nbsp; <code>PC VRChat</code>
 </p>
 
 NXSG is a shader graph editor for Unity's Built-In Render Pipeline, developed for PC VRChat avatars. It includes Toon, PBR and Unlit shading, procedural textures, fur, particles, and animated effects. Materials are built by connecting nodes, with controls for lighting, color, masks, and movement.
@@ -17,7 +17,7 @@ The editor generates shaders and materials directly in Unity. Graphs remain edit
   <a href="docs/VPM.md">Installation help</a>
 </p>
 
-Add the NXSG repository and install **NX Shader Graph** in your project. Version **2.2.0** is available without enabling prerelease packages. [Release notes](https://github.com/nerdrx/nxsg/releases/tag/v2.2.0).
+Add the NXSG repository and install **NX Shader Graph** in your project. Version **2.3.0** is available without enabling prerelease packages. [Release notes](https://github.com/nerdrx/nxsg/releases/tag/v2.3.0).
 
 <details>
 <summary>VPM repository URL</summary>
@@ -74,7 +74,7 @@ Other editor features include:
 - Collapsible inspector sections and advanced node inputs, with connected sockets kept visible.
 - `*` markers beside changed settings and their section headings, plus full-width XYZ controls.
 - Intermediate output previews, A/B material snapshots, and animation scrubbing.
-- Texture-set import, selected-material texture review, channel packing, atlas building, batch preset application, and static texture baking.
+- Texture-set import, Poiyomi/lilToon material import with backup and editable graph, channel packing, atlas building, batch preset application, and static texture baking.
 - Automatic scene updates for saved edits, build diagnostics, and recovery snapshots.
 - A **Cost** panel with pass budgets, costly-node explanations and click-to-focus navigation. Estimates describe generated work, not GPU timings.
 

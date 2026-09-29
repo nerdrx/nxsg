@@ -43,6 +43,24 @@ numeric values, render state, animation settings, and shader-specific effects
 remain on the original material; recreate them in the graph as needed. The
 source material is not modified.
 
+### Poiyomi/lilToon material conversion
+
+Choose **Tools → NXSG → Import Poiyomi or lilToon material…** or the graph
+editor's **Tools → Material → Import Poiyomi or lilToon material…**. Select a
+material asset and click **Import and replace material**. NXSG builds an
+editable `.nxsg` graph, saves a backup `.mat` and an import report beside the
+source material, then assigns the generated shader to that same material asset.
+Existing scene and avatar material references keep pointing at it.
+
+Conversion is limited to properties that NXSG explicitly supports and maps.
+Unmapped shader settings and effects will not be reproduced automatically, so
+the converted appearance may differ from the source. Review the generated
+graph, material values, and render in context before relying on the conversion.
+Keep the backup `.mat` until the result is accepted; use it to restore the
+pre-conversion material if needed. The existing **Start from selected
+material…** texture workflow remains a separate, non-modifying way to seed a
+graph from common texture slots.
+
 **Tools → Textures → Pack channels…** combines four chosen texture channels into
 one linear PNG. Each output channel can read R, G, B, or A from a separate
 source. An empty source becomes white. Set a common resolution, save in
