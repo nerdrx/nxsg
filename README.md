@@ -17,7 +17,7 @@ The editor generates shaders and materials directly in Unity. Graphs remain edit
   <a href="docs/VPM.md">Installation help</a>
 </p>
 
-Add the NXSG repository and install **NX Shader Graph** in your project. Version **2.1.1** is available without enabling prerelease packages.
+Add the NXSG repository and install **NX Shader Graph** in your project. Version **2.1.1** is available without enabling prerelease packages. [Release notes](https://github.com/nerdrx/nxsg/releases/tag/v2.1.1).
 
 <details>
 <summary>VPM repository URL</summary>
@@ -78,6 +78,14 @@ Other editor features include:
 - Automatic scene updates for saved edits, build diagnostics, and recovery snapshots.
 - A **Cost** panel with pass budgets, costly-node explanations and click-to-focus navigation. Estimates describe generated work, not GPU timings.
 
+### Automatic organization
+
+**Tools → Auto-organize graph** follows the connections and creates labelled frames for albedo, emission, particle controls and other surface inputs. Shared controls and the final surface/output chain stay in their own groups. Short value chains sit near the nodes they control.
+
+[![NXSG 2.1.1 in Unity, with automatically labelled material and particle branches](docs/images/auto-organize-branches.png)](docs/CREATOR_WORKFLOW.md#organizing-the-canvas)
+
+Rename a frame to keep your own grouping. Existing manual frames and Patterns are preserved, and the entire organization is one Undo step. You can also organize a selection or enable grid snapping. Connections and shader settings stay unchanged; dense graphs can still have crossing wires.
+
 ### Basic workflow
 
 1. Open **Tools → NXSG → Open Graph Editor**.
@@ -136,11 +144,11 @@ Report bugs and request features through [GitHub Issues](https://github.com/nerd
 
 Current development priorities include avatar and stereo testing, fur performance, and editor usability. The node SDK, Blender bridge, CLI, and web viewer are planned work, not current features.
 
-## Project report
+## Research archive
 
 [Read the NXSG 1.5 report (PDF, 39 pages)](docs/reports/nxsg-1.5-state-research-validation.pdf)
 
-Current capabilities, possible future directions, test evidence, research decisions, and the complete node and example catalogs, with 22 charts and diagrams. [Report date and scope](docs/reports/README.md).
+A dated snapshot of version 1.5: capabilities at that release, possible future directions, test evidence, research decisions, and its node and example catalogs, with 22 charts and diagrams. For current behavior, use the guides above. [Report date and scope](docs/reports/README.md).
 
 <details>
 <summary><strong>For contributors</strong></summary>

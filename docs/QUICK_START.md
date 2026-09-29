@@ -1,12 +1,22 @@
 # Your first NXSG material
 
-1. Add the [VPM listing](https://nerdrx.github.io/nxsg/) to your package manager. Enable pre-release packages and install **NX Shader Graph** in a test project using Unity **2022.3.22f1**, Built-In rendering.
+1. Add the [VPM listing](https://nerdrx.github.io/nxsg/) to your package manager. Install **NX Shader Graph** in a test project using Unity **2022.3.22f1**, Built-In rendering.
 2. Open **Tools → NXSG → Open Graph Editor → File → New graph**. The starter graph already connects a texture to a toon surface and Output.
 3. Select **Texture** and pick a project texture in the **Inspector** tab. Use **Nodes** or Space to find more nodes; drag the sidebar divider to resize it.
 4. Click **Save**, choose a `.nxsg` file inside **Assets**, then **Build for VRChat**. This creates a local shader and material under **Assets/NXSGGenerated**; it does not upload an avatar.
 5. Drag the generated material onto a scene mesh. Its inspector has **Open Shader Graph** to return to the right graph/material context.
 6. Edit the graph. **Auto scene** applies saved edits after a short pause; disable it for manual builds. **Problems** explains graph errors and cost warnings. Node-specific errors include a button to show the node.
 7. Save, close and reopen the graph. Confirm the material still looks right. Undo/Redo toolbar buttons remain available; File → Recovery contains local snapshots and checkpoints.
+
+## Keep the graph readable
+
+Use **Tools → Auto-organize graph** to arrange branches into labelled frames.
+Names describe what they feed, such as albedo, emission or particle motion.
+Rename a frame to keep your own grouping; one Undo restores the old layout.
+For a small edit, select the relevant nodes and choose **Auto-organize selection**.
+
+**View → Grid snapping** aligns dragged nodes to the grid. Hold **Alt** for
+free movement. [Organization, frames and snapping](CREATOR_WORKFLOW.md#organizing-the-canvas).
 
 ## Ready-made materials
 

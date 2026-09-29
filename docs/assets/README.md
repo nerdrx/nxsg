@@ -35,3 +35,13 @@ Keep the wordmark geometry and aspect ratio intact. Change the surrounding compo
 `hologram-study.png`, `pearl-study.png`, `fur-study.png` and `hologram-study.mp4` are real Unity OpenGL renders from `Tests/Editor/ShowcaseRender.cs`, using the package's corresponding Showcase graphs. No generated artwork or external textures are used. The clip is encoded from 24 deterministic rendered frames; the fixture replaces the Time node with a material parameter to control capture time. The material studies use primitive meshes, not a VRChat avatar.
 
 The refreshed editor capture uses `EditorPolishCapture.cs` and the hidden Gamescope compositor screenshot API; Unity's screen-read API returned black in that environment. It shows the real current editor and a neutral live material preview.
+
+## Automatic branch groups — 2026-09-29
+
+`docs/images/auto-organize-branches.png` is an unedited 1920×1080 Unity editor
+capture of NXSG 2.1.1, taken in headless Gamescope. The public demonstration
+extends the bundled **Particle Lifetime** graph with Mesh UV0, Noise, Layer and
+Emission nodes, then uses **Tools → Auto-organize graph**. It shows twelve
+nodes, automatic frame labels, the particle inspector and a live preview.
+It contains no creator-provided graph, avatar or textures. The same capture is
+published on the NXSG website and NX Workshop product page.

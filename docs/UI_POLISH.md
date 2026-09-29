@@ -1,4 +1,6 @@
-# Editor UI pass — Version 2.0
+# Editor UI — versions 2.0–2.1.1
+
+Current editor behavior, with dated checks below. [Creator workflow](CREATOR_WORKFLOW.md) covers the menus and everyday editing tools.
 
 Reviewed the actual Unity 2022.3.22f1 Linux editor using compositor captures in headless Gamescope. Focus: dense particle controls, the minimum window size, node labels, and the connected-node picker.
 
@@ -29,9 +31,24 @@ Inspector v2 capture: default-change markers, compact Toon controls, and full-wi
 
 `EditorPolishCapture` exercises wide and 850×500 layouts, numeric field bounds, preview collapse, and a picker opened at the bottom-right canvas edge. `InspectorPolishSmoke` checks fresh defaults across 181 nodes, live default markers, Undo, and section state. `SurfaceSocketFoldoutSmoke` checks grouped sockets and connected-input visibility for Layered PBR and Surface Particles. Packaging checks also pass.
 
-These checks cover the Linux editor fixture and its current display scale, not every OS/theme/DPI combination. Dense inspectors still scroll; the preview is collapsible to reclaim space. Existing user graph positions are not rearranged.
+These checks cover the Linux editor fixture and its current display scale, not every OS/theme/DPI combination. Dense inspectors still scroll; the preview is collapsible to reclaim space. Opening a graph does not rearrange its positions; organization runs only when requested.
 
-## Canvas organization and snapping
+## Canvas organization and snapping — 2.1.1
+
+Whole-graph organization now creates labelled frames by surface input. Shared
+controls, particle branches and material outputs stay distinguishable. Small
+value chains sit near their consumers, and frames pack into rows. Automatic
+frames have larger headings and muted backgrounds; renaming one makes it a
+manual frame that later organization preserves.
+
+![Automatic branch frames in the Unity editor](images/auto-organize-branches.png)
+
+`BranchOrganizeSmoke` checked a 44-node/50-connection graph, repeat stability,
+frame bounds and Undo/Redo. `BranchGroupsSmoke` checked shared inputs, manual
+frames, renamed frames and unknown imported metadata.
+[Recorded checks](VALIDATION.md#branch-organization--2026-09-29).
+
+### Layout and drag checks
 
 The Tools menu can organize the whole graph or a selection. Layout uses measured
 node bounds, preserves complete groups, and records one Undo step. The View menu
