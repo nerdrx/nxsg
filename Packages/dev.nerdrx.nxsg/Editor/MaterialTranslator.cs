@@ -333,7 +333,7 @@ namespace NXSG.Editor
             graph.Resources.Add(resource);
             sample.Properties["resourceId"] = resource.Id;
             var uv = Add(graph, "core.uv0", hint + "UV");
-            uv.Properties["coordinateSource"] = uvMode == 4 ? "panosphere" : uvMode >= 0 && uvMode <= 3 ? "uv" + uvMode : uvMode == 5 ? "world" : "uv0";
+            uv.Properties["coordinateSource"] = Coordinate(uvMode);
             var uvSource = Port(uv, "uv");
             var scale = material.GetTextureScale(property);
             var offset = material.GetTextureOffset(property);
@@ -364,6 +364,20 @@ namespace NXSG.Editor
             if (!material.HasProperty(property)) return Vector2.zero;
             var value = material.GetVector(property);
             return new Vector2(value.x, value.y);
+        }
+
+        static string Coordinate(int mode)
+        {
+            if (mode >= 0 && mode <= 3) return "uv" + mode;
+            switch (mode)
+            {
+                case 4: return "panosphere";
+                case 5: return "world";
+                case 6: return "polar";
+                case 8: return "object";
+                case 9: return "matcap";
+                default: return "uv0";
+            }
         }
 
         static GraphPortRef Source(ShaderGraph graph, GraphNode target, string port)
@@ -444,7 +458,8 @@ namespace NXSG.Editor
             foreach (var suffix in suffixes)
             {
                 var enabled = lilToon ? "_UseEmission" + suffix : "_EnableEmission" + suffix;
-                if (material.HasProperty(enabled) && GetFloat(material, used, 0, enabled) < .5f) continue;
+                // Locked shaders omit disabled layers entirely. Missing enable flags are not enabled layers.
+                if (!material.HasProperty(enabled) || GetFloat(material, used, 0, enabled) < .5f) continue;
                 var map = "_Emission" + suffix + (lilToon ? "Map" : "Map");
                 if (!lilToon) map = "_EmissionMap" + suffix;
                 var colorProperty = lilToon ? "_Emission" + suffix + "Color" : "_EmissionColor" + suffix;
@@ -458,7 +473,9 @@ namespace NXSG.Editor
                 GraphPortRef value = texture ?? Constant(graph, Color.white, "Emission " + suffix + " base");
                 if (tint != Color.white) value = Combine(graph, "core.multiply", value, Constant(graph, tint, "Emission " + suffix + " tint"), "Emission " + suffix + " tinted");
                 var maskProperty = lilToon ? "_Emission" + suffix + "BlendMask" : "_EmissionMask" + suffix;
-                var mask = Texture(graph, material, maskProperty, used, "Emission " + suffix + " mask", channel: "r");
+                var maskUv = lilToon ? 0 : Mathf.RoundToInt(GetFloat(material, used, 0, maskProperty + "UV"));
+                var mask = Texture(graph, material, maskProperty, used, "Emission " + suffix + " mask", maskUv,
+                    lilToon ? (Vector2?)null : Pan(material, maskProperty + "Pan"), "r");
                 if (mask != null) value = Combine(graph, "core.multiply", value, mask, "Emission " + suffix + " masked");
                 var audioFlag = "_EmissionAL" + (suffix == "" ? "0" : suffix) + "Enabled";
                 if (!lilToon && GetFloat(material, used, 0, "_EnableAudioLink") > .5f && GetFloat(material, used, 0, audioFlag) > .5f)
@@ -497,7 +514,17 @@ namespace NXSG.Editor
                 glitter.Properties["size"] = GetFloat(material, used, .16f, "_GlitterSize");
                 glitter.Properties["brightness"] = GetFloat(material, used, 2f, "_GlitterBrightness");
                 glitter.Properties["speed"] = GetFloat(material, used, 1f, "_GlitterSpeed");
-                glitter.Properties["sharpness"] = GetFloat(material, used, 32f, "_GlitterContrast");
+                // Poiyomi applies contrast after its glint calculation. NXSG uses a view-angle exponent.
+                glitter.Properties["sharpness"] = Mathf.Pow(Mathf.Max(1, GetFloat(material, used, 32f, "_GlitterContrast")), 1f / 3f);
+                glitter.Properties["density"] = Mathf.Clamp01(.4f * GetFloat(material, used, 1, "_GlitterLayers"));
+                if (material.HasProperty("_GlitterTexture") && material.GetTexture("_GlitterTexture") is Texture2D shape)
+                {
+                    var shapeName = shape.name.ToLowerInvariant();
+                    glitter.Properties["shape"] = shapeName.Contains("cross") ? 2 : shapeName.Contains("star") ? 3 : shapeName.Contains("square") ? 1 : 0;
+                    // NXSG's cross has long arms relative to the cell; keep imported texture stamps small.
+                    if (shapeName.Contains("cross")) glitter.Properties["size"] = (float)glitter.Properties["size"] * .16f;
+                    // Keep the source texture in the review report: the built-in shape is an approximation.
+                }
             }
             var tint = GetColor(material, used, Color.white, "_GlitterColor");
             GraphPortRef glitterColor = Constant(graph, tint, "Glitter color");
@@ -509,11 +536,18 @@ namespace NXSG.Editor
             Connect(graph, glitterColor, glitter, "color");
             if (!lilToon)
             {
-                var mask = Texture(graph, material, "_GlitterMask", used, "Glitter mask", channel: "r");
-                if (mask != null) Connect(graph, mask, glitter, "mask");
+                var maskUv = Mathf.RoundToInt(GetFloat(material, used, 0, "_GlitterMaskUV"));
+                var mask = Texture(graph, material, "_GlitterMask", used, "Glitter mask", maskUv, Pan(material, "_GlitterMaskPan"), "r");
+                if (mask != null)
+                {
+                    if (GetFloat(material, used, 0, "_GlitterMaskInvert") > .5f)
+                        mask = Combine(graph, "core.subtract", Scalar(graph, 1, "One"), mask, "Inverted glitter mask", true);
+                    Connect(graph, mask, glitter, "mask");
+                }
             }
             var uv = Add(graph, "core.uv0", "Glitter UV");
             if (lilToon && GetFloat(material, used, 0, "_GlitterUVMode") > .5f) uv.Properties["coordinateSource"] = "uv1";
+            if (!lilToon) uv.Properties["coordinateSource"] = Coordinate(Mathf.RoundToInt(GetFloat(material, used, 0, "_GlitterUV")));
             GraphPortRef uvSource = Port(uv, "uv");
             var pan = Pan(material, "_GlitterUVPanning");
             if (pan != Vector2.zero)
@@ -526,8 +560,11 @@ namespace NXSG.Editor
             GraphPortRef sparkle = Port(glitter, "color");
             if (!lilToon && GetFloat(material, used, 0, "_EnableAudioLink") > .5f && GetFloat(material, used, 0, "_GlitterALEnabled") > .5f)
             {
-                var audio = Add(graph, "core.audioLink", "Glitter AudioLink"); audio.Properties["fallback"] = 1;
-                sparkle = Combine(graph, "core.multiply", sparkle, Port(audio, "value"), "Audio glitter");
+                var audio = Add(graph, "core.audioLink", "Glitter AudioLink");
+                var clock = Add(graph, "core.time", "Glitter clock");
+                Connect(graph, Combine(graph, "core.add", Port(clock, "value"),
+                    Combine(graph, "core.multiply", Port(audio, "value"), Scalar(graph, 2, "Audio motion"), "Audio rotation speed", true),
+                    "Glitter audio motion", true), glitter, "time");
             }
             var previous = Source(graph, surface, "emission");
             Connect(graph, previous == null ? sparkle : Combine(graph, "core.add", previous, sparkle, "Emission and glitter"), surface, "emission");

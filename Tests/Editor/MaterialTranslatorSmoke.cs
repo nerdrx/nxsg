@@ -43,10 +43,13 @@ public static class MaterialTranslatorSmoke
         _EmissionColor2 (""Emission color 2"", Color) = (1,0,1,1) _EmissionStrength1 (""Emission strength 1"", Float) = 1
         _EmissionStrength2 (""Emission strength 2"", Float) = 1 _EmissionMap1UV (""Emission UV"", Float) = 0
         _EmissionMap1Pan (""Emission pan"", Vector) = (0,0,0,0)
-        _EmissionMask2 (""Emission mask 2"", 2D) = ""white"" {}
+        _EmissionMask2 (""Emission mask 2"", 2D) = ""white"" {} _EmissionMask2UV (""Emission mask 2 UV"", Float) = 0
+        _EmissionMask2Pan (""Emission mask 2 pan"", Vector) = (0,0,0,0)
         _EnableAudioLink (""Audio Link"", Float) = 0 _EmissionAL1Enabled (""Emission audio"", Float) = 0
         _GlitterEnable (""Glitter"", Float) = 0 _GlitterALEnabled (""Glitter audio"", Float) = 0
         _GlitterMask (""Glitter mask"", 2D) = ""white"" {} _GlitterFrequency (""Glitter frequency"", Float) = 70
+        _GlitterTexture (""Glitter shape"", 2D) = ""white"" {} _GlitterMaskInvert (""Glitter mask invert"", Float) = 0
+        _GlitterUV (""Glitter UV"", Float) = 0 _GlitterLayers (""Glitter layers"", Float) = 2
         _GlitterBrightness (""Glitter brightness"", Float) = 3 _GlitterSize (""Glitter size"", Float) = .25
         _GlitterSpeed (""Glitter speed"", Float) = 5 _GlitterContrast (""Glitter contrast"", Float) = 325
         _ClearCoatBRDF (""Clear coat enabled"", Float) = 0 _ClearCoatStrength (""Clear coat"", Float) = 0 _ClearCoatSmoothness (""Clear coat smoothness"", Float) = 1
@@ -118,6 +121,7 @@ public static class MaterialTranslatorSmoke
         var graph = GraphJson.Parse(AssetDatabase.LoadAssetAtPath<GraphAsset>(result.GraphPath).source);
         Require(graph.Nodes.Any(n => n.Operation == "core.layeredPbrSurface") &&
             graph.Nodes.Count(n => n.Operation == "core.audioLink") >= 2 &&
+            graph.Nodes.Count(n => n.Operation == "core.add") == 3 &&
             graph.Nodes.Any(n => n.Operation == "core.glitter") &&
             graph.Nodes.Any(n => n.Operation == "core.uv0" && (string)n.Properties["coordinateSource"] == "panosphere"),
             "Real Poiyomi snapshot did not map its active feature branches.");
@@ -143,6 +147,9 @@ public static class MaterialTranslatorSmoke
             source.SetFloat("_EnableAudioLink", 1); source.SetFloat("_EmissionAL1Enabled", 1);
             source.SetFloat("_GlitterEnable", 1); source.SetFloat("_GlitterALEnabled", 1);
             source.SetTexture("_GlitterMask", fixtureTexture);
+            source.SetFloat("_GlitterUV", 4); source.SetFloat("_GlitterMaskInvert", 1);
+            source.SetTexture("_EmissionMask2", fixtureTexture); source.SetFloat("_EmissionMask2UV", 9);
+            source.SetVector("_EmissionMask2Pan", new Vector4(0, 1, 0, 0));
             source.SetFloat("_ClearCoatBRDF", 1); source.SetFloat("_ClearCoatStrength", .077f); source.SetFloat("_ClearCoatSmoothness", 1);
             source.SetFloat("_AlphaForceOpaque", 1);
         }
@@ -180,12 +187,15 @@ public static class MaterialTranslatorSmoke
         Require(graph.Resources.Any(r => r.Name != null && r.Name.StartsWith("Emission", StringComparison.Ordinal)), family + " imported texture slots are unnamed.");
         Require(graph.Connections.Any(c => c.To.NodeId == surface.Id && c.To.PortId == "emission"), family + " emission is disconnected.");
         Require(graph.Nodes.Any(n => n.Operation == "core.add"), family + " emission layers were not combined.");
+        Require(graph.Nodes.Count(n => n.Operation == "core.add") == (family == "Poiyomi" ? 3 : 2), family + " imported a disabled emission layer.");
         Require(graph.Nodes.Any(n => n.Operation == "core.glitter"), family + " glitter is missing.");
         if (family == "Poiyomi")
         {
             Require(graph.Nodes.Any(n => n.Operation == "core.audioLink"), "Poiyomi AudioLink was dropped.");
             Require(graph.Nodes.Any(n => n.Operation == "core.uv0" && (string)n.Properties["coordinateSource"] == "panosphere"), "Poiyomi emission Panosphere UV was dropped.");
+            Require(graph.Nodes.Any(n => n.Operation == "core.uv0" && (string)n.Properties["coordinateSource"] == "matcap"), "Poiyomi emission mask MatCap UV was dropped.");
             Require(graph.Nodes.Any(n => n.Operation == "core.uvScroll" && Math.Abs((double)n.Properties["speed"][1] - 1) < .001), "Poiyomi emission pan was dropped.");
+            Require(graph.Nodes.Any(n => n.Operation == "core.glitter" && Math.Abs((double)n.Properties["sharpness"] - Math.Pow(325, 1.0 / 3.0)) < .01), "Poiyomi glitter contrast was not converted.");
             Require(Math.Abs((double)surface.Properties["coat"] - .077) < .001, "Poiyomi clear coat was dropped.");
             Require((int)output.Properties["renderMode"] == 1, "Poiyomi force opaque was lost.");
         }
