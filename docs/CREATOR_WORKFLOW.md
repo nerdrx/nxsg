@@ -52,10 +52,12 @@ editable `.nxsg` graph, saves a backup `.mat` and an import report beside the
 source material, then assigns the generated shader to that same material asset.
 Existing scene and avatar material references keep pointing at it.
 
-Conversion is limited to properties that NXSG explicitly supports and maps.
-Unmapped shader settings and effects will not be reproduced automatically, so
-the converted appearance may differ from the source. Review the generated
-graph, material values, and render in context before relying on the conversion.
+NXSG chooses Toon or PBR automatically from source settings. Active emission
+layers, glitter, AudioLink branches, clear coat, lilToon color layers and
+outlines are connected where NXSG has matching nodes. A report lists active
+settings and assigned textures that still need manual review. Source-specific
+blending, masks, lighting and animation can render differently; compare the
+generated graph, material values and avatar before relying on the conversion.
 Keep the backup `.mat` until the result is accepted; use it to restore the
 pre-conversion material if needed. The existing **Start from selected
 material…** texture workflow remains a separate, non-modifying way to seed a
