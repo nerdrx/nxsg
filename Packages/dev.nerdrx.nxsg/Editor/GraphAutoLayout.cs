@@ -45,11 +45,7 @@ namespace NXSG.Editor
                 indexById.Add(id, i);
             }
 
-            var edgeFrom = new List<int>();
-            var edgeTo = new List<int>();
-            var outgoing = CreateLists(count);
-            var incoming = CreateLists(count);
-            var undirected = CreateLists(count);
+            var edgeKeys = new List<ulong>();
             var seenEdges = new HashSet<ulong>();
             if (edges != null)
             {
@@ -63,17 +59,28 @@ namespace NXSG.Editor
                         continue;
 
                     ulong key = ((ulong)(uint)from << 32) | (uint)to;
-                    if (!seenEdges.Add(key))
-                        continue;
-
-                    int edgeIndex = edgeFrom.Count;
-                    edgeFrom.Add(from);
-                    edgeTo.Add(to);
-                    outgoing[from].Add(edgeIndex);
-                    incoming[to].Add(edgeIndex);
-                    undirected[from].Add(to);
-                    undirected[to].Add(from);
+                    if (seenEdges.Add(key))
+                        edgeKeys.Add(key);
                 }
+            }
+            edgeKeys.Sort();
+
+            var edgeFrom = new List<int>(edgeKeys.Count);
+            var edgeTo = new List<int>(edgeKeys.Count);
+            var outgoing = CreateLists(count);
+            var incoming = CreateLists(count);
+            var undirected = CreateLists(count);
+            foreach (ulong key in edgeKeys)
+            {
+                int from = (int)(key >> 32);
+                int to = (int)(uint)key;
+                int edgeIndex = edgeFrom.Count;
+                edgeFrom.Add(from);
+                edgeTo.Add(to);
+                outgoing[from].Add(edgeIndex);
+                incoming[to].Add(edgeIndex);
+                undirected[from].Add(to);
+                undirected[to].Add(from);
             }
 
             int[] indegree = new int[count];
@@ -92,6 +99,7 @@ namespace NXSG.Editor
 
             var processed = new bool[count];
             var ranks = new int[count];
+            var topologicalOrder = new List<int>(count);
             int processedCount = 0;
             while (processedCount < count)
             {
@@ -120,15 +128,34 @@ namespace NXSG.Editor
 
                 processed[current] = true;
                 processedCount++;
+                topologicalOrder.Add(current);
                 foreach (int edgeIndex in outgoing[current])
                 {
                     if (!active[edgeIndex])
                         continue;
                     int next = edgeTo[edgeIndex];
-                    ranks[next] = Math.Max(ranks[next], ranks[current] + 1);
                     if (--indegree[next] == 0)
                         ready.Add(next);
                 }
+            }
+
+            var components = FindComponents(undirected, comparer);
+            var depthToSink = new int[count];
+            for (int orderIndex = topologicalOrder.Count - 1; orderIndex >= 0; orderIndex--)
+            {
+                int node = topologicalOrder[orderIndex];
+                foreach (int edgeIndex in outgoing[node])
+                    if (active[edgeIndex])
+                        depthToSink[node] = Math.Max(depthToSink[node], depthToSink[edgeTo[edgeIndex]] + 1);
+            }
+
+            foreach (var component in components)
+            {
+                int componentDepth = 0;
+                foreach (int node in component)
+                    componentDepth = Math.Max(componentDepth, depthToSink[node]);
+                foreach (int node in component)
+                    ranks[node] = componentDepth - depthToSink[node];
             }
 
             int layerCount = 1;
@@ -143,7 +170,6 @@ namespace NXSG.Editor
 
             ReduceCrossings(layers, outgoing, incoming, edgeTo, edgeFrom, active, ranks, comparer);
 
-            var components = FindComponents(undirected, comparer);
             var componentByNode = new int[count];
             var componentLayers = new List<int>[components.Count][];
             var componentHeights = new float[components.Count];

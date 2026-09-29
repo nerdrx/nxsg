@@ -1037,3 +1037,35 @@ package does not rewrite previously generated shader assets.
 isolated Unity 2022.3.22f1 project under headless Gamescope on Linux. They do not
 cover every OS, theme or display scale. This pass changes editor organization
 and controls; existing graph property IDs and shader calculations are retained.
+
+## Branch organization — 2026-09-29
+
+- **Reported graph:** `BranchOrganizeSmoke` exercised the supplied 44-node,
+  50-connection graph in the isolated Unity editor at 1440×900 and 1920×1080.
+  It checked node/property/connection preservation, semantic hash identity,
+  node and frame-header bounds, repeat stability, and one-step Undo/Redo.
+  The final layout has ten labelled frames. Its node bounds changed from
+  approximately 2977×2109 to 3283×1575 canvas units; this reduces height,
+  with a modest increase in width. Final log:
+  `work/unity/branch-organize-final.log`. The original graph and captures are
+  local test inputs and are not included in the package.
+- **Layout regressions:** `GraphOrganizeSmoke` passed variable node sizes,
+  disconnected components, cycle handling, a 500-node chain, large-coordinate
+  persistence, existing frames and folded Patterns, selection-only placement,
+  and Undo/Redo. Log: `work/unity/organize-branches-regression.log`.
+- **Frame ownership:** `BranchGroupsSmoke` passed four surface-input branches
+  with a shared source, manual-frame and unknown imported-metadata preservation,
+  unchanged graph semantics, and renaming an automatic frame to keep it manual
+  on subsequent organization. Log: `work/unity/branch-groups-final.log`.
+- **Dragging:** `GridDragSmoke` passed zoomed grid snapping, Alt bypass,
+  repeated folded-Pattern movement, frame movement and Undo after the frame
+  styling changes. Log: `work/unity/grid-branches-regression.log`.
+- **Portable and packaging:** portable graph/compiler checks and nine VPM
+  packaging tests passed. Logs: `work/portable-211.log` and
+  `work/packaging-211.log`.
+
+The GUI checks used Unity 2022.3.22f1 in headless Gamescope on Linux. They
+cover editor layout and interaction; this change does not alter shader output.
+The layout is heuristic: dense graphs can still have crossing wires, and
+automatic branch inference falls back to ordinary layout for unusually large
+graphs. Manual frames are preserved.

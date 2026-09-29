@@ -38,19 +38,30 @@ settings for you.
 
 ## Organizing the canvas
 
-Choose **Tools → Auto-organize graph** to arrange nodes from inputs on the
-left toward outputs on the right. The layout uses node heights, leaves room
-between branches, and reduces wire crossings. Complex graphs can still have
-crossing wires.
+Choose **Tools → Auto-organize graph** to arrange connected branches into
+labelled frames. On graphs with several surface inputs, NXSG separates
+albedo, emission, roughness and particle controls by what they feed. Inputs
+used by several branches get a **Shared controls** frame; surface nodes and
+Output stay together. Nodes that do not reach Output go into **Unused branches**.
+
+Small graphs keep a simple left-to-right layout. Short value chains sit near
+the nodes they control, rather than joining one tall input column. Frames
+use measured node sizes and pack into rows. Complex graphs can still have
+crossing wires; organization does not insert reroutes or duplicate nodes.
+
+Automatic frames are refreshed when you organize again. Rename a frame to
+keep it as a manual group. Existing manual frames and Patterns retain their
+names, membership, notes and collapsed state.
 
 **Tools → Auto-organize selection** arranges two or more selected nodes and
 keeps other nodes in place. If the result needs more room, it moves below
 nearby nodes. Complete frames and Patterns move together; expanded groups
 also get an internal layout, while folded Patterns retain their internal
-positions. Group names, membership, and collapsed state are preserved.
+positions. Selection-only organization does not create automatic frames.
 
 Each organization is one **Undo** step. Save the graph to retain the layout.
-Organizing changes positions without changing connections or shader values.
+Organizing changes positions and frame metadata without changing connections
+or shader values.
 
 Enable **View → Grid snapping** to snap drags to the canvas's 24-unit grid.
 Hold **Alt** while dragging for free movement. Multiple selected nodes, frames,

@@ -33,8 +33,20 @@ namespace NXSG.Editor
             var targets = ids.ToDictionary(id => id, id => bounds[id].position);
             var blocks = new Dictionary<string, Rect>();
             var owners = new Dictionary<string, string>();
+            var roles = new Dictionary<string, string>();
+            var groups = OrganizeBranchGroups(selectedOnly);
+            var previousGroups = graph.Layout?.ExtensionData != null && graph.Layout.ExtensionData.TryGetValue("groups", out var storedGroups)
+                ? storedGroups as JArray : null;
+            var groupData = new JArray(groups.Select(g => g.DeepClone()));
+            // Retain unrecognized layout metadata from newer editors/imported graphs.
+            if (previousGroups != null)
+            {
+                var recognized = new HashSet<JToken>(GraphGroups.All(graph));
+                foreach (var token in previousGroups.Where(t => !recognized.Contains(t))) groupData.Add(token.DeepClone());
+            }
+            var groupsChanged = !selectedOnly && (groupData.Count > 0 || previousGroups != null) && !JToken.DeepEquals(previousGroups, groupData);
             var connections = graph.Connections.Select(e => (from: e.From.NodeId, to: e.To.NodeId)).ToArray();
-            foreach (var group in GraphGroups.All(graph))
+            foreach (var group in groups)
             {
                 var members = GraphGroups.Members(graph, group);
                 if (members.Length == 0 || members.Any(id => !ids.Contains(id) || owners.ContainsKey(id))) continue;
@@ -47,14 +59,24 @@ namespace NXSG.Editor
                 }
                 var memberBounds = members.Select(id => new Rect(targets[id], bounds[id].size));
                 blocks[key] = OrganizeGroupBounds(group, memberBounds);
+                if (IsInferredFrame(group))
+                    roles[key] = (string)group["organizeRole"];
                 foreach (var id in members) owners[id] = key;
             }
             foreach (var id in ids)
                 if (!owners.ContainsKey(id)) { owners[id] = id; blocks[id] = bounds[id]; }
 
+            // Subpixel subtraction after a move must not reorder equally sized frames.
+            foreach (var key in blocks.Keys.ToArray())
+            {
+                var block = blocks[key];
+                block.size = new Vector2(Mathf.Ceil(block.width - .01f), Mathf.Ceil(block.height - .01f));
+                blocks[key] = block;
+            }
+
             var blockEdges = connections.Where(e => owners.ContainsKey(e.from) && owners.ContainsKey(e.to))
                 .Select(e => (from: owners[e.from], to: owners[e.to]));
-            var arranged = GraphAutoLayout.Arrange(blocks, blockEdges);
+            var arranged = selectedOnly ? GraphAutoLayout.Arrange(blocks, blockEdges) : ArrangeOrganizeBlocks(blocks, roles, blockEdges);
             foreach (var id in ids) targets[id] += arranged[owners[id]] - blocks[owners[id]].position;
 
             // Selection layout never moves its neighbors. Put the organized block below
@@ -81,12 +103,17 @@ namespace NXSG.Editor
                 foreach (var id in ids) targets[id] += offset;
             }
 
-            if (targets.All(p => (p.Value - Position(p.Key)).sqrMagnitude < .01f))
+            if (!groupsChanged && targets.All(p => (p.Value - Position(p.Key)).sqrMagnitude < .01f))
             { SetStatus("Already organized."); return; }
             Undo.IncrementCurrentGroup();
             Edit(selectedOnly ? "Auto-organize selection" : "Auto-organize graph", () =>
             {
                 foreach (var pair in targets) SetPosition(pair.Key, pair.Value);
+                if (groupsChanged)
+                {
+                    if (graph.Layout.ExtensionData == null) graph.Layout.ExtensionData = new Dictionary<string, JToken>();
+                    graph.Layout.ExtensionData["groups"] = groupData;
+                }
             });
             canvas.schedule.Execute(() => FrameOrganizedNodes(ids));
             SetStatus("Organized " + ids.Count + " nodes. Undo restores the previous layout.");
@@ -114,7 +141,7 @@ namespace NXSG.Editor
                 return new Rect(bounds.position, new Vector2(240, height));
             }
             if (group["frame"]?.Type == JTokenType.Boolean && (bool)group["frame"])
-                return new Rect(bounds.xMin - 16, bounds.yMin - 96, Mathf.Max(320, bounds.width + 32), bounds.height + 112);
+                return new Rect(bounds.xMin - 16, bounds.yMin - FrameTopPadding(group), Mathf.Max(FrameMinWidth(group), bounds.width + 32), bounds.height + FrameTopPadding(group) + 16);
             return new Rect(bounds.xMin - 16, bounds.yMin - 48, Mathf.Max(332, bounds.width + 32), bounds.height + 64);
         }
 

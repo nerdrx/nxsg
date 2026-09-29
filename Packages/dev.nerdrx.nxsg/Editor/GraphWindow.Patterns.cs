@@ -78,26 +78,41 @@ namespace NXSG.Editor
                 var point = new Vector2(positions.Min(p => p.x), positions.Min(p => p.y));
                 var collapsed = group["collapsed"]?.Type == JTokenType.Boolean && (bool)group["collapsed"];
                 var isFrame = group["frame"]?.Type == JTokenType.Boolean && (bool)group["frame"];
+                var inferredFrame = IsInferredFrame(group);
                 var boundsMax = positions.Length == 0 ? point : positions.Aggregate(Vector2.Max);
-                var frameWidth = Mathf.Max(300, boundsMax.x - point.x + 210);
-                var frameHeight = Mathf.Max(100, boundsMax.y - point.y + 170);
+                var frameWidth = Mathf.Max(inferredFrame ? FrameMinWidth(group) : 300, boundsMax.x - point.x + (inferredFrame ? 32 : 210));
+                var frameHeight = Mathf.Max(100, boundsMax.y - point.y + (inferredFrame ? FrameTopPadding(group) + 16 : 170));
                 var card = new VisualElement { name = isFrame ? "frame-card" : "pattern-card", userData = group, style = { position = UnityEngine.UIElements.Position.Absolute,
                     left = isFrame && !collapsed ? point.x - 16 : point.x, top = collapsed ? point.y : point.y - 38, width = collapsed ? 240 : isFrame ? frameWidth : 300,
                     height = isFrame && !collapsed ? frameHeight : StyleKeyword.Auto,
                     backgroundColor = isFrame ? (collapsed ? new Color(.20f, .14f, .25f) : Color.clear) : new Color(.12f, .18f, .21f), borderTopLeftRadius = 7, borderTopRightRadius = 7,
                     borderBottomLeftRadius = 7, borderBottomRightRadius = 7, paddingBottom = 6 } };
                 var header = new VisualElement { style = { flexDirection = FlexDirection.Row } };
-                var title = new TextField { value = (string)group["name"] ?? "Pattern", isDelayed = true, maxLength = 80, style = { flexGrow = 1 } };
-                title.RegisterValueChangedCallback(evt => Edit("Rename Pattern", () => group["name"] = evt.newValue));
+                var title = new TextField { value = (string)group["name"] ?? "Pattern", isDelayed = true, maxLength = 80, style = { flexGrow = 1,
+                    unityFontStyleAndWeight = inferredFrame ? FontStyle.Bold : FontStyle.Normal, minWidth = 0 } };
+                if (inferredFrame)
+                {
+                    header.style.marginLeft = 6; header.style.marginRight = 6; header.style.marginTop = 4;
+                    title.style.fontSize = 24;
+                    title.tooltip = title.value + ". Rename to keep this as a manual frame.";
+                }
+                title.RegisterValueChangedCallback(evt => Edit("Rename Pattern", () => { ClearOrganizeMarker(group); group["name"] = evt.newValue; }));
                 header.Add(title);
+                TextField note = null;
                 if (isFrame)
                 {
-                    var note = new TextField { value = (string)group["note"] ?? "", isDelayed = true, maxLength = 1000, multiline = true, tooltip = "Frame note", style = { flexGrow = 1 } };
-                    note.RegisterValueChangedCallback(evt => Edit("Edit frame note", () => group["note"] = evt.newValue));
-                    header.Add(new Label("FRAME") { style = { marginLeft = 6, unityFontStyleAndWeight = FontStyle.Bold } });
+                    if (!inferredFrame)
+                    {
+                        note = new TextField { value = (string)group["note"] ?? "", isDelayed = true, maxLength = 1000, multiline = true, tooltip = "Frame note", style = { flexGrow = 1 } };
+                        note.RegisterValueChangedCallback(evt => Edit("Edit frame note", () => { ClearOrganizeMarker(group); group["note"] = evt.newValue; }));
+                        header.Add(new Label("FRAME") { style = { marginLeft = 6, unityFontStyleAndWeight = FontStyle.Bold } });
+                    }
                     card.Add(header);
-                    var noteRow = new VisualElement { style = { flexDirection = FlexDirection.Row, marginLeft = 6, marginRight = 6 } };
-                    noteRow.Add(note); card.Add(noteRow);
+                    if (!inferredFrame)
+                    {
+                        var noteRow = new VisualElement { style = { flexDirection = FlexDirection.Row, marginLeft = 6, marginRight = 6 } };
+                        noteRow.Add(note); card.Add(noteRow);
+                    }
                 }
                 else
                 {
@@ -158,7 +173,7 @@ namespace NXSG.Editor
                 }
                 else if (isFrame)
                 {
-                    var grip = new Label("⋮⋮  " + members.Count + " nodes · drag to move") { tooltip = "Hold Alt while dragging to bypass grid snapping.", style = { paddingLeft = 10, paddingTop = 6, paddingBottom = 4 } };
+                    var grip = new Label(inferredFrame ? "⋮⋮" : "⋮⋮  " + members.Count + " nodes · drag to move") { tooltip = "Drag to move " + members.Count + " nodes. Hold Alt while dragging to bypass grid snapping.", style = { paddingLeft = 10, paddingTop = inferredFrame ? 2 : 6, paddingBottom = inferredFrame ? 2 : 4 } };
                     Vector2 start = Vector2.zero, anchor = point; Dictionary<string, Vector2> starts = null; var moved = false;
                     grip.RegisterCallback<PointerDownEvent>(evt => { if (evt.button != 0) return; selection = members.ToList(); selected = selection.LastOrDefault(); start = evt.position; starts = members.ToDictionary(id => id, Position); anchor = starts.Values.Aggregate(Vector2.Min); moved = false; grip.CapturePointer(evt.pointerId); evt.StopPropagation(); });
                     grip.RegisterCallback<PointerMoveEvent>(evt => { if (!grip.HasPointerCapture(evt.pointerId) || starts == null) return; var pointerDelta = (Vector2)evt.position - start; if (pointerDelta.sqrMagnitude > 16) moved = true; if (!moved) { evt.StopPropagation(); return; } var delta = SnapDragDelta(anchor, pointerDelta / zoom, GridSnappingEnabled, evt.altKey); foreach (var pair in starts) { var position = pair.Value + delta; SetPosition(pair.Key, position); if (nodes.TryGetValue(pair.Key, out var box)) { box.style.left = position.x; box.style.top = position.y; } } layer.MarkDirtyRepaint(); evt.StopPropagation(); });
@@ -186,8 +201,8 @@ namespace NXSG.Editor
                             }
                             max = Vector2.Max(max, p + new Vector2(w,h));
                         }
-                        card.style.left = min.x - 16; card.style.top = min.y - 96;
-                        card.style.width = Mathf.Max(320,max.x-min.x+32); card.style.height=max.y-min.y+112;
+                        card.style.left = min.x - 16; card.style.top = min.y - FrameTopPadding(group);
+                        card.style.width = Mathf.Max(FrameMinWidth(group),max.x-min.x+32); card.style.height=max.y-min.y+FrameTopPadding(group)+16;
                     };
                     card.schedule.Execute(updateBounds);
                     foreach(var id in members) if(nodes.TryGetValue(id,out var box)) box.RegisterCallback<GeometryChangedEvent>(_ => updateBounds());
@@ -199,19 +214,74 @@ namespace NXSG.Editor
         void DrawFrameBackgrounds(Painter2D painter)
         {
             // Frame backdrops belong below the wires; their controls remain above them.
-            painter.fillColor = new Color(.20f, .14f, .25f);
             foreach (var card in layer.Children())
             {
                 if (card.name != "frame-card" || !(card.userData is JObject group) ||
                     (group["collapsed"]?.Type == JTokenType.Boolean && (bool)group["collapsed"])) continue;
                 var rect = card.layout;
                 if (!ValidOrganizeSize(rect.width) || !ValidOrganizeSize(rect.height)) continue;
+                if (!IsInferredFrame(group))
+                {
+                    painter.fillColor = new Color(.20f, .14f, .25f);
+                    painter.BeginPath();
+                    painter.MoveTo(new Vector2(rect.xMin, rect.yMin));
+                    painter.LineTo(new Vector2(rect.xMax, rect.yMin));
+                    painter.LineTo(new Vector2(rect.xMax, rect.yMax));
+                    painter.LineTo(new Vector2(rect.xMin, rect.yMax));
+                    painter.ClosePath(); painter.Fill();
+                    continue;
+                }
+
+                var accent = FrameAccent(group["organizeRole"]?.Type == JTokenType.String ? (string)group["organizeRole"] : "branch");
+                painter.fillColor = new Color(.075f, .09f, .11f, .86f);
                 painter.BeginPath();
                 painter.MoveTo(new Vector2(rect.xMin, rect.yMin));
                 painter.LineTo(new Vector2(rect.xMax, rect.yMin));
                 painter.LineTo(new Vector2(rect.xMax, rect.yMax));
                 painter.LineTo(new Vector2(rect.xMin, rect.yMax));
                 painter.ClosePath(); painter.Fill();
+                painter.strokeColor = new Color(accent.r, accent.g, accent.b, .38f);
+                painter.lineWidth = 1;
+                painter.BeginPath();
+                painter.MoveTo(new Vector2(rect.xMin, rect.yMin));
+                painter.LineTo(new Vector2(rect.xMax, rect.yMin));
+                painter.LineTo(new Vector2(rect.xMax, rect.yMax));
+                painter.LineTo(new Vector2(rect.xMin, rect.yMax));
+                painter.ClosePath(); painter.Stroke();
+                painter.strokeColor = new Color(accent.r, accent.g, accent.b, .68f);
+                painter.lineWidth = 2;
+                painter.BeginPath();
+                painter.MoveTo(new Vector2(rect.xMin + 1, rect.yMin + 1));
+                painter.LineTo(new Vector2(rect.xMax - 1, rect.yMin + 1));
+                painter.Stroke();
+            }
+        }
+
+        static bool IsInferredFrame(JObject group) => group?["nxsgOrganizeVersion"]?.Type == JTokenType.Integer &&
+            group["nxsgOrganizeVersion"].ToString() == "1" && group["organizeKey"]?.Type == JTokenType.String &&
+            !string.IsNullOrEmpty((string)group["organizeKey"]) && group["organizeRole"]?.Type == JTokenType.String &&
+            new[] { "branch", "shared", "output", "unused" }.Contains((string)group["organizeRole"]);
+
+        static void ClearOrganizeMarker(JObject group)
+        {
+            if (!IsInferredFrame(group)) return;
+            group.Remove("organizeKey");
+            group.Remove("organizeRole");
+            group.Remove("nxsgOrganizeVersion");
+        }
+
+        static float FrameTopPadding(JObject group) => IsInferredFrame(group) ? 56f : 96f;
+
+        static float FrameMinWidth(JObject group) => 320f;
+
+        static Color FrameAccent(string role)
+        {
+            switch (role)
+            {
+                case "shared": return new Color(.31f, .53f, .48f);
+                case "output": return new Color(.55f, .47f, .32f);
+                case "unused": return new Color(.42f, .45f, .49f);
+                default: return new Color(.36f, .46f, .58f);
             }
         }
 
