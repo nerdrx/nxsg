@@ -46,11 +46,13 @@ All three need a valid camera depth texture. They cannot detect hidden or off-sc
 
 ## 5. XYZ vertex deformation
 
-Place **Vertex Deform** around the completed mesh surface chain: connect the surface or supported geometry wrapper to **Base**, then connect Vertex Deform to Output. Numeric inputs for Translation, Rotation, Scale, Pivot, Mask, Snap size, and Warp amount are connectable. Rotation uses XYZ Euler degrees. **Transform space** defaults to Object local; World applies the axes in world space. **Warp shape** defaults to None; Sphere bends toward a rounded volume and Cylinder rounds the XZ profile. Snap size 0 disables snapping; Mask 0 preserves the input geometry.
+Place **Vertex Deform** around the completed mesh surface chain: connect the surface or supported geometry wrapper to **Base**, then connect Vertex Deform to Output. Numeric inputs for Translation, Rotation, Scale, Pivot, Mask, Snap size, Warp amount, Minimum camera distance, and Near-camera strength are connectable. Rotation uses XYZ Euler degrees. **Transform space** defaults to Object local; World applies the axes in world space. **Warp shape** defaults to None; Sphere bends toward a rounded volume and Cylinder rounds the XZ profile. Snap size 0 disables snapping; Mask 0 preserves the input geometry.
 
 The node transforms the current mesh positions and updates normals and tangents. Its vertex stage is used by forward, additive, shadow, and tessellated geometry paths. It can wrap supported fur, surface-particle, outline, and dissolve chains so those generated effects follow the deformed mesh. The SRT-only normal transform is analytic; sphere/cylinder warp and active snapping estimate their local Jacobian from nearby samples. It does not add persistent trails or remember earlier poses. Large offsets may require larger renderer bounds. Transform inputs are evaluated at the original vertex; generated effects and scalar displacement follow the deformation. The local normal estimate does not reconstruct spatial gradients of arbitrary connected masks.
 
 Example: `Texture2D alpha → mask math → Vertex Deform.Mask`; set Translation to `(0, 0.1, 0)`, Rotation to `(0, 0, 15)`, and keep Scale `(1,1,1)` for a masked local tilt. For world-axis motion, switch Transform space to World.
+
+**Near-camera push** is off by default (Minimum camera distance 0 m). Set it above zero to push vertices within that camera depth away along the camera's view axis; Near-camera strength controls how much of the correction is applied. This can reduce clipping when an effect approaches the viewer. It is camera dependent and can change the silhouette in a mirror or between stereo eyes; test both views on the actual avatar. It cannot repair clipping caused by unrelated transparent draw order or missing renderer bounds.
 
 ## 6. Infinity Parallax
 

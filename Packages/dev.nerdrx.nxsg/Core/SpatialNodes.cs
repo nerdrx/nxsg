@@ -22,9 +22,9 @@ namespace NXSG.Core
             nodes.Add("core.vertexDeform", new FeatureNode(
                 "Vertex Deform", "Surface",
                 "Translate, rotate and scale mesh vertices around a pivot, then optionally snap or bend the shape toward a sphere or cylinder. Translation, Euler rotation (degrees), scale, pivot, mask, snap size and warp amount are connectable. Local space follows the object; world space uses world axes. Normals and tangents follow the transform. Deforms the final mesh surface before fur, particles, outlines, dissolve and tessellation stages, including additive and shadow geometry.",
-                "base:surface,translation:vector3,rotation:vector3,scale:vector3,pivot:vector3,mask:float,snap:float,warp:float",
+                "base:surface,translation:vector3,rotation:vector3,scale:vector3,pivot:vector3,mask:float,snap:float,warp:float,nearDistance:float,nearStrength:float",
                 "surface:surface", false,
-                new JObject { ["translation"] = new JArray(0,0,0), ["rotation"] = new JArray(0,0,0), ["scale"] = new JArray(1,1,1), ["pivot"] = new JArray(0,0,0), ["mask"] = 1, ["snap"] = 0, ["warp"] = 0, ["space"] = 0, ["shape"] = 0 }));
+                new JObject { ["translation"] = new JArray(0,0,0), ["rotation"] = new JArray(0,0,0), ["scale"] = new JArray(1,1,1), ["pivot"] = new JArray(0,0,0), ["mask"] = 1, ["snap"] = 0, ["warp"] = 0, ["nearDistance"] = 0, ["nearStrength"] = 1, ["space"] = 0, ["shape"] = 0 }));
 
             nodes.Add("core.infinityParallax", new FeatureNode(
                 "Infinity Parallax", "Textures",

@@ -103,6 +103,9 @@ internal static class Program
         FloatHashChecks.Run(Assert);
         NegativeLiteralChecks.Run(Assert);
         GlitterChecks.Run(Assert);
+        ConstellationChecks.Run(Assert, fixtures);
+        PathingChecks.Run(Assert, fixtures);
+        SkinToneLutChecks.Run(Assert, fixtures);
         ColorConversionChecks.Run(Assert);
         ColorAdjustChecks.Run(Assert);
         ColorKeyChecks.Run(Assert);

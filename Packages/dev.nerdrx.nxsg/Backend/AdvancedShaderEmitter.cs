@@ -304,7 +304,8 @@ namespace NXSG.Backend
             if (surfaceParticles) passCode.Append(SurfaceParticleShader.Pass(
                 Scalar(root,"mask",1,true), Input(root,"albedo","float4(1,1,1,1)","color"), Input(root,"emission","float4(0,0,0,1)","color"), Scalar(root,"opacity",1), Input(root,"time","NXSG_Time()","float",true),
                 Scalar(root,"density",.1,true), Input(root,"emissionRate",root.Properties["emissionRate"] == null ? "1.0/max(" + Scalar(root,"lifetime",2,true) + ",0.0001)" : Prop(root,"emissionRate",0),"float",true), Scalar(root,"size",.03,true), Scalar(root,"lifetime",2,true), Scalar(root,"speed",.2,true), Scalar(root,"gravity",0,true), Scalar(root,"spread",.05,true), IntProp(root,"blendMode",1,0,1), IntProp(root,"sourceUV",0,0,1) == 1, Scalar(root,"edgeSharpness",0), Source(root,"emissionRate") != null || Source(root,"lifetime") != null,
-                ParticleCurve(root, "sizeCurve", false, "1"), ParticleCurve(root, "colorCurve", true, "float4(1,1,1,1)"), ParticleCurve(root, "opacityCurve", false, "1")));
+                ParticleCurve(root, "sizeCurve", false, "1"), ParticleCurve(root, "colorCurve", true, "float4(1,1,1,1)"), ParticleCurve(root, "opacityCurve", false, "1"),
+                IntProp(root,"atlasColumns",1,1,16), IntProp(root,"atlasRows",1,1,16), IntProp(root,"shape",0,0,3), Prop(root,"rotation",0), Prop(root,"randomRotation",0), IntProp(root,"perArea",0,0,1)==1, Prop(root,"referenceArea",.01)));
             var screenDependentShadow = !particle && !renderState.ForceOpaque && options.IncludeShadowCaster &&
                 ((IntProp(passes[0].Surface,"useAlbedoAlpha",1,0,1)==1 && ContainsScreenDependentOperation(passes[0].Surface, "albedo")) || ContainsScreenDependentOperation(passes[0].Surface, "opacity"));
             if (screenDependentShadow)
@@ -350,6 +351,9 @@ namespace NXSG.Backend
             if (coatEnabled) b.AppendLine(LayeredPbrShader.CoatHelpers);
             if (sheenEnabled) b.AppendLine(LayeredPbrShader.SheenHelpers);
             if (live.Any(id => nodes[id].Operation == "core.glitter")) b.AppendLine(GlitterShader.Hlsl);
+            if (live.Any(id => nodes[id].Operation == ConstellationNodes.Operation)) b.AppendLine(ConstellationShader.Hlsl);
+            if (live.Any(id => nodes[id].Operation == PathingNodes.Operation)) b.AppendLine(PathingShader.Hlsl);
+            if (live.Any(id => nodes[id].Operation == SkinToneLutNodes.Operation)) b.AppendLine(SkinToneLutShader.Hlsl);
             if (needsDistortionHelpers) b.AppendLine(DistortionShader.Hlsl);
             foreach (var prop in properties.Where(p=>p.Type==GraphValueType.Texture2DArray))
                 b.AppendLine("float NX_ArraySlice_"+Hash(prop.ResourceId)+"(float slice) { return clamp(floor(slice),0,max(0,"+prop.Name+"_Layers-1)); }");
@@ -670,7 +674,22 @@ namespace NXSG.Backend
                     var glitterMask = port == "color" ? Eval(n,"value",false) : null;
                     body = port == "color"
                         ? "float4(("+P("color",n.Properties["color"]==null?"float4(1,1,1,1)":Literal(n.Properties["color"],"color"),"color")+").rgb*"+glitterMask+"*"+Prop(n,"brightness",2)+","+glitterMask+")"
-                        : "NX_Glitter(input,"+P("uv",uv,"vector2")+","+Prop(n,"scale",60)+","+Prop(n,"density",.6)+","+Prop(n,"size",.16)+","+Prop(n,"sharpness",32)+","+Prop(n,"viewStrength",1)+","+P("time","NXSG_Time()","float")+","+Prop(n,"speed",1)+","+Prop(n,"twinkle",.3)+","+Prop(n,"seed",0)+","+S("mask",1)+")";
+                        : "NX_Glitter(input,"+P("uv",uv,"vector2")+","+Prop(n,"scale",60)+","+Prop(n,"density",.6)+","+Prop(n,"size",.16)+","+Prop(n,"sharpness",32)+","+Prop(n,"viewStrength",1)+","+P("time","NXSG_Time()","float")+","+Prop(n,"speed",1)+","+Prop(n,"twinkle",.3)+","+Prop(n,"seed",0)+","+S("mask",1)+","+IntProp(n,"shape",0,0,3)+","+Prop(n,"rotation",0)+","+Prop(n,"randomRotation",0)+")";
+                    break;
+                case ConstellationNodes.Operation:
+                    if (vertex) throw new InvalidOperationException("Constellation is fragment-only.");
+                    body = ConstellationShader.Expression(port,P("uv",uv,"vector2"),P("time","NXSG_Time()","float"),S("audio",1),S("scale",12),S("pointSize",.075),S("lineWidth",.018),S("linkChance",.65),S("twinkle",.35),Prop(n,"seed",0));
+                    break;
+                case PathingNodes.Operation:
+                    if (vertex) throw new InvalidOperationException("Pathing is fragment-only.");
+                    body = PathingShader.Expression(port,P("uv",uv,"vector2"),P("start",Vec(n,"start",.1,.5),"vector2"),P("end",Vec(n,"end",.9,.5),"vector2"),P("time","NXSG_Time()","float"),S("audio",1),S("mask",1),S("width",.02),S("spacing",.1),S("speed",.3),S("tail",.28),S("travel",1));
+                    break;
+                case SkinToneLutNodes.Operation:
+                    if (vertex) throw new InvalidOperationException("Skin Tone LUT is fragment-only.");
+                    var skinBase=P("base","float4(1,1,1,1)","color");
+                    var skinId=(string)n.Properties["resourceId"];
+                    var skinGuid=(string)(graph.Adapter?["textures"] as JObject)?[skinId??""];
+                    body=string.IsNullOrEmpty(skinGuid)?skinBase:SkinToneLutShader.Expression(skinBase,S("pigment",.5),S("mask",1),S("strength",1),textureNames[skinId]);
                     break;
                 case "core.normalMap": body = "NX_Normal(" + P("color", "float4(.5,.5,1,1)", "color") + "," + Prop(n, "strength", 1) + ")*float3(1," + (IntProp(n,"flipGreen",0,0,1)==1 ? "-1" : "1") + ",1)"; break;
                 default:

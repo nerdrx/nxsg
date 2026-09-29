@@ -27,6 +27,12 @@ namespace NXSG.Editor
                         AddIndexedChoice(node, "shape", "Warp shape", new[] { "None", "Sphere", "Cylinder" });
                         FeatureNote("Snap 0 disables snapping. Check renderer bounds after large motion.");
                     });
+                    InspectorSection(node, "deform.near-camera", "Near camera", () =>
+                    {
+                        AddBoundedNumber(node, "nearDistance", "Minimum camera distance (m)", 0, 2, 0, "nearDistance", "Push nearby vertices away from the camera. Zero disables this control.");
+                        AddBoundedNumber(node, "nearStrength", "Push strength", 0, 1, 1, "nearStrength");
+                        FeatureNote("Uses Deformation mask. Expand renderer bounds if the mesh moves beyond its original bounds.");
+                    });
                     FeatureNote("Connect a completed mesh Surface to Base. Transform values use the selected space; rotation uses degrees.");
                     return true;
                 case "core.infinityParallax":

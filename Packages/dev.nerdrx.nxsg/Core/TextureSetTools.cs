@@ -5,7 +5,7 @@ using System.Linq;
 
 namespace NXSG.Core
 {
-    public enum TextureSetSlot { Albedo, Normal, Roughness, Metallic, AmbientOcclusion, Height, Mask, Flow }
+    public enum TextureSetSlot { Albedo, Normal, Roughness, Metallic, AmbientOcclusion, Height, Mask, Flow, Emission }
 
     public sealed class TextureSetSuggestion
     {
@@ -26,7 +26,8 @@ namespace NXSG.Core
             { TextureSetSlot.AmbientOcclusion, new[] { new[] { "ambient", "occlusion" }, new[] { "occlusion" }, new[] { "ao" } } },
             { TextureSetSlot.Height, new[] { new[] { "height" }, new[] { "displacement" }, new[] { "disp" } } },
             { TextureSetSlot.Mask, new[] { new[] { "mask" }, new[] { "opacity" }, new[] { "alpha" } } },
-            { TextureSetSlot.Flow, new[] { new[] { "flow" }, new[] { "velocity" }, new[] { "direction" } } }
+            { TextureSetSlot.Flow, new[] { new[] { "flow" }, new[] { "velocity" }, new[] { "direction" } } },
+            { TextureSetSlot.Emission, new[] { new[] { "emission" }, new[] { "emissive" }, new[] { "emit" } } }
         };
 
         public static IReadOnlyDictionary<TextureSetSlot, TextureSetSuggestion> Suggest(IEnumerable<string> paths)
@@ -94,6 +95,7 @@ namespace NXSG.Core
                         var amount = Add(graph,"core.value","heightAmount");amount.Properties["value"]=.02;
                         WireChannel(graph,texture,height,"a");Wire(graph,amount,"value",height,"b");Wire(graph,height,"value",surface,"displacement");break;
                     case TextureSetSlot.Mask: WireChannel(graph, texture, surface, "opacity"); break;
+                    case TextureSetSlot.Emission: Wire(graph, texture, "color", surface, "emission"); break;
                 }
             }
             if (flowTexture != null)

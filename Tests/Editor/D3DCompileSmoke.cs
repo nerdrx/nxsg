@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using Newtonsoft.Json.Linq;
 using NXSG.Backend;
 using NXSG.Core;
 using UnityEditor;
@@ -23,9 +24,12 @@ public static class D3DCompileSmoke
             Directory.CreateDirectory(Path.Combine(Application.dataPath, "SmokeResults/D3DCompileSmoke"));
             AssetDatabase.Refresh();
 
-            var sampleNames = new[] { "Lacquered Surface", "Velvet Fabric", "Shiny Surface", "Neon Wireframe", "Tessellated Bumps", "Fur Cards", "Surface Sparkles", "Particle Lifetime", "Audio Hologram", "Volume Nebula", "Volume Carved Orb", "Volume Smoke Ring", "Touch Dent" };
+            var sampleNames = new[] { "Lacquered Surface", "Velvet Fabric", "Shiny Surface", "Neon Wireframe", "Tessellated Bumps", "Fur Cards", "Surface Sparkles", "Particle Lifetime", "Audio Hologram", "Volume Nebula", "Volume Carved Orb", "Volume Smoke Ring", "Touch Dent", "Skin Tone LUT" };
             var sampleRoot = Path.Combine(UnityEditor.PackageManager.PackageInfo.FindForAssembly(typeof(ShaderEmitter).Assembly).resolvedPath, "Samples~");
             var shaders = sampleNames.Select((name, index) => Emit(File.ReadAllText(Path.Combine(sampleRoot, name + ".nxsg")), "sample_" + index)).ToList();
+            var assignedSkin = GraphJson.Parse(File.ReadAllText(Path.Combine(sampleRoot, "Skin Tone LUT.nxsg")));
+            assignedSkin.Adapter = new JObject { ["textures"] = new JObject { ["skinLut"] = "d3d-test-asset" } };
+            shaders.Add(Emit(GraphJson.Serialize(assignedSkin), "skin_lut_assigned"));
             // Camera-depth LOD sampling must compile in both the regular vertex
             // path and the tessellation domain, alongside a generated-particle pass.
             foreach (var wrapper in new[] { "core.tessellation", "core.surfaceParticles" })

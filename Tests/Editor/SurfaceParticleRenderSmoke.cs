@@ -23,7 +23,7 @@ public static class SurfaceParticleRenderSmoke
             subject = GameObject.CreatePrimitive(PrimitiveType.Cube); subject.transform.localScale = Vector3.one * 1.4f;
             camera = new GameObject("NXSG Surface Particle Camera").AddComponent<Camera>(); camera.clearFlags = CameraClearFlags.SolidColor; camera.backgroundColor = Color.black; camera.orthographic = true; camera.orthographicSize = 2.5f; camera.transform.position = new Vector3(0, 0, -4); camera.transform.LookAt(Vector3.zero);
             target = new RenderTexture(Size, Size, 24, RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.Linear); target.Create(); camera.targetTexture = target;
-            CheckRender(); CheckSourceVertexAlpha(); CheckRate(); CheckParticleInputs(); CheckEdgeSharpness(); CheckMirrorAlpha(); CheckLifetimeCurves(); CheckAudioRange(); CheckSkinnedSource(); CheckSample(); Debug.Log("NXSG SURFACE PARTICLE RENDER SMOKE PASSED"); EditorApplication.Exit(0);
+            CheckRender(); CheckSourceVertexAlpha(); CheckRate(); CheckParticleInputs(); CheckEdgeSharpness(); CheckShapesAndArea(); CheckMirrorAlpha(); CheckLifetimeCurves(); CheckAudioRange(); CheckSkinnedSource(); CheckSample(); Debug.Log("NXSG SURFACE PARTICLE RENDER SMOKE PASSED"); EditorApplication.Exit(0);
         }
         catch (Exception exception) { Debug.LogException(exception); EditorApplication.Exit(1); }
         finally { RenderTexture.active = null; if (target != null) { target.Release(); UnityEngine.Object.DestroyImmediate(target); } if (camera != null) UnityEngine.Object.DestroyImmediate(camera.gameObject); if (subject != null) UnityEngine.Object.DestroyImmediate(subject); }
@@ -171,6 +171,20 @@ public static class SurfaceParticleRenderSmoke
         particle.Properties["emissionRate"] = 8; particle.Properties["size"] = .2; particle.Properties.Remove("edgeSharpness");
         wired.Nodes.Add(Float("edgeSharpness", 1)); Edge(wired, "edgeSharpness", "value", "particles", "edgeSharpness");
         using (var preview = GraphPreview.Create(wired, null)) { subject.GetComponent<Renderer>().sharedMaterial = preview.Material; if (!Same(propertyOne, Capture(), .001f)) throw new InvalidOperationException("Connected edgeSharpness 1 did not match property 1"); }
+    }
+    static void CheckShapesAndArea()
+    {
+        var graph = Graph(1, 1, .2); var particle = graph.Nodes.Single(n => n.Id == "particles");
+        particle.Properties["emissionRate"] = 8; particle.Properties["size"] = .2;
+        Color[] circle;
+        using (var preview = GraphPreview.Create(graph, null)) { subject.GetComponent<Renderer>().sharedMaterial = preview.Material; circle = Capture(); }
+        particle.Properties["shape"] = 1; particle.Properties["atlasColumns"] = 4; particle.Properties["atlasRows"] = 2;
+        particle.Properties["rotation"] = 25; particle.Properties["randomRotation"] = 45;
+        Color[] rectangle;
+        using (var preview = GraphPreview.Create(graph, null)) { subject.GetComponent<Renderer>().sharedMaterial = preview.Material; rectangle = Capture(); }
+        if (CountRed(rectangle) <= CountRed(circle) + 4) throw new InvalidOperationException("Atlas rectangle did not expand particle coverage");
+        particle.Properties["perArea"] = 1; particle.Properties["referenceArea"] = 2;
+        using (var preview = GraphPreview.Create(graph, null)) { subject.GetComponent<Renderer>().sharedMaterial = preview.Material; if (CountRed(Capture()) < 3) throw new InvalidOperationException("Area emission produced no particles"); }
     }
     static void CheckMirrorAlpha()
     {

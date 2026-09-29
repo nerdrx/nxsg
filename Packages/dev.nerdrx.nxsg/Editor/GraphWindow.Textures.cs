@@ -60,11 +60,59 @@ namespace NXSG.Editor
             int previewChannel;
             int maskChannel;
             Material channelMaterial;
+            Material sourceMaterial;
+            readonly List<string> skippedProperties = new List<string>();
+            readonly Dictionary<TextureSetSlot, string> sourceProperties = new Dictionary<TextureSetSlot, string>();
+
+            static readonly Dictionary<string, TextureSetSlot> MaterialSlots = new Dictionary<string, TextureSetSlot>(StringComparer.OrdinalIgnoreCase)
+            {
+                { "_MainTex", TextureSetSlot.Albedo }, { "_BaseMap", TextureSetSlot.Albedo }, { "_BaseColorMap", TextureSetSlot.Albedo },
+                { "_BumpMap", TextureSetSlot.Normal }, { "_NormalMap", TextureSetSlot.Normal },
+                { "_RoughnessMap", TextureSetSlot.Roughness }, { "_MetallicGlossMap", TextureSetSlot.Metallic }, { "_MetallicMap", TextureSetSlot.Metallic },
+                { "_OcclusionMap", TextureSetSlot.AmbientOcclusion }, { "_ParallaxMap", TextureSetSlot.Height }, { "_HeightMap", TextureSetSlot.Height },
+                { "_AlphaMask", TextureSetSlot.Mask }, { "_ClippingMask", TextureSetSlot.Mask }, { "_EmissionMap", TextureSetSlot.Emission }
+            };
 
             public static void Open(GraphWindow owner, IEnumerable<Texture2D> textures)
             {
                 var window = CreateInstance<TextureSetReviewWindow>(); window.owner = owner; window.titleContent = new GUIContent("NXSG Texture Set Review");
                 window.minSize = new Vector2(560, 440); window.Assign(textures); window.ShowUtility();
+            }
+
+            public static void Open(GraphWindow owner, Material material)
+            {
+                if (material == null || material.shader == null)
+                {
+                    EditorUtility.DisplayDialog("NXSG material import", "Select a material asset in the Project window first.", "OK");
+                    return;
+                }
+                var window = CreateInstance<TextureSetReviewWindow>();
+                window.owner = owner; window.sourceMaterial = material;
+                window.titleContent = new GUIContent("NXSG Material Review"); window.minSize = new Vector2(560, 440);
+                window.AssignMaterial(material); window.ShowUtility();
+            }
+
+            void AssignMaterial(Material material)
+            {
+                var shader = material.shader;
+                for (var i = 0; i < shader.GetPropertyCount(); i++)
+                {
+                    var name = shader.GetPropertyName(i);
+                    if (shader.GetPropertyType(i) != UnityEngine.Rendering.ShaderPropertyType.Texture)
+                    {
+                        if ((shader.GetPropertyFlags(i) & UnityEngine.Rendering.ShaderPropertyFlags.HideInInspector) == 0)
+                            skippedProperties.Add(name);
+                        continue;
+                    }
+                    var texture = material.GetTexture(name) as Texture2D;
+                    if (texture == null) continue;
+                    var path = AssetDatabase.GetAssetPath(texture);
+                    if (string.IsNullOrEmpty(path) || !(path.StartsWith("Assets/", StringComparison.Ordinal) || path.StartsWith("Packages/", StringComparison.Ordinal)))
+                    { skippedProperties.Add(name + " (no project asset)"); continue; }
+                    if (MaterialSlots.TryGetValue(name, out var slot) && !assigned.ContainsKey(slot))
+                    { assigned[slot] = texture; sourceProperties[slot] = name; }
+                    else skippedProperties.Add(name);
+                }
             }
 
             void Assign(IEnumerable<Texture2D> textures)
@@ -78,7 +126,14 @@ namespace NXSG.Editor
             {
                 HandleDrop();
                 EditorGUILayout.LabelField("Texture Set Review", EditorStyles.boldLabel);
-                EditorGUILayout.HelpBox("Filename suggestions are editable. Review assignments before creating graph. Importer settings stay unchanged.", MessageType.Info);
+                if (sourceMaterial == null)
+                    EditorGUILayout.HelpBox("Filename suggestions are editable. Review assignments before creating graph. Importer settings stay unchanged.", MessageType.Info);
+                if (sourceMaterial != null)
+                {
+                    EditorGUILayout.HelpBox("Starting from " + sourceMaterial.name + " (" + sourceMaterial.shader.name + "). Only reviewed texture slots become graph nodes. Colors, values, render state and animation settings stay on the source material; recreate those separately.", MessageType.Info);
+                    if (skippedProperties.Count > 0)
+                        EditorGUILayout.HelpBox("Not mapped: " + string.Join(", ", skippedProperties.Take(16)) + (skippedProperties.Count > 16 ? "…" : ""), MessageType.Warning);
+                }
                 scroll = EditorGUILayout.BeginScrollView(scroll);
                 foreach (TextureSetSlot slot in Enum.GetValues(typeof(TextureSetSlot))) DrawSlot(slot);
                 EditorGUILayout.Space(8);
@@ -119,7 +174,7 @@ namespace NXSG.Editor
                 {
                     EditorGUILayout.LabelField(slot.ToString(), GUILayout.Width(120));
                     var next = (Texture2D)EditorGUILayout.ObjectField(value, typeof(Texture2D), false);
-                    if (next != value) assigned[slot] = next;
+                    if (next != value) { assigned[slot] = next; sourceProperties.Remove(slot); }
                     if (value != null && GUILayout.Button("Preview", GUILayout.Width(70))) { preview = value; previewSlot = slot; previewChannel = 0; Repaint(); }
                     if (value != null) EditorGUILayout.LabelField("~" + FormatBytes(Profiler.GetRuntimeMemorySizeLong(value)) + " runtime estimate", GUILayout.Width(150));
                 }
@@ -128,6 +183,8 @@ namespace NXSG.Editor
                     var importer=AssetImporter.GetAtPath(AssetDatabase.GetAssetPath(value)) as TextureImporter;
                     if(importer!=null && importer.sRGBTexture)EditorGUILayout.HelpBox("This data map has sRGB enabled. Review its Import Settings: masks, flow, roughness and height usually need linear sampling.",MessageType.Warning);
                 }
+                if (sourceMaterial != null && sourceProperties.TryGetValue(slot, out var property))
+                    EditorGUILayout.LabelField("From " + property, EditorStyles.miniLabel);
                 if (slot == TextureSetSlot.Normal && value != null)
                 {
                     var importer = AssetImporter.GetAtPath(AssetDatabase.GetAssetPath(value)) as TextureImporter;

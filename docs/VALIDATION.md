@@ -1,6 +1,30 @@
 # Validation record
 
-**Current status (2026-09-28):** The latest release evidence includes Linux
+## Comparison-gap implementation — 2026-09-29
+
+The portable graph/compiler suite and 11 packaging checks pass after adding
+particle atlas/shape/area controls, shaped glitter, Constellation, Pathing,
+Skin Tone LUT, and near-camera vertex push. Focused Unity 2022.3.22f1
+OpenGLCore checks ran in hidden Gamescope: glitter shapes, particle atlas and
+area emission, near-camera deformation, Constellation and Pathing animation,
+the material texture workflow, the atlas builder, and Skin Tone LUT rendering
+passed. The constellation/pathing renders checked visible output, mask and
+audio suppression, and animated controls. The LUT render checked
+unassigned passthrough, two pigment rows, Mask 0 and Strength 0. Strict
+Windows-target D3D11 asset-bundle cross-compilation with the stereo path
+enabled passed 21 shaders, including an assigned LUT and the neutral sample.
+The editor inspector smoke then exposed a missing LUT texture picker; adding
+that control and rerunning passed the node inspector, texture control, default,
+connection and search checks.
+
+The comparison [scene matrix](COMPATIBILITY_MATRIX.md) is a test plan, not a
+set of passed client results. Native Windows rendering, live VRChat upload,
+mirror/world scenes and headset stereo remain untested for these additions.
+The target-facing vertex prototype failed a Unity render assertion and was
+excluded. The selected-material translator intentionally reviews texture
+slots only; it does not transfer render state or animation.
+
+**Prior release status (2026-09-28):** The release evidence includes Linux
 Unity/OpenGL rendering and editor checks for lighting, outlines, typed textures
 and AudioLink data, plus strict Windows-target D3D11 asset-bundle cross-compilation
 for 35 shaders in Linux Unity. Cross-compilation does not establish native

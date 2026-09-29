@@ -37,6 +37,9 @@ namespace NXSG.Core
         public static void Validate(GraphNode node, Action<string, string> error)
         {
             if (node == null || error == null) return;
+            ConstellationNodes.Validate(node, error);
+            PathingNodes.Validate(node, error);
+            SkinToneLutNodes.Validate(node, error);
             if (node.Operation == Clock)
             {
                 CheckEnum(node, "source", 0, 1, error);

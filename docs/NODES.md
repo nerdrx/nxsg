@@ -105,7 +105,7 @@ The toolbar's **Live preview** switch controls a temporary material preview at t
 
 ## Automatic math types and wire colors
 
-Add, Subtract, Multiply, Divide, Minimum, Maximum, Mix, Invert, and Clamp infer their number/color type from connected operands. Numeric inputs yield a number; adding a color operand yields a color. Numbers can feed color inputs by repeating the value in all four channels. Color-to-number conversion is not implicit. UV vectors and surfaces remain separate types. The selected-node panel shows the current automatic type. A number-to-color wire fades from gray at its source to yellow at its destination.
+Add, Subtract, Multiply, Divide, Minimum, Maximum, Mix, Invert, and Clamp infer their number/color type from connected operands. Numeric inputs yield a number; adding a color operand yields a color. Numbers can feed color inputs by repeating the value in all four channels. A color connected to a numeric input uses its luminance; use Split Color when a specific channel matters. UV vectors and surfaces remain separate types. The selected-node panel shows the current automatic type. A number-to-color wire fades from gray at its source to yellow at its destination.
 
 An empty math chain connected to a numeric socket also becomes numeric. Otherwise, unconnected math keeps its previous default color behavior. The editor rejects a new connection if its type change would break an existing numeric consumer. Disconnecting or Undo recomputes types; inferred types are not serialized into the graph.
 
@@ -155,7 +155,7 @@ can feed a surface or another effect.
 | Audio Spectrum Bars, Audio Spectrum, Audio Spectrum Bin | UV/frequency/bin → mask or magnitude | DFT bins support raw, EQ, and ColorChord-filtered magnitude. See [AudioLink data nodes](AUDIOLINK_DATA_NODES.md). |
 | AudioLink Chronotensity | Motion mode, band, speed → accumulated/wrapped time | Eight AudioLink-defined motion modes and four frequency bands. See [mode meanings](AUDIOLINK_DATA_NODES.md#chronotensity-mode-labels-follow-audiolinks-documented-modes). |
 | AudioLink Theme Color | Theme index → color | Reads one of four world-selected theme colors. See [AudioLink data nodes](AUDIOLINK_DATA_NODES.md). |
-| Surface Particles | Base surface, albedo, emission, opacity, mask, time → surface | GPU geometry pass emits looping particles from the mesh wearing the material; no separate mesh. Density is per triangle, motion follows current pose, bounds remain unchanged. |
+| Surface Particles | Base surface, albedo, emission, opacity, mask, time → surface | GPU geometry pass emits looping particles from the mesh wearing the material; no separate mesh. Emission can use each triangle or mesh area; motion follows current pose, bounds remain unchanged. |
 | Particle Surface | Albedo, emission, opacity → surface | Particle-facing surface. Blend mode 1 is additive; opacity defaults to 1 and soft distance to 0 (off). Optional soft intersection uses camera depth. Renderer COLOR multiplies particle color and alpha automatically. |
 | Particle Color | Renderer COLOR → color and alpha | Reads Unity's per-particle RGBA stream, including Color over Lifetime. Do not multiply it into albedo or opacity again. |
 | Shell | Base surface, layer surface, offset → surface | Accepts nested Shells in Base or Layer, up to 8 transparent passes. Base chains keep each offset relative to the original mesh; nesting in Layer adds ancestor offsets. Layers render in graph order, base first. Each leaf retains its own surface settings; only the first base surface casts shadows. Extra passes increase draw calls and overdraw; bounds and transparent sorting need review on each mesh. |
@@ -283,6 +283,18 @@ Albedo, tangent-space Normal, Roughness, Metallic and Strength → Color. Connec
 **Textures → Glitter** creates view-dependent procedural flakes. Connect Color to
 Emission or Albedo; Value is a 0–1 mask for Opacity or a Mix factor. See the
 [Glitter guide](GLITTER.md) and `Glitter Fabric.nxsg` sample.
+Choose circle, square, cross or star flakes, then set rotation and random
+rotation. Shape only changes the flake mask; existing connections and brightness
+controls still work.
+
+**Textures → Constellation** produces separate Points, Lines and combined Mask
+outputs for animated star links. **Textures → Pathing** produces four animated
+lanes and a direction signal. Start with their sample graphs and the
+[Constellation](CONSTELLATION.md) and [Pathing](PATHING.md) guides.
+
+**Color → Skin Tone LUT** maps base-color luminance and a Pigment input through
+an assigned 2D lookup texture. Mask and Strength blend the result with the
+base color; an unassigned texture is neutral. [Skin Tone LUT guide](SKIN_TONE_LUT.md).
 
 Color wires can now connect directly to numeric inputs. RGB is converted to
 luminance (0.2126 R + 0.7152 G + 0.0722 B); alpha is ignored. The original color

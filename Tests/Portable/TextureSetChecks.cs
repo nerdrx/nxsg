@@ -6,10 +6,11 @@ public static class TextureSetChecks
 {
     public static void Run(Action<bool, string> assert)
     {
-        var found = TextureSetMatcher.Suggest(new[] { "Fox_BaseColor.png", "Fox_Normal.png", "Fox_Roughness.png", "Fox_metal.png" });
+        var found = TextureSetMatcher.Suggest(new[] { "Fox_BaseColor.png", "Fox_Normal.png", "Fox_Roughness.png", "Fox_metal.png", "Fox_Emission.png" });
         assert(found[TextureSetSlot.Albedo].Path == "Fox_BaseColor.png", "texture matcher base color");
         assert(found[TextureSetSlot.Normal].Path == "Fox_Normal.png", "texture matcher normal");
         assert(found[TextureSetSlot.Roughness].Path == "Fox_Roughness.png", "texture matcher roughness");
+        assert(found[TextureSetSlot.Emission].Path == "Fox_Emission.png", "texture matcher emission");
         var graph = TextureSetGraphBuilder.Build(new System.Collections.Generic.Dictionary<TextureSetSlot, string>
         {
             { TextureSetSlot.Albedo, "Assets/Fox_BaseColor.png" },
@@ -26,9 +27,11 @@ public static class TextureSetChecks
             { TextureSetSlot.Albedo, "Assets/albedo.png" }, { TextureSetSlot.Normal, "Assets/normal.png" },
             { TextureSetSlot.Roughness, "Assets/rough.png" }, { TextureSetSlot.Metallic, "Assets/metal.png" },
             { TextureSetSlot.AmbientOcclusion, "Assets/ao.png" }, { TextureSetSlot.Height, "Assets/height.png" },
-            { TextureSetSlot.Mask, "Assets/mask.png" }, { TextureSetSlot.Flow, "Assets/flow.png" }
+            { TextureSetSlot.Mask, "Assets/mask.png" }, { TextureSetSlot.Flow, "Assets/flow.png" },
+            { TextureSetSlot.Emission, "Assets/emission.png" }
         }, false);
         assert(GraphValidator.Validate(all).IsValid && NXSG.Backend.ShaderEmitter.Emit(all).Succeeded, "toon texture set graph validates and emits");
+        assert(all.Connections.Any(c => c.To.PortId == "emission"), "emission texture is connected");
         var flow = TextureSetGraphBuilder.BuildFlow("Assets/flow.png", .2f);
         assert(GraphValidator.Validate(flow).IsValid && NXSG.Backend.ShaderEmitter.Emit(flow).Succeeded && flow.Connections.Any(c => c.To.PortId == "flow"), "flow helper validates, emits and wires flow color");
     }

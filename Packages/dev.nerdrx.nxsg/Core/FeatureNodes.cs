@@ -46,7 +46,7 @@ namespace NXSG.Core
             ["core.marble"] = D("Marble","Textures","Wavy veins distorted by layered noise. Feed the result into a Color Ramp.","uv:vector2","value:float",false,new JObject{{"scale",5},{"distortion",3}}),
             ["core.clouds"] = D("Clouds","Textures","Four-layer drifting soft noise for clouds, mist masks and soft organic patches.","uv:vector2,time:float","value:float",false,new JObject{{"scale",4},{"speed",.1},{"contrast",1}}),
             ["core.sparkleMask"] = D("Sparkle Mask","Textures","Small procedural sparkles blink independently across UV space.","uv:vector2,time:float","value:float",false,new JObject{{"scale",30},{"speed",2},{"density",.2},{"size",.08}}),
-            ["core.glitter"] = D("Glitter","Textures","Surface glitter flakes use stable surface UVs. Sparkle varies with view angle and time. Mask stays in the 0–1 range; brightness affects HDR color only.","uv:vector2,color:color,mask:float,time:float","color:color,value:float",false,new JObject{{"scale",60},{"density",.6},{"size",.16},{"sharpness",32},{"viewStrength",1},{"speed",1},{"twinkle",.3},{"brightness",2},{"seed",0},{"mask",1}}),
+            ["core.glitter"] = D("Glitter","Textures","Surface glitter flakes use stable surface UVs. Choose circle, square, cross or star shapes and rotate them. Sparkle varies with view angle and time.","uv:vector2,color:color,mask:float,time:float","color:color,value:float",false,new JObject{{"scale",60},{"density",.6},{"size",.16},{"sharpness",32},{"viewStrength",1},{"speed",1},{"twinkle",.3},{"brightness",2},{"seed",0},{"mask",1},{"shape",0},{"rotation",0},{"randomRotation",0}}),
             ["core.scanlines"] = D("Hologram Scanlines","Textures","Moving horizontal scanlines for hologram emission or opacity.","uv:vector2,time:float","value:float",false,new JObject{{"scale",100},{"speed",.2},{"width",.3}}),
             ["core.glitchUV"] = D("Glitch UVs","Coordinates","Jitter horizontal strips in discrete time steps for a digital glitch.","uv:vector2,time:float","uv:vector2",false,new JObject{{"strength",.05},{"speed",5},{"rows",20}}),
             ["core.pixelateUV"] = D("Pixelate UVs","Coordinates","Snap UV sampling to cell centers for a blocky pixelated texture.","uv:vector2","uv:vector2",false,new JObject{{"cells",64}}),
@@ -90,6 +90,9 @@ namespace NXSG.Core
             FaceNodes.Register(Items);
             SpatialNodes.Register(Items);
             UtilityNodes.Register(Items);
+            ConstellationNodes.Register(Items);
+            PathingNodes.Register(Items);
+            SkinToneLutNodes.Register(Items);
         }
         static FeatureNode D(string title,string category,string description,string inputs,string outputs,bool texture,JObject defaults) { return new FeatureNode(title,category,description,inputs,outputs,texture,defaults); }
         public static IEnumerable<string> All { get { return Items.Keys; } }

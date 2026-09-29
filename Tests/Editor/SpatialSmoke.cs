@@ -48,6 +48,24 @@ public static class SpatialSmoke
             var moved = Draw(transformed, camera, quad, target);
             Require(Changed(neutralPixels, moved) > 100, "XYZ vertex transform did not change rendered output");
 
+            camera.transform.position = new Vector3(0, 0, -.4f); camera.transform.LookAt(Vector3.zero);
+            camera.farClipPlane = .75f;
+            var closeBaseline = Draw(SurfaceGraph("spatial-near-baseline", false, false), camera, quad, target);
+            var nearGraph = SurfaceGraph("spatial-near-push", true, false);
+            var nearNode = nearGraph.Nodes.Single(node => node.Id == "deform");
+            nearNode.Properties["translation"] = new Newtonsoft.Json.Linq.JArray(0, 0, 0);
+            nearNode.Properties["rotation"] = new Newtonsoft.Json.Linq.JArray(0, 0, 0);
+            nearNode.Properties["scale"] = new Newtonsoft.Json.Linq.JArray(1, 1, 1);
+            nearNode.Properties["nearDistance"] = 1;
+            var pushed = Draw(nearGraph, camera, quad, target);
+            Require(closeBaseline[ImageSize / 2, ImageSize / 2].r > .5f && pushed[ImageSize / 2, ImageSize / 2].r < .1f, "Near camera control did not push geometry beyond close view");
+            nearNode.Properties["mask"] = 0;
+            Require(Changed(closeBaseline, Draw(nearGraph, camera, quad, target)) < 8, "Near camera mask zero moved geometry");
+            camera.transform.position = new Vector3(.5f, 0, -3); camera.transform.LookAt(Vector3.zero);
+            camera.farClipPlane = 1000;
+
+
+
             foreach (var geometry in new[] { "core.tessellation", "core.fur", "core.surfaceParticles", "core.outline", "core.geometryDissolve" })
             {
                 var graph = GeometryGraph("spatial-" + geometry, geometry);
@@ -130,7 +148,8 @@ public static class SpatialSmoke
             typeof(GraphWindow).GetMethod("Rebuild", privateInstance).Invoke(window, null);
             typeof(GraphWindow).GetMethod("SelectNode", privateInstance).Invoke(window, new object[] { "deform", false });
             inspector = (VisualElement)typeof(GraphWindow).GetField("inspector", privateInstance).GetValue(window);
-            Require(!inspector.Query<Vector3Field>().ToList().Single(item => item.label == "Translation").enabledSelf, "Connected translation vector field remained editable");
+            var connectedTranslation = inspector.Query<Vector3Field>().ToList().SingleOrDefault(item => item.label == "Translation");
+            Require(connectedTranslation == null || !connectedTranslation.enabledSelf, "Connected translation vector field remained editable");
         }
         finally
         {

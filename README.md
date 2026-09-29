@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <code>2.1.1</code> &nbsp; <code>Unity 2022.3.22f1</code> &nbsp; <code>Built-In</code> &nbsp; <code>PC VRChat</code>
+  <code>2.2.0</code> &nbsp; <code>Unity 2022.3.22f1</code> &nbsp; <code>Built-In</code> &nbsp; <code>PC VRChat</code>
 </p>
 
 NXSG is a shader graph editor for Unity's Built-In Render Pipeline, developed for PC VRChat avatars. It includes Toon, PBR and Unlit shading, procedural textures, fur, particles, and animated effects. Materials are built by connecting nodes, with controls for lighting, color, masks, and movement.
@@ -17,7 +17,7 @@ The editor generates shaders and materials directly in Unity. Graphs remain edit
   <a href="docs/VPM.md">Installation help</a>
 </p>
 
-Add the NXSG repository and install **NX Shader Graph** in your project. Version **2.1.1** is available without enabling prerelease packages. [Release notes](https://github.com/nerdrx/nxsg/releases/tag/v2.1.1).
+Add the NXSG repository and install **NX Shader Graph** in your project. Version **2.2.0** is available without enabling prerelease packages. [Release notes](https://github.com/nerdrx/nxsg/releases/tag/v2.2.0).
 
 <details>
 <summary>VPM repository URL</summary>
@@ -41,11 +41,11 @@ https://nerdrx.github.io/nxsg/index.json
 | Feature | Includes |
 | :--- | :--- |
 | **Surface shading** | Toon, PBR and Unlit surfaces, clearcoat, velvet sheen, directional hair highlights, stretched probe reflections, subsurface controls, specular anti-aliasing, face-shadow masks, bent-normal ambient lighting and reflection occlusion, normal maps, and matcaps. |
-| **Material effects** | Color adjustment (hue, saturation, lift, gamma, gain, contrast, exposure), glitter, gem refraction and interior sparkles, emission, iridescence, holograms, dissolve, stickers, and wireframes. |
+| **Material effects** | Color adjustment (hue, saturation, lift, gamma, gain, contrast, exposure), shaped glitter, animated constellations and multichannel pathing, skin tone LUTs, gem refraction and interior sparkles, emission, iridescence, holograms, dissolve, stickers, and wireframes. |
 | **Fur** | Shell fur, silhouette fins, and cards generated from mesh edges, with root/tip coloring, masks, grooming, wind, local self-shadowing, and shell distance LOD. |
 | **Procedural textures** | 1D–4D noise, Voronoi, Musgrave-style fractals, checkerboards, waves, ramps, distortion, and texture bombing. |
 | **Texture coordinates** | Mesh UVs, object/world projection, Polar and Panosphere coordinates, scrolling, rotation, and other UV transforms. |
-| **Geometry effects** | Nested shells, layered Infinity Parallax, parallax occlusion, tessellation, XYZ vertex deformation, triangle disintegration, and shader-driven particles emitted from the mesh. |
+| **Geometry effects** | Nested shells, layered Infinity Parallax, parallax occlusion, tessellation, XYZ vertex deformation with a near-camera push, triangle disintegration, and mesh-emitted particles with shapes, atlas frames and area-scaled emission. |
 | **Animation and AudioLink** | Flipbooks, a VRChat network clock, vertex animation, animatable properties, spectrum bars and bins, chronotensity, and world theme colors. |
 | **Rendering controls** | Layered shadows with separate reception controls, light-aware Toon rims, brightness and saturation limits, multiple-band or texture-ramp lighting, world/pixel-width outlines, feathered silhouette fins, depth rims, screen-space AO and contact shadows, light-direction overrides, and Output controls for alpha-to-coverage and back/front transparency passes. |
 | **Decals and displays** | MSDF decals, SDF numeric text with an atlas generator, and viewer-local rendering stats. |
@@ -56,7 +56,7 @@ https://nerdrx.github.io/nxsg/index.json
 
 The [surface detail guide](docs/SURFACE_DETAILS.md) covers Soft Outline, Geometry Dissolve, Gem, SDF Face Shadow, and the expanded lighting controls.
 
-The [advanced controls guide](docs/ADVANCED_CONTROLS.md) covers the new face, transparency, lighting, deformation, parallax, clock and text features, with wiring examples and limitations.
+The [advanced controls guide](docs/ADVANCED_CONTROLS.md) covers face, transparency, lighting, deformation, parallax, clock and text features. [Constellation](docs/CONSTELLATION.md), [Pathing](docs/PATHING.md), and [Skin Tone LUT](docs/SKIN_TONE_LUT.md) have short wiring guides.
 
 See the [node guide](docs/NODES.md) for individual nodes, inputs, and settings, or the [rendering features guide](docs/RENDERING_FEATURES.md) for toon modes, outlines, depth effects, textures, and render state. The [AudioLink guide](docs/AUDIOLINK_DATA_NODES.md), [screen-space lighting notes](docs/SCREEN_SPACE_LIGHTING.md), and [VRC Light Volumes setup](docs/LIGHT_VOLUMES.md) cover their integration details.
 
@@ -74,7 +74,7 @@ Other editor features include:
 - Collapsible inspector sections and advanced node inputs, with connected sockets kept visible.
 - `*` markers beside changed settings and their section headings, plus full-width XYZ controls.
 - Intermediate output previews, A/B material snapshots, and animation scrubbing.
-- Texture-set import, presets, and static texture baking.
+- Texture-set import, selected-material texture review, channel packing, atlas building, batch preset application, and static texture baking.
 - Automatic scene updates for saved edits, build diagnostics, and recovery snapshots.
 - A **Cost** panel with pass budgets, costly-node explanations and click-to-focus navigation. Estimates describe generated work, not GPU timings.
 
@@ -94,7 +94,7 @@ Rename a frame to keep your own grouping. Existing manual frames and Patterns ar
 
 This builds local assets; avatar uploading still uses the VRChat SDK.
 
-[Editor controls](docs/QUICK_START.md) · [Creator workflow](docs/CREATOR_WORKFLOW.md) · [Build performance](docs/BUILD_PERFORMANCE.md)
+[Editor controls](docs/QUICK_START.md) · [Creator workflow](docs/CREATOR_WORKFLOW.md) · [Material recipes](docs/RECIPES.md) · [Build performance](docs/BUILD_PERFORMANCE.md)
 
 ## Example materials
 

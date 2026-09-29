@@ -21,6 +21,15 @@ public static class SurfaceParticleChecks
         assert(emitted.ShaderSource.Contains("maxvertexcount(16)") && emitted.ShaderSource.Contains("SV_PrimitiveID") && emitted.ShaderSource.Contains("TriangleStream"), "surfaceParticles emits bounded geometry pass");
         assert(emitted.ShaderSource.Contains("ForwardBase") && emitted.ShaderSource.Contains("originalLocal"), "surfaceParticles preserves base pass and source position");
         assert(emitted.ShaderSource.Contains("corner.particleAlpha = fade * particleMask * active;") && !emitted.ShaderSource.Contains("* _Color * input.color;"), "surface particles keep fade separate from source vertex colors");
+        var atlasGraph = Graph(); var atlasNode = atlasGraph.Nodes.Single(n => n.Id == "particles");
+        atlasNode.Properties["atlasColumns"] = 4; atlasNode.Properties["atlasRows"] = 2; atlasNode.Properties["shape"] = 1;
+        atlasNode.Properties["rotation"] = 25; atlasNode.Properties["randomRotation"] = 45;
+        atlasNode.Properties["perArea"] = 1; atlasNode.Properties["referenceArea"] = .02;
+        var atlasResult = ShaderEmitter.Emit(GraphJson.Parse(GraphJson.Serialize(atlasGraph)));
+        assert(atlasResult.Succeeded && atlasResult.ShaderSource.Contains("float frame=floor(input.particleRandom*8.0)") && atlasResult.ShaderSource.Contains("corner.uv1 = spriteUV[i]") && atlasResult.ShaderSource.Contains("float2 rotated=") && atlasResult.ShaderSource.Contains("triangleArea/max(0.02"), "atlas, rotation, and area emission survive round trip");
+        Reject(assert, atlasGraph, "atlasColumns", 0, "atlas columns bounded");
+        Reject(assert, atlasGraph, "referenceArea", 0, "reference area positive");
+        Reject(assert, atlasGraph, "shape", 4, "particle shape bounded");
         Reject(assert, graph, "edgeSharpness", new JValue(double.NaN), "sharpness finite");
         Reject(assert, graph, "lifetime", .0009, "lifetime lower bound"); Reject(assert, graph, "blendMode", 2, "blend mode choice"); Reject(assert, graph, "speed", new JValue(double.NaN), "speed finite");
         var wired = Graph();

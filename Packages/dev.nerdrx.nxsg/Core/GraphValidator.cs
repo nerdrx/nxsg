@@ -119,6 +119,8 @@ namespace NXSG.Core
                 foreach(var key in new[]{"translation","rotation","scale","pivot"}) CheckVector3(node.Properties[key],path+".properties."+key,diagnostics);
                 CheckIntegerRange(node.Properties["space"],path+".properties.space",0,1,diagnostics);
                 CheckIntegerRange(node.Properties["shape"],path+".properties.shape",0,2,diagnostics);
+                CheckRange(node.Properties["nearDistance"],path+".properties.nearDistance",0,2,diagnostics);
+                CheckRange(node.Properties["nearStrength"],path+".properties.nearStrength",0,1,diagnostics);
             }
             if (node.Operation == "core.infinityParallax") {
                 CheckIntegerRange(node.Properties["steps"],path+".properties.steps",1,32,diagnostics);
@@ -321,7 +323,7 @@ namespace NXSG.Core
                 case "core.unlitSurface": numeric = new[] { "opacity", "displacement", "cutoff" }; break;
                 case "core.layeredPbrSurface": numeric = new[] { "opacity", "displacement", "metallic", "roughness", "cutoff", "coat", "coatRoughness", "sheen", "sheenRoughness" }; CheckVector4(node.Properties["sheenColor"], path + ".properties.sheenColor", diagnostics); break;
                 case "core.pbrSurface": numeric = new[] { "opacity", "displacement", "metallic", "roughness", "specularAa", "cutoff" }; break;
-                case "core.surfaceParticles": numeric = new[] { "density", "size", "lifetime", "speed", "gravity", "spread", "opacity", "mask", "emissionRate", "edgeSharpness" }; break;
+                case "core.surfaceParticles": numeric = new[] { "density", "size", "lifetime", "speed", "gravity", "spread", "opacity", "mask", "emissionRate", "edgeSharpness", "rotation", "randomRotation", "referenceArea" }; break;
                 case "core.particleSurface": numeric = new[] { "opacity", "softDistance" }; break;
                 case "core.fresnel": numeric = new[] { "power" }; break;
                 case "core.colorRamp": break;
@@ -335,7 +337,7 @@ namespace NXSG.Core
                 case "core.dissolve": numeric = new[] { "threshold", "edgeWidth" }; break;
                 case "core.shell": numeric = new[] { "offset" }; break;
                 case "core.vertexMotion": numeric = new[] { "strength", "speed", "frequency" }; break;
-                case "core.glitter": numeric = new[] { "scale", "density", "size", "sharpness", "viewStrength", "speed", "twinkle", "brightness", "seed", "mask" }; break;
+                case "core.glitter": numeric = new[] { "scale", "density", "size", "sharpness", "viewStrength", "speed", "twinkle", "brightness", "seed", "mask", "rotation", "randomRotation" }; break;
                 case "core.uvDistort": numeric = new[] { "strength", "speed", "scale", "mask", "radius", "falloff" }; vectors = new[] { "center", "direction", "axes" }; break;
                 case "core.gradient": numeric = new[] { "angle", "radius" }; vectors = new[] { "center" }; break;
                 case "core.uvTile": vectors = new[] { "tiling", "offset" }; break;
@@ -385,6 +387,11 @@ namespace NXSG.Core
             {
                 CheckIntegerRange(node.Properties["sourceUV"], path + ".properties.sourceUV", 0, 1, diagnostics);
                 CheckIntegerRange(node.Properties["blendMode"], path + ".properties.blendMode", 0, 1, diagnostics);
+                CheckIntegerRange(node.Properties["atlasColumns"], path + ".properties.atlasColumns", 1, 16, diagnostics);
+                CheckIntegerRange(node.Properties["atlasRows"], path + ".properties.atlasRows", 1, 16, diagnostics);
+                CheckIntegerRange(node.Properties["shape"], path + ".properties.shape", 0, 3, diagnostics);
+                CheckIntegerRange(node.Properties["perArea"], path + ".properties.perArea", 0, 1, diagnostics);
+                CheckRange(node.Properties["referenceArea"], path + ".properties.referenceArea", .000001, float.MaxValue, diagnostics);
             }
             if (node.Operation == "core.surfaceParticles") CheckRange(node.Properties["lifetime"], path + ".properties.lifetime", .001, float.MaxValue, diagnostics);
             if (node.Operation == "core.wave")
@@ -465,6 +472,7 @@ namespace NXSG.Core
                 Add(diagnostics,DiagnosticSeverity.Error,"value.range",path+".properties.size","Sticker size must be positive.");
             if (node.Operation == "core.glitter")
             {
+                CheckIntegerRange(node.Properties["shape"], path + ".properties.shape", 0, 3, diagnostics);
                 CheckRange(node.Properties["scale"], path + ".properties.scale", double.Epsilon, 100000, diagnostics);
                 CheckRange(node.Properties["density"], path + ".properties.density", 0, 1, diagnostics);
                 CheckRange(node.Properties["size"], path + ".properties.size", 0, 1, diagnostics);

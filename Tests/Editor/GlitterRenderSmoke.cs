@@ -18,6 +18,9 @@ public static class GlitterRenderSmoke
         target=new RenderTexture(Size,Size,24,RenderTextureFormat.ARGBFloat,RenderTextureReadWrite.Linear);target.Create();camera.targetTexture=target;
         var g=GlitterChecks.Graph();var n=g.Nodes.Single(x=>x.Id=="glitter");n.Properties["scale"]=18;n.Properties["density"]=1;n.Properties["size"]=.6;n.Properties["viewStrength"]=0;n.Properties["twinkle"]=0;n.Properties["brightness"]=1;
         var plain=Render(g,Vector3.back*3);Require(Energy(plain)>.01f,"Glitter invisible");
+        n.Properties["shape"]=1;var square=Render(g,Vector3.back*3);Require(Energy(square)>Energy(plain),"Square glitter did not expand coverage");
+        n.Properties["rotation"]=45;Require(Difference(square,Render(g,Vector3.back*3))>.001f,"Glitter rotation did not change shape");
+        n.Properties["shape"]=3;Require(Energy(Render(g,Vector3.back*3))>.001f,"Star glitter invisible");n.Properties["shape"]=0;n.Properties["rotation"]=0;
         n.Properties["mask"]=0;Require(Energy(Render(g,Vector3.back*3))<.00001f,"Mask zero leaks glitter");n.Properties["mask"]=1;
         n.Properties["density"]=0;Require(Energy(Render(g,Vector3.back*3))<.00001f,"Density zero leaks glitter");n.Properties["density"]=1;
         n.Properties["size"]=0;Require(Energy(Render(g,Vector3.back*3))<.00001f,"Size zero leaks glitter");n.Properties["size"]=.6;

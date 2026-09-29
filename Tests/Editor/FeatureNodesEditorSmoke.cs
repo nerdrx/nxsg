@@ -19,7 +19,7 @@ public static class FeatureNodesEditorSmoke
         "scratches", "cracks", "woodRings", "marble", "clouds", "sparkleMask", "scanlines", "glitchUV", "pixelateUV", "kaleidoscopeUV",
         "swapUV", "spherizeUV", "pinchUV", "barrelUV", "chromaticTexture", "normalBlend", "normalStrength", "normalFromHeight",
         "reflectionDirection", "objectScale", "objectOrigin", "objectRandom", "distanceToPoint", "sphereMask", "boxVolumeMask",
-        "capsuleMask", "stripes3D", "snowMask", "wetnessColor", "anisotropicHighlight", "depthBulge"
+        "capsuleMask", "stripes3D", "snowMask", "wetnessColor", "anisotropicHighlight", "depthBulge", "constellation", "pathing", "skinToneLut"
     };
     static GraphWindow window;
     static int phase, ticks;
@@ -40,7 +40,7 @@ public static class FeatureNodesEditorSmoke
             var node = NodeCatalog.Create("core." + operation);
             Require(node != null, "Missing feature node: " + operation);
             node.Id = operation;
-            if (operation == "parallaxOcclusion" || operation == "chromaticTexture")
+            if (operation == "parallaxOcclusion" || operation == "chromaticTexture" || operation == "skinToneLut")
             {
                 node.Properties["resourceId"] = "resource-" + operation;
                 Graph.Resources.Add(new GraphResource { Id = "resource-" + operation, Kind = "texture2D", Uri = "builtin://white" });
@@ -72,10 +72,18 @@ public static class FeatureNodesEditorSmoke
         foreach (var operation in Operations) CheckNodeInspector(operation);
         Invoke("SelectNode", "fur", false);
         var sections = Inspector.Query<Foldout>().ToList().Select(foldout => foldout.text).ToList();
-        Require(sections.Contains("Shells") && sections.Contains("Strands") && sections.Contains("Grooming & wind") && sections.Contains("Distance LOD"), "Fur sections missing");
+        Require(sections.Contains("Shells") && sections.Contains("Silhouette fins") && sections.Contains("Grooming and wind") && sections.Contains("Lighting and shadows") && sections.Contains("Distance detail"), "Fur sections missing");
         var layers = Inspector.Query<IntegerField>().ToList().Single(field => field.label == "Shell layers");
         Require(layers.value == 16, "Fur layers default missing");
-        Require(Inspector.Query<IntegerField>().ToList().Any(field => field.label == "Minimum LOD layers"), "Fur minimum LOD control missing");
+        Inspector.Query<Foldout>().ToList().Single(foldout => foldout.text == "Distance detail").value = true;
+        Require(Inspector.Query<IntegerField>().ToList().Any(field => field.label == "Minimum shell layers"), "Fur minimum LOD control missing");
+
+        Invoke("SelectNode", "constellation", false);
+        Require(Inspector.Q<FloatField>("node-property-scale") != null, "Constellation scale control missing");
+        Invoke("SelectNode", "pathing", false);
+        Require(Inspector.Q<FloatField>("node-property-travel") != null, "Pathing travel control missing");
+        Invoke("SelectNode", "skinToneLut", false);
+        Require(Inspector.Query<ObjectField>().ToList().Count == 1, "Skin Tone LUT texture picker missing");
 
         foreach (var operation in new[] { "parallaxOcclusion", "chromaticTexture" })
         {
@@ -150,7 +158,7 @@ public static class FeatureNodesEditorSmoke
             else if (phase == 2) { CheckSelectedFramingAndSearchFocus(); phase = 3; }
             else
             {
-                Debug.Log("NXSG FEATURE NODES EDITOR SMOKE PASSED: 42 node inspectors, descriptions, texture controls, defaults, connected disable, and search metadata");
+                Debug.Log("NXSG FEATURE NODES EDITOR SMOKE PASSED: " + Operations.Length + " node inspectors, descriptions, texture controls, defaults, connected disable, and search metadata");
                 EditorApplication.update -= Tick; window.DiscardChanges(); window.Close(); EditorApplication.Exit(0);
             }
         }

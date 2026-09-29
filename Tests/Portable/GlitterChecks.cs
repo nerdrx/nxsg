@@ -24,6 +24,10 @@ public static class GlitterChecks
             assert(result.ShaderSource!=null&&result.ShaderSource.Contains("NX_Glitter(input,"),"Glitter uses procedural helper");
         }
         var vertex=ShaderEmitter.Emit(Graph("value","displacement"));assert(!vertex.Succeeded&&vertex.Diagnostics.Any(d=>d.Message.Contains("Glitter needs fragment")),"Glitter rejects vertex use with an explanation");
+        var shapes=Graph(); shapes.Nodes[0].Properties["shape"]=3; shapes.Nodes[0].Properties["rotation"]=30; shapes.Nodes[0].Properties["randomRotation"]=90;
+        var shaped=ShaderEmitter.Emit(GraphJson.Parse(GraphJson.Serialize(shapes)));
+        assert(shaped.Succeeded&&shaped.ShaderSource.Contains("float distanceShape=length(q)")&&shaped.ShaderSource.Contains("atan2(q.y,q.x)")&&shaped.ShaderSource.Contains("NX_Glitter(input,"),"glitter shape and rotation round trip");
+        shapes.Nodes[0].Properties["shape"]=4; assert(!GraphValidator.Validate(shapes).IsValid,"Glitter shape bounded");
         foreach(var property in new[]{"density","size","viewStrength","twinkle","mask"}){var g=Graph();g.Nodes[0].Properties[property]=2;assert(!GraphValidator.Validate(g).IsValid,"Glitter validates "+property);}
     }
 }

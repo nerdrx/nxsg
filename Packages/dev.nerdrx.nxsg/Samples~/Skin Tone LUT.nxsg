@@ -1,0 +1,20 @@
+{
+  "format": "nxsg",
+  "schemaVersion": 1,
+  "graphId": "skin-tone-lut-example",
+  "nodes": [
+    {"id":"base","operation":"core.constant","version":1,"properties":{"valueType":"color","value":[0.78,0.48,0.35,1]}},
+    {"id":"tone","operation":"core.skinToneLut","version":1,"properties":{"resourceId":"skinLut","pigment":0.5,"mask":1,"strength":1}},
+    {"id":"surface","operation":"core.unlitSurface","version":1,"properties":{}},
+    {"id":"output","operation":"core.output","version":1,"properties":{}}
+  ],
+  "connections": [
+    {"id":"base-tone","from":{"nodeId":"base","portId":"value"},"to":{"nodeId":"tone","portId":"base"}},
+    {"id":"tone-surface","from":{"nodeId":"tone","portId":"color"},"to":{"nodeId":"surface","portId":"albedo"}},
+    {"id":"surface-output","from":{"nodeId":"surface","portId":"surface"},"to":{"nodeId":"output","portId":"surface"}}
+  ],
+  "parameters": [],
+  "resources": [{"id":"skinLut","kind":"texture2D","uri":"builtin://white"}],
+  "patterns": [],
+  "layout": {"nodes":{"base":{"x":0,"y":180},"tone":{"x":240,"y":180},"surface":{"x":540,"y":180},"output":{"x":850,"y":180}}}
+}

@@ -16,6 +16,9 @@ coverage. Sharpness tightens each flake's view-angle highlight. Set View angle
 strength to 0 for an even pattern. Twinkle amount 0 freezes blinking; connect
 Time for explicit animation control. UV options and incoming UV distortion work
 like other texture nodes. Tiny distant flakes fade to reduce aliasing.
+Choose Circle, Square, Cross or Star for the flake mask. Rotation turns every
+flake by the same number of degrees; Random rotation adds a stable per-flake
+offset. The original Circle/zero-rotation defaults preserve older graphs.
 
 `Glitter Fabric.nxsg` is a ready-to-edit example. This node uses a fixed nine-cell
 neighborhood search and fragment derivatives: it adds pixel work, no textures or

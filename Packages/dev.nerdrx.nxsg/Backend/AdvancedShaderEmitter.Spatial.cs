@@ -15,11 +15,11 @@ namespace NXSG.Backend
         bool ActiveDeformation(GraphNode node)
         {
             if (Source(node,"mask") == null && (double?)node.Properties["mask"] == 0) return false;
-            foreach (var port in new[]{"translation","rotation","scale","pivot","mask","snap","warp"})
+            foreach (var port in new[]{"translation","rotation","scale","pivot","mask","snap","warp","nearDistance","nearStrength"})
                 if(Source(node,port) != null) return true;
             foreach(var port in new[]{"translation","rotation","scale"})
                 if(node.Properties[port] is JArray vector && vector.Any(v => (double)v != (port == "scale" ? 1 : 0))) return true;
-            return (double?)node.Properties["snap"] > 0 || ((int?)node.Properties["shape"] ?? 0) != 0 && (double?)node.Properties["warp"] > 0;
+            return (double?)node.Properties["snap"] > 0 || ((int?)node.Properties["shape"] ?? 0) != 0 && (double?)node.Properties["warp"] > 0 || (double?)node.Properties["nearDistance"] > 0;
         }
 
         GraphNode UnwrapVertexDeform(GraphNode root)
@@ -46,7 +46,7 @@ namespace NXSG.Backend
                 string V(string port, string fallback) => Input(node,port,node.Properties[port] == null ? fallback : Literal(node.Properties[port],"vector3"),"vector3",true);
                 var call = SpatialShader.TransformCall(name,"v.vertex.xyz","v.normal","v.tangent",
                     V("translation","float3(0,0,0)"),V("rotation","float3(0,0,0)"),V("scale","float3(1,1,1)"),V("pivot","float3(0,0,0)"),
-                    Scalar(node,"mask",1,true),Scalar(node,"snap",0,true),Scalar(node,"warp",0,true));
+                    Scalar(node,"mask",1,true),Scalar(node,"snap",0,true),Scalar(node,"warp",0,true),Scalar(node,"nearDistance",0,true),Scalar(node,"nearStrength",1,true));
                 body.AppendLine("{ "+name+"Result d="+call+"; v.vertex.xyz=d.position; v.normal=d.normal; v.tangent=d.tangent; }");
             }
             return helpers.Append(body).AppendLine("}").ToString();

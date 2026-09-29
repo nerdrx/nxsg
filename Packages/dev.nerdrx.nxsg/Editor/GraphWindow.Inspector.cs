@@ -127,6 +127,8 @@ namespace NXSG.Editor
                 AddBoundedNumber(node, "emissionRate", "Rate per triangle / second", 0, 4, 1 / Mathf.Max(.001f, (float?)node.Properties["lifetime"] ?? 2), "emissionRate");
                 AddBoundedNumber(node, "lifetime", "Lifetime (seconds)", .05f, 30, 2, "lifetime");
                 AddBoundedNumber(node, "mask", "Emitter mask", 0, 1, 1, "mask", "Samples the emitter mesh UVs. 0 blocks emission; 1 allows it.");
+                AddIndexedChoice(node, "perArea", "Emission distribution", new[] { "Per triangle", "Per surface area" });
+                AddNumber(node, "referenceArea", "Reference area (m²)", .01f, help: "Rate applies to this much mesh area; Density remains a selection fraction.");
             }, true);
             InspectorSection(node, "appearance", "Appearance", () =>
             {
@@ -137,6 +139,11 @@ namespace NXSG.Editor
                 AddIndexedChoice(node, "blendMode", "Blending", new[] { "Alpha", "Additive" }, 1);
                 AddBoundedNumber(node, "size", "Size", .0001f, 1, .03f, "size");
                 AddBoundedNumber(node, "edgeSharpness", "Edge sharpness", 0, 1, 0, "edgeSharpness", "0 = soft puff, 1 = crisp circle. Opacity and lifetime fading still apply.");
+                AddIndexedChoice(node, "shape", "Particle shape", new[] { "Soft circle", "Texture / rectangle", "Square", "Cross" });
+                AddIntegerField(node, "atlasColumns", "Atlas columns", 1, 16, 1);
+                AddIntegerField(node, "atlasRows", "Atlas rows", 1, 16, 1);
+                AddNumber(node, "rotation", "Rotation (degrees)", 0);
+                AddNumber(node, "randomRotation", "Random rotation (degrees)", 0);
                 AddBoundedNumber(node, "opacity", "Opacity", 0, 1, 1, "opacity");
             }, true);
             InspectorSection(node, "lifetime-curves", "Lifetime curves", () => AddParticleCurves(node));

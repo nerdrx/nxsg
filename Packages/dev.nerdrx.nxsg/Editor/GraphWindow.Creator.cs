@@ -20,6 +20,9 @@ namespace NXSG.Editor
             tools.menu.AppendAction("Preview/Why does the scene look different?", _ => ShowPreviewDiagnostics());
             tools.menu.AppendAction("Textures/Review selected textures…", _ => TextureSetReviewWindow.Open(this, Selection.GetFiltered<Texture2D>(SelectionMode.Assets)));
             tools.menu.AppendAction("Textures/Import texture set…", _ => TextureSetReviewWindow.Open(this, Array.Empty<Texture2D>()));
+            tools.menu.AppendAction("Textures/Start from selected material…", _ => TextureSetReviewWindow.Open(this, Selection.activeObject as Material));
+            tools.menu.AppendAction("Textures/Pack channels…", _ => TextureChannelPacker.Open());
+            tools.menu.AppendAction("Textures/Build atlas from selected images…", _ => TextureAtlasBuilder.Open());
             tools.menu.AppendAction("Material/Bake selected output to texture…", _ => BakeSelected());
             tools.menu.AppendAction("Scene/Place selected sticker…", _ => OpenEffectHandlesForSelectedNode());
             tools.menu.AppendAction("Scene/Create avatar motion driver…", _ => MotionDriverWindow.Open());

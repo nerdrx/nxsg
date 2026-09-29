@@ -1,0 +1,24 @@
+{
+  "format": "nxsg",
+  "schemaVersion": 1,
+  "graphId": "constellation-example",
+  "nodes": [
+    {"id":"stars","operation":"core.constellation","version":1,"properties":{"scale":13,"pointSize":0.09,"lineWidth":0.014,"linkChance":0.7,"twinkle":0.5,"audio":1,"seed":2}},
+    {"id":"tint","operation":"core.constant","version":1,"properties":{"valueType":"color","value":[0.2,0.65,1,1]}},
+    {"id":"glow","operation":"core.multiply","version":1,"properties":{}},
+    {"id":"base","operation":"core.constant","version":1,"properties":{"valueType":"color","value":[0.004,0.008,0.025,1]}},
+    {"id":"surface","operation":"core.unlitSurface","version":1,"properties":{}},
+    {"id":"output","operation":"core.output","version":1,"properties":{}}
+  ],
+  "connections": [
+    {"id":"stars-glow-a","from":{"nodeId":"stars","portId":"mask"},"to":{"nodeId":"glow","portId":"a"}},
+    {"id":"tint-glow-b","from":{"nodeId":"tint","portId":"value"},"to":{"nodeId":"glow","portId":"b"}},
+    {"id":"base-surface-albedo","from":{"nodeId":"base","portId":"value"},"to":{"nodeId":"surface","portId":"albedo"}},
+    {"id":"glow-surface-emission","from":{"nodeId":"glow","portId":"value"},"to":{"nodeId":"surface","portId":"emission"}},
+    {"id":"surface-output","from":{"nodeId":"surface","portId":"surface"},"to":{"nodeId":"output","portId":"surface"}}
+  ],
+  "parameters": [],
+  "resources": [],
+  "patterns": [],
+  "layout": {"nodes":{"stars":{"x":0,"y":160},"tint":{"x":0,"y":440},"glow":{"x":280,"y":220},"base":{"x":280,"y":470},"surface":{"x":550,"y":200},"output":{"x":840,"y":200}}}
+}

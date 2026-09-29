@@ -16,6 +16,34 @@ namespace NXSG.Editor
             if(node.Operation == "core.frontFace") { AddFrontFaceControls(node); return true; }
             switch (node.Operation)
             {
+                case SkinToneLutNodes.Operation:
+                    AddTexturePicker(node, "Skin tone LUT");
+                    AddBoundedNumber(node, "pigment", "Pigment", 0, 1, .5f, "pigment");
+                    AddBoundedNumber(node, "mask", "Skin mask", 0, 1, 1, "mask");
+                    AddBoundedNumber(node, "strength", "Strength", 0, 1, 1, "strength");
+                    FeatureNote("LUT X follows base-color luminance; Y follows Pigment. Unassigned texture leaves Base unchanged. Rebuild after assigning a texture.");
+                    return true;
+                case ConstellationNodes.Operation:
+                    AddCoordinateChoice(node);
+                    AddBoundedNumber(node, "scale", "Cells per UV", 1, 64, 12, "scale");
+                    AddBoundedNumber(node, "pointSize", "Point size", 0, .5f, .075f, "pointSize");
+                    AddBoundedNumber(node, "lineWidth", "Line width", 0, .25f, .018f, "lineWidth");
+                    AddBoundedNumber(node, "linkChance", "Link chance", 0, 1, .65f, "linkChance");
+                    AddBoundedNumber(node, "twinkle", "Twinkle", 0, 1, .35f, "twinkle");
+                    AddNumber(node, "seed", "Seed", 0);
+                    FeatureNote("Connect Points, Lines, or Mask to an emission or opacity branch. Time and Audio sockets animate the pattern.");
+                    return true;
+                case PathingNodes.Operation:
+                    AddCoordinateChoice(node);
+                    AddVector(node, "start", "Path start", new Vector2(.1f, .5f));
+                    AddVector(node, "end", "Path end", new Vector2(.9f, .5f));
+                    AddBoundedNumber(node, "width", "Lane width", 0, .5f, .02f, "width");
+                    AddBoundedNumber(node, "spacing", "Lane spacing", 0, 1, .1f, "spacing");
+                    AddBoundedNumber(node, "speed", "Travel speed", -20, 20, .3f, "speed");
+                    AddBoundedNumber(node, "tail", "Trail length", .001f, 1, .28f, "tail");
+                    AddBoundedNumber(node, "travel", "Travel amount", 0, 1, 1, "travel");
+                    FeatureNote("Channels outputs four lanes. Value combines them; Phase and Direction can drive other effects.");
+                    return true;
                 case "core.layeredPbrSurface": AddLayeredSurfaceControls(node); return true;
                 case "core.fur": AddFurControls(node); return true;
                 case "core.depthBulge":
@@ -87,6 +115,9 @@ namespace NXSG.Editor
                     AddNumber(node, "scale", "Flake scale", 60);
                     AddBoundedNumber(node, "density", "Flake density", 0, 1, .6f);
                     AddBoundedNumber(node, "size", "Flake size", 0, 1, .16f);
+                    AddIndexedChoice(node, "shape", "Flake shape", new[] { "Circle", "Square", "Cross", "Star" });
+                    AddNumber(node, "rotation", "Rotation (degrees)", 0);
+                    AddNumber(node, "randomRotation", "Random rotation (degrees)", 0);
                     AddBoundedNumber(node, "sharpness", "Sparkle sharpness", 1, 512, 32);
                     InspectorSection(node, "glitter-animation", "Sparkle response", () =>
                     {

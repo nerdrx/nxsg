@@ -47,6 +47,15 @@ Open **Window → NXSG → Example Gallery**, or **Examples** in the graph toolb
 
 **Particle Lifetime** demonstrates Particle Info age driving a color ramp, random values controlling size, and lifetime curves. **Audio Hologram** can be tested using the AudioLink preview controls without an active world audio source.
 
+**Constellation** draws animated points and links with separate mask outputs.
+**Pathing** provides four animated path lanes and a direction output. Both are
+editable UV effects; see the repository's Constellation and Pathing guides for
+controls and cost limits.
+
+**Skin Tone LUT** shows the dedicated color lookup and mask inputs. Its unassigned
+texture is deliberately neutral; assign a 2D LUT in the graph before building
+to see a color change. See the [Skin Tone LUT guide](../../../docs/SKIN_TONE_LUT.md).
+
 ## Raymarching examples
 
 Volume Nebula, Volume Carved Orb and Volume Smoke Ring use a closed default Unity Cube as their proxy. Open the Example Gallery to create editable copies. They use 128 steps for detail; lower Steps for everyday use. See the repository volume guide for setup and limits.

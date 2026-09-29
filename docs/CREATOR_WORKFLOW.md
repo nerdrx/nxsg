@@ -29,12 +29,31 @@ The graph editor's **Tools** toolbar menu groups its commands by area:
 **Tools → Textures → Review selected textures…** and **Tools → Textures → Import
 texture set…** open the texture review workflow. You can correct filename
 suggestions for albedo, mask, normal, roughness, metallic, ambient occlusion,
-height, and flow slots. It previews RGBA or one channel at a time, chooses a
+height, flow, and emission slots. It previews RGBA or one channel at a time, chooses a
 mask channel, supports mask inversion and strength, and creates a mask, flow, or
 reviewed graph. Normal previews decode
 the normal map; the graph inspector's **Flip green (DirectX/OpenGL)** option
 handles green-channel orientation. NXSG does not change Unity importer
 settings for you.
+
+**Tools → Textures → Start from selected material…** reads common texture slots
+from a material selected in the Project window. Review every assignment before
+creating an untitled graph. The window lists properties it cannot map. Colors,
+numeric values, render state, animation settings, and shader-specific effects
+remain on the original material; recreate them in the graph as needed. The
+source material is not modified.
+
+**Tools → Textures → Pack channels…** combines four chosen texture channels into
+one linear PNG. Each output channel can read R, G, B, or A from a separate
+source. An empty source becomes white. Set a common resolution, save in
+`Assets`, then assign the packed texture in the graph. Inputs are sampled on a
+shared 0–1 UV grid and keep their own Unity import settings.
+
+**Tools → Textures → Build atlas from selected images…** packs selected Project
+textures into equal cells in path order. Choose columns and cell size, then
+save the PNG in `Assets`. Use it with Flipbook, Texture Sheet Animation, or
+Surface Particles' atlas columns/rows. Export GIF animation frames as images
+before using this builder; Unity does not import the GIF itself here.
 
 ## Organizing the canvas
 
@@ -97,6 +116,10 @@ textures, and texture scale/offset. Loading checks the exact shader name,
 records Undo for the target material, and leaves incompatible targets
 untouched. The underlying utility also supports applying one preset to multiple
 compatible materials. Presets do not carry graph topology or shader code.
+To apply one preset to several compatible materials, select their assets in
+the Project window and choose **Tools → Material → Apply preset to selected
+materials…**. Review the compatibility list before applying; the operation
+records one Undo step for all selected materials.
 
 ## When results mismatch
 

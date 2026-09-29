@@ -7,7 +7,7 @@ namespace NXSG.Backend
     // Geometry emission keeps particles attached to the mesh that owns the material.
     internal static class SurfaceParticleShader
     {
-        public static string Pass(string mask, string color, string emission, string opacity, string time, string density, string emissionRate, string size, string lifetime, string speed, string gravity, string spread, int blendMode, bool sourceUV, string edgeSharpness, bool dynamicBudget = false, string sizeCurve = "1", string colorCurve = "float4(1,1,1,1)", string opacityCurve = "1")
+        public static string Pass(string mask, string color, string emission, string opacity, string time, string density, string emissionRate, string size, string lifetime, string speed, string gravity, string spread, int blendMode, bool sourceUV, string edgeSharpness, bool dynamicBudget = false, string sizeCurve = "1", string colorCurve = "float4(1,1,1,1)", string opacityCurve = "1", int atlasColumns = 1, int atlasRows = 1, int shape = 0, string rotation = "0", string randomRotation = "0", bool perArea = false, string referenceArea = "0.01")
         {
             // Keep RGB source-over/additive modes, but use separate alpha factors so
             // straight-alpha output is not multiplied by source alpha twice.
@@ -18,7 +18,7 @@ namespace NXSG.Backend
             // Triangle tessellators use concentric rings. Count is an estimate across APIs;
             // the requested rate is distributed across those microtriangles.
             var subdivisions = level == 1 ? 1 : (3 * level * level - level % 2) / 2;
-            var tessellated = dynamicBudget || level > 1;
+            var tessellated = dynamicBudget || perArea || level > 1;
             return @"
 Pass {
 Name ""SurfaceParticles""
@@ -47,7 +47,7 @@ NXInput vertEmit(NXApp v)
     return input;
 }
 
-" + (tessellated ? Tessellation(level, dynamicBudget ? emissionRate : null, lifetime) : "") + @"
+" + (tessellated ? Tessellation(level, dynamicBudget || perArea ? emissionRate : null, lifetime, perArea, referenceArea) : "") + @"
 [maxvertexcount(16)]
 void geomEmit(triangle NXInput tri[3], inout TriangleStream<NXInput> stream, uint primitiveId : SV_PrimitiveID)
 {
@@ -55,10 +55,12 @@ void geomEmit(triangle NXInput tri[3], inout TriangleStream<NXInput> stream, uin
     UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
     float sourceId = " + (tessellated ? "tri[0].sourceUV.x" : "(float)primitiveId") + @";
     float seed = (float)primitiveId + dot(tri[0].uv + tri[1].uv + tri[2].uv,float2(17.3,41.7));
-    float h0 = NX_SurfaceParticleHash(sourceId + 1.17);
+    float h0 = NX_SurfaceParticleHash(" + (perArea ? "(float)primitiveId" : "sourceId") + @" + 1.17);
+    float triangleArea = length(cross(tri[1].ws-tri[0].ws,tri[2].ws-tri[0].ws)) * 0.5;
+    float areaFactor = " + (perArea ? "triangleArea/max(" + referenceArea + ",0.000001)" : "1.0") + @";
     float densityGate = h0 < saturate(" + density + @") ? 1.0 : 0.0;
     float life = max(" + lifetime + @", 0.0001);
-    float effectiveRate = min(max(" + emissionRate + @", 0.0) / " + (dynamicBudget ? "max(1.0, tri[0].sourceUV.y)" : subdivisions + ".0") + @", 4.0 / life);
+    float effectiveRate = min(max(" + emissionRate + @", 0.0) * areaFactor / " + (perArea ? "1.0" : dynamicBudget ? "max(1.0, tri[0].sourceUV.y)" : subdivisions + ".0") + @", 4.0 / life);
     float rateVisible = step(0.000001, effectiveRate);
     for (int slot = 0; slot < 4; slot++)
     {
@@ -100,18 +102,24 @@ void geomEmit(triangle NXInput tri[3], inout TriangleStream<NXInput> stream, uin
         float halfSize = 0.5 * max(0.0, (" + size + @") * (" + sizeCurve + @")) * objectScale * active;
         float3 right = normalize(float3(UNITY_MATRIX_I_V._m00, UNITY_MATRIX_I_V._m10, UNITY_MATRIX_I_V._m20));
         float3 up = normalize(float3(UNITY_MATRIX_I_V._m01, UNITY_MATRIX_I_V._m11, UNITY_MATRIX_I_V._m21));
+        float angle = radians(" + rotation + @" + (input.particleRandom*2.0-1.0)*" + randomRotation + @");
+        float cs=cos(angle), sn=sin(angle);
         float3 corners[4] = { float3(-1,-1,0), float3(1,-1,0), float3(-1,1,0), float3(1,1,0) };
         float2 spriteUV[4] = { float2(0,0), float2(1,0), float2(0,1), float2(1,1) };
+        float frame=floor(input.particleRandom*" + (atlasColumns * atlasRows) + @".0);
+        float2 tile=float2(fmod(frame," + atlasColumns + @".0),floor(frame/" + atlasColumns + @".0));
         float fade = smoothstep(0.0, 0.1, normalizedAge) * (1.0 - smoothstep(0.9, 1.0, normalizedAge));
         for (int i = 0; i < 4; i++)
         {
             NXInput corner = input;
-            float3 worldPosition = worldCenter + right * corners[i].x * halfSize + up * corners[i].y * halfSize;
+            float2 rotated=float2(corners[i].x*cs-corners[i].y*sn,corners[i].x*sn+corners[i].y*cs);
+            float3 worldPosition = worldCenter + right * rotated.x * halfSize + up * rotated.y * halfSize;
             corner.pos = UnityWorldToClipPos(worldPosition);
             corner.ws = worldPosition;
             corner.local = mul(unity_WorldToObject, float4(worldPosition, 1.0)).xyz;
             corner.sourceUV = input.uv;
-            corner.uv = spriteUV[i];
+            corner.uv = (spriteUV[i]+tile)/float2(" + atlasColumns + @"," + atlasRows + @");
+            corner.uv1 = spriteUV[i];
             corner.particleAlpha = fade * particleMask * active;
             corner.particleAge = normalizedAge;
             corner.particleRandom = input.particleRandom;
@@ -126,8 +134,8 @@ void geomEmit(triangle NXInput tri[3], inout TriangleStream<NXInput> stream, uin
 float4 fragEmit(NXInput input) : SV_Target
 {
     UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
-    float2 circlePosition = input.uv * 2.0 - 1.0;
-    float circle = saturate(1.0 - dot(circlePosition, circlePosition));
+    float2 circlePosition = input.uv1 * 2.0 - 1.0;
+    float circle = " + (shape == 1 ? "1.0" : shape == 2 ? "saturate(1.0-max(abs(circlePosition.x),abs(circlePosition.y)))" : shape == 3 ? "saturate(1.0-min(abs(circlePosition.x),abs(circlePosition.y))*4.0)" : "saturate(1.0-dot(circlePosition,circlePosition))") + @";
     float sharpness = saturate(" + edgeSharpness + @");
     circle = sharpness >= 1.0 ? step(0.000001, circle) : saturate(circle / max(1.0 - sharpness, 0.000001));
     circle *= circle;
@@ -178,7 +186,7 @@ ENDCG
             return ((double)token).ToString("R", CultureInfo.InvariantCulture);
         }
 
-        static string Tessellation(int level, string dynamicRate, string lifetime)
+        static string Tessellation(int level, string dynamicRate, string lifetime, bool perArea, string referenceArea)
         {
             var code = @"
 struct NXParticleTess { float edge[3] : SV_TessFactor; float inside : SV_InsideTessFactor; float sourceId : TEXCOORD0; float subdivisions : TEXCOORD1; };
@@ -186,7 +194,7 @@ NXParticleTess particleFactors(InputPatch<NXInput,3> patch, uint patchId : SV_Pr
 {
     NXInput input = patch[0];
     UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
-    float level = " + (dynamicRate == null ? level + ".0" : "clamp(ceil(sqrt(min(max(" + dynamicRate + ",0.0),16384.0/max(" + lifetime + ",0.0001)) * max(" + lifetime + ",0.0001) / 4.0)),1.0,64.0)") + @";
+    float level = " + (dynamicRate == null ? level + ".0" : "clamp(ceil(sqrt(min(max(" + dynamicRate + ",0.0)" + (perArea ? "*length(cross(patch[1].ws-patch[0].ws,patch[2].ws-patch[0].ws))*0.5/max(" + referenceArea + ",0.000001)" : "") + ",16384.0/max(" + lifetime + ",0.0001)) * max(" + lifetime + ",0.0001) / 4.0)),1.0,64.0)") + @";
     NXParticleTess o; o.edge[0]=o.edge[1]=o.edge[2]=o.inside=level; o.sourceId=(float)patchId;
     o.subdivisions = level <= 1.0 ? 1.0 : (3.0*level*level-fmod(level,2.0))*0.5;
     return o;

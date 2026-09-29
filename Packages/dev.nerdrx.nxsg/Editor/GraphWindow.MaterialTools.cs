@@ -13,6 +13,7 @@ namespace NXSG.Editor
             
             menu.menu.AppendAction("Material/Save preset…", _ => SaveMaterialPreset());
             menu.menu.AppendAction("Material/Load preset…", _ => LoadMaterialPreset());
+            menu.menu.AppendAction("Material/Apply preset to selected materials…", _ => BatchPresetWindow.Open());
         }
 
         void SaveMaterialPreset()

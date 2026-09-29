@@ -1,0 +1,24 @@
+{
+  "format": "nxsg",
+  "schemaVersion": 1,
+  "graphId": "pathing-example",
+  "nodes": [
+    {"id":"path","operation":"core.pathing","version":1,"properties":{"start":[0.1,0.5],"end":[0.9,0.5],"width":0.02,"spacing":0.1,"speed":0.3,"tail":0.28,"travel":1,"audio":1,"mask":1}},
+    {"id":"tint","operation":"core.constant","version":1,"properties":{"valueType":"color","value":[0.15,0.9,1,1]}},
+    {"id":"glow","operation":"core.multiply","version":1,"properties":{}},
+    {"id":"base","operation":"core.constant","version":1,"properties":{"valueType":"color","value":[0.003,0.008,0.02,1]}},
+    {"id":"surface","operation":"core.unlitSurface","version":1,"properties":{}},
+    {"id":"output","operation":"core.output","version":1,"properties":{}}
+  ],
+  "connections": [
+    {"id":"path-glow-a","from":{"nodeId":"path","portId":"value"},"to":{"nodeId":"glow","portId":"a"}},
+    {"id":"tint-glow-b","from":{"nodeId":"tint","portId":"value"},"to":{"nodeId":"glow","portId":"b"}},
+    {"id":"base-surface-albedo","from":{"nodeId":"base","portId":"value"},"to":{"nodeId":"surface","portId":"albedo"}},
+    {"id":"glow-surface-emission","from":{"nodeId":"glow","portId":"value"},"to":{"nodeId":"surface","portId":"emission"}},
+    {"id":"surface-output","from":{"nodeId":"surface","portId":"surface"},"to":{"nodeId":"output","portId":"surface"}}
+  ],
+  "parameters": [],
+  "resources": [],
+  "patterns": [],
+  "layout": {"nodes":{"path":{"x":0,"y":160},"tint":{"x":0,"y":440},"glow":{"x":280,"y":220},"base":{"x":280,"y":470},"surface":{"x":550,"y":200},"output":{"x":840,"y":200}}}
+}

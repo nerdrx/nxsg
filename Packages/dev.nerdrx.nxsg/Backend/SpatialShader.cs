@@ -36,7 +36,7 @@ float3 " + functionName + @"Rotate(float3 q,float3 rotation)
                   -q.x*s.y+q.y*s.x*c.y+q.z*c.x*c.y);
 }
 float3 " + functionName + @"Linear(float3 v,float3 rotation,float3 scale) { return " + functionName + @"Rotate(v*scale,rotation); }
-float3 " + functionName + @"Map(float3 p,float3 translation,float3 rotation,float3 scale,float3 pivot,float snap,float warp)
+float3 " + functionName + @"Map(float3 p,float3 translation,float3 rotation,float3 scale,float3 pivot,float snap,float warp,float nearDistance,float nearStrength)
 {
     float3 q=" + functionName + @"Linear(p-pivot,rotation,scale);
     q+=pivot+translation;
@@ -51,20 +51,27 @@ float3 " + functionName + @"Map(float3 p,float3 translation,float3 rotation,floa
         q.xz=lerp(q.xz,pivot.xz+curved,saturate(warp));
     }
     if (snap>1e-6) q=round(q/snap)*snap;
+    if (nearDistance>0 && nearStrength>0) {
+        float3 worldPos=" + (world ? "q" : "mul(unity_ObjectToWorld,float4(q,1)).xyz") + @";
+        float3 forward=-normalize(float3(UNITY_MATRIX_I_V._m02,UNITY_MATRIX_I_V._m12,UNITY_MATRIX_I_V._m22));
+        float cameraDepth=dot(worldPos-_WorldSpaceCameraPos,forward);
+        worldPos+=forward*max(0,nearDistance-cameraDepth)*saturate(nearStrength);
+        q=" + (world ? "worldPos" : "mul(unity_WorldToObject,float4(worldPos,1)).xyz") + @";
+    }
     return q;
 }
-" + resultType + " " + functionName + @"(float3 p,float3 n,float4 t,float3 translation,float3 rotation,float3 scale,float3 pivot,float mask,float snap,float warp)
+" + resultType + " " + functionName + @"(float3 p,float3 n,float4 t,float3 translation,float3 rotation,float3 scale,float3 pivot,float mask,float snap,float warp,float nearDistance,float nearStrength)
 {
     " + resultType + " o; float3 source=" + positionIn + @"; float3 rawN=" + normalIn + @"; float3 sourceN=dot(rawN,rawN)>1e-10?normalize(rawN):float3(0,1,0);
     float3 rawT=" + tangentIn + @"; float3 tangentPlane=rawT-sourceN*dot(sourceN,rawT); float3 axis=abs(sourceN.y)<.99?float3(0,1,0):float3(1,0,0);
     float3 sourceT=dot(tangentPlane,tangentPlane)>1e-10?normalize(tangentPlane):normalize(cross(axis,sourceN));
-    float3 moved=" + functionName + @"Map(source,translation,rotation,scale,pivot,snap,warp);
+    float3 moved=" + functionName + @"Map(source,translation,rotation,scale,pivot,snap,warp,nearDistance,nearStrength);
     float3 jx=" + functionName + @"Linear(float3(1,0,0),rotation,scale),jy=" + functionName + @"Linear(float3(0,1,0),rotation,scale),jz=" + functionName + @"Linear(float3(0,0,1),rotation,scale);
-    if (" + (shape == "none" ? "snap>1e-6" : "warp>1e-6 || snap>1e-6") + @") {
+    if (" + (shape == "none" ? "snap>1e-6" : "warp>1e-6 || snap>1e-6") + @" || nearDistance>0) {
         float e=0.0005;
-        jx=(" + functionName + @"Map(source+float3(e,0,0),translation,rotation,scale,pivot,snap,warp)-moved)/e;
-        jy=(" + functionName + @"Map(source+float3(0,e,0),translation,rotation,scale,pivot,snap,warp)-moved)/e;
-        jz=(" + functionName + @"Map(source+float3(0,0,e),translation,rotation,scale,pivot,snap,warp)-moved)/e;
+        jx=(" + functionName + @"Map(source+float3(e,0,0),translation,rotation,scale,pivot,snap,warp,nearDistance,nearStrength)-moved)/e;
+        jy=(" + functionName + @"Map(source+float3(0,e,0),translation,rotation,scale,pivot,snap,warp,nearDistance,nearStrength)-moved)/e;
+        jz=(" + functionName + @"Map(source+float3(0,0,e),translation,rotation,scale,pivot,snap,warp,nearDistance,nearStrength)-moved)/e;
     }
     jx=lerp(float3(1,0,0),jx,saturate(mask)); jy=lerp(float3(0,1,0),jy,saturate(mask)); jz=lerp(float3(0,0,1),jz,saturate(mask));
     float3 transformedN=cross(jy,jz)*sourceN.x+cross(jz,jx)*sourceN.y+cross(jx,jy)*sourceN.z;
@@ -81,9 +88,9 @@ float3 " + functionName + @"Map(float3 p,float3 translation,float3 rotation,floa
         }
 
         public static string TransformCall(string functionName, string position, string normal, string tangent,
-            string translation, string rotation, string scale, string pivot, string mask, string snap, string warp)
+            string translation, string rotation, string scale, string pivot, string mask, string snap, string warp, string nearDistance = "0", string nearStrength = "1")
         {
-            return functionName + "(" + string.Join(",", new[] { position, normal, tangent, translation, rotation, scale, pivot, mask, snap, warp }) + ")";
+            return functionName + "(" + string.Join(",", new[] { position, normal, tangent, translation, rotation, scale, pivot, mask, snap, warp, nearDistance, nearStrength }) + ")";
         }
 
         public static string InfinityParallaxBody(string sampler, string uv, string view, string height,
