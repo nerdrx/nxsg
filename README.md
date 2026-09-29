@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <code>2.0.0</code> &nbsp; <code>Unity 2022.3.22f1</code> &nbsp; <code>Built-In</code> &nbsp; <code>PC VRChat</code>
+  <code>2.1.0</code> &nbsp; <code>Unity 2022.3.22f1</code> &nbsp; <code>Built-In</code> &nbsp; <code>PC VRChat</code>
 </p>
 
 NXSG is a shader graph editor for Unity's Built-In Render Pipeline, developed for PC VRChat avatars. It includes Toon, PBR and Unlit shading, procedural textures, fur, particles, and animated effects. Materials are built by connecting nodes, with controls for lighting, color, masks, and movement.
@@ -17,7 +17,7 @@ The editor generates shaders and materials directly in Unity. Graphs remain edit
   <a href="docs/VPM.md">Installation help</a>
 </p>
 
-Add the NXSG repository and install **NX Shader Graph** in your project. Version **2.0.0** is available without enabling prerelease packages.
+Add the NXSG repository and install **NX Shader Graph** in your project. Version **2.1.0** is available without enabling prerelease packages.
 
 <details>
 <summary>VPM repository URL</summary>
@@ -69,6 +69,7 @@ The editor supports searching for nodes, connecting from either socket direction
 Other editor features include:
 
 - Box selection, copy/paste, duplication, and reusable node groups called **Patterns**.
+- [Auto-organize](docs/CREATOR_WORKFLOW.md#organizing-the-canvas) for the whole graph or a selection, plus optional grid snapping with Alt for free movement.
 - Named texture slots shared between the graph and material inspector.
 - Collapsible inspector sections and advanced node inputs, with connected sockets kept visible.
 - `*` markers beside changed settings and their section headings, plus full-width XYZ controls.
