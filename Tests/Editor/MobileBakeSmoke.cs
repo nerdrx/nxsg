@@ -107,10 +107,53 @@ ENDCG } } }");
             if (renderer.sharedMaterial != desktop) throw new Exception("Desktop material not restored");
             if (desktop.shader.name == "VRChat/Mobile/Toon Standard") throw new Exception("Desktop material changed");
             UnityEngine.Object.DestroyImmediate(source);
+            VerifyTextureSlotRemap();
             Debug.Log("NXSG MOBILE BAKE SMOKE PASSED");
             EditorApplication.Exit(0);
         }
         catch (Exception exception) { Debug.LogException(exception); EditorApplication.Exit(1); }
+    }
+
+    static void VerifyTextureSlotRemap()
+    {
+        const string path="Assets/NXSGTextureSlotSmoke.nxsg";
+        var graph=GraphSamples.CreateDefault();
+        var mask=NodeCatalog.Create("core.texture2D");
+        mask.Id="a-mask"; mask.Properties["resourceId"]="mask"; graph.Nodes.Add(mask);
+        graph.Resources.Add(new GraphResource { Id="mask", Kind="texture2D", Uri="builtin://white" });
+        graph.Connections.Add(Link(mask.Id,"color","toon","emission"));
+        File.WriteAllText(path,GraphJson.Serialize(graph));
+        AssetDatabase.ImportAsset(path,ImportAssetOptions.ForceSynchronousImport);
+        var material=GraphBuild.Build(graph,Path.GetFullPath(path));
+        var albedoLabel=TextureSlotLabels.DisplayName(graph,"white");
+        string albedoProperty=null;
+        for(var i=0;i<material.shader.GetPropertyCount();i++)
+            if(material.shader.GetPropertyDescription(i)==albedoLabel)
+                albedoProperty=material.shader.GetPropertyName(i);
+        if(albedoProperty==null || albedoProperty=="_MainTex")
+            throw new Exception("Texture-slot regression fixture did not promote a different resource to _MainTex");
+        var maskTexture=new Texture2D(2,2,TextureFormat.RGBA32,false,true);
+        var colorTexture=new Texture2D(2,2,TextureFormat.RGBA32,false,true);
+        try
+        {
+            maskTexture.SetPixels(Enumerable.Repeat(Color.green,4).ToArray());maskTexture.Apply();
+            colorTexture.SetPixels(Enumerable.Repeat(Color.red,4).ToArray());colorTexture.Apply();
+            material.SetTexture("_MainTex",maskTexture);
+            material.SetTexture(albedoProperty,colorTexture);
+            var baked=GraphBaker.RenderSnapshot(graph,"texture","color",32,material,0,false,0);
+            try
+            {
+                var pixel=baked.GetPixel(16,16);
+                if(pixel.r<.8f || pixel.g>.2f)
+                    throw new Exception("Pruned _MainTex took another resource's texture: "+pixel);
+            }
+            finally { UnityEngine.Object.DestroyImmediate(baked); }
+        }
+        finally
+        {
+            UnityEngine.Object.DestroyImmediate(maskTexture);
+            UnityEngine.Object.DestroyImmediate(colorTexture);
+        }
     }
 
     static GraphConnection Link(string source, string output, string target, string input) => new GraphConnection

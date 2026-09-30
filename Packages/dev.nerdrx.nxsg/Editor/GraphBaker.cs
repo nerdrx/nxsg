@@ -3,9 +3,11 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Newtonsoft.Json.Linq;
+using NXSG.Backend;
 using NXSG.Core;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 namespace NXSG.Editor
 {
@@ -70,7 +72,7 @@ namespace NXSG.Editor
                 {
                     // GraphPreview assigns graph defaults after copying the material. Restore
                     // matching material overrides so this bake reflects the selected material.
-                    if(context!=null)preview.Material.CopyMatchingPropertiesFromMaterial(context);
+                    ApplyContext(preview,context);
                     preview.Material.SetFloat("_NXSG_PreviewClock",1); preview.Material.SetFloat("_NXSG_PreviewTime",0);
                     // Blit binds its source as _MainTex; keep the graph's first texture intact.
                     var source=preview.Material.HasProperty("_MainTex")?preview.Material.GetTexture("_MainTex"):null;
@@ -158,7 +160,7 @@ namespace NXSG.Editor
             {
                 using(var preview=GraphPreview.Create(snapshot,context))
                 {
-                    if(context!=null)preview.Material.CopyMatchingPropertiesFromMaterial(context);
+                    ApplyContext(preview,context);
                     preview.Material.SetFloat("_NXSG_PreviewClock",1);
                     preview.Material.SetFloat("_NXSG_PreviewTime",seconds);
                     preview.Material.SetFloat("_NXSG_AudioLinkPreview",audioEnabled?1:0);
@@ -195,6 +197,42 @@ namespace NXSG.Editor
                 if(plane!=null)UnityEngine.Object.DestroyImmediate(plane);
                 if(mesh!=null)UnityEngine.Object.DestroyImmediate(mesh);
                 RenderTexture.ReleaseTemporary(target);
+            }
+        }
+
+        // Pruning a branch can promote a different texture to _MainTex. Match
+        // texture resources by their stable material labels, not slot symbols.
+        static void ApplyContext(GraphPreview preview, Material context)
+        {
+            if(context==null)return;
+            var textures=preview.Properties.Where(p=>p.ResourceId!=null).ToArray();
+            var defaults=textures.ToDictionary(p=>p.ResourceId,p=>new
+            {
+                texture=preview.Material.GetTexture(p.Name),
+                scale=preview.Material.GetTextureScale(p.Name),
+                offset=preview.Material.GetTextureOffset(p.Name)
+            });
+            preview.Material.CopyMatchingPropertiesFromMaterial(context);
+            foreach(var property in textures)
+            {
+                string sourceName=null;
+                for(var i=0;i<context.shader.GetPropertyCount();i++)
+                    if(context.shader.GetPropertyType(i)==ShaderPropertyType.Texture &&
+                       context.shader.GetPropertyDescription(i)==property.DisplayName)
+                    { sourceName=context.shader.GetPropertyName(i); break; }
+                if(sourceName!=null)
+                {
+                    preview.Material.SetTexture(property.Name,context.GetTexture(sourceName));
+                    preview.Material.SetTextureScale(property.Name,context.GetTextureScale(sourceName));
+                    preview.Material.SetTextureOffset(property.Name,context.GetTextureOffset(sourceName));
+                }
+                else
+                {
+                    var fallback=defaults[property.ResourceId];
+                    preview.Material.SetTexture(property.Name,fallback.texture);
+                    preview.Material.SetTextureScale(property.Name,fallback.scale);
+                    preview.Material.SetTextureOffset(property.Name,fallback.offset);
+                }
             }
         }
     }

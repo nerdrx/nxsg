@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using NXSG.Backend;
 using NXSG.Core;
@@ -12,13 +13,15 @@ namespace NXSG.Editor
     {
         private Shader shader;
 
-        private GraphPreview(Shader shader, Material material)
+        private GraphPreview(Shader shader, Material material, IReadOnlyList<NXSG.Backend.MaterialProperty> properties)
         {
             this.shader = shader;
             Material = material;
+            Properties = properties;
         }
 
         public Material Material { get; private set; }
+        public IReadOnlyList<NXSG.Backend.MaterialProperty> Properties { get; private set; }
 
         public static GraphPreview Create(ShaderGraph graph, Material context)
         {
@@ -44,7 +47,7 @@ namespace NXSG.Editor
 
                 CheckCompilation(createdMaterial, createdShader);
                 AssignTextures(graph, emitted, createdMaterial);
-                return new GraphPreview(createdShader, createdMaterial);
+                return new GraphPreview(createdShader, createdMaterial, emitted.Properties);
             }
             catch
             {
@@ -63,6 +66,7 @@ namespace NXSG.Editor
             Destroy(Material);
             Destroy(shader);
             Material = null;
+            Properties = null;
             shader = null;
         }
 
