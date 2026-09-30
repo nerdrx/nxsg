@@ -1356,6 +1356,58 @@
           "url": "https://github.com/nerdrx/nxsg/releases/download/v2.4.0/dev.nerdrx.nxsg-2.4.0.zip",
           "version": "2.4.0",
           "zipSHA256": "08512f8eedea817eccc74a33868a3a8701d08054df4d5fc683d5fd8888a49e5a"
+        },
+        "2.4.1": {
+          "author": {
+            "name": "nerdrx",
+            "url": "https://github.com/nerdrx"
+          },
+          "changelogUrl": "https://github.com/nerdrx/nxsg/releases",
+          "dependencies": {
+            "com.unity.nuget.newtonsoft-json": "3.2.1"
+          },
+          "description": "Shader graph authoring for VRChat and Unity Built-In, with mobile material baking.",
+          "displayName": "NX Shader Graph",
+          "documentationUrl": "https://github.com/nerdrx/nxsg/blob/main/docs/NODES.md",
+          "name": "dev.nerdrx.nxsg",
+          "samples": [
+            {
+              "description": "Ready-to-edit fur, hologram, procedural and surface graphs.",
+              "displayName": "Example Graphs",
+              "path": "Samples~"
+            }
+          ],
+          "unity": "2022.3",
+          "unityRelease": "22f1",
+          "url": "https://github.com/nerdrx/nxsg/releases/download/v2.4.1/dev.nerdrx.nxsg-2.4.1.zip",
+          "version": "2.4.1",
+          "zipSHA256": "bfb0ef35451923e4539f0ccd132b641bc3a84e429a26a5b4953e8be7b0b44f02"
+        },
+        "2.4.2": {
+          "author": {
+            "name": "nerdrx",
+            "url": "https://github.com/nerdrx"
+          },
+          "changelogUrl": "https://github.com/nerdrx/nxsg/releases",
+          "dependencies": {
+            "com.unity.nuget.newtonsoft-json": "3.2.1"
+          },
+          "description": "Shader graph authoring for VRChat and Unity Built-In, with mobile material baking.",
+          "displayName": "NX Shader Graph",
+          "documentationUrl": "https://github.com/nerdrx/nxsg/blob/main/docs/NODES.md",
+          "name": "dev.nerdrx.nxsg",
+          "samples": [
+            {
+              "description": "Ready-to-edit fur, hologram, procedural and surface graphs.",
+              "displayName": "Example Graphs",
+              "path": "Samples~"
+            }
+          ],
+          "unity": "2022.3",
+          "unityRelease": "22f1",
+          "url": "https://github.com/nerdrx/nxsg/releases/download/v2.4.2/dev.nerdrx.nxsg-2.4.2.zip",
+          "version": "2.4.2",
+          "zipSHA256": "61a76e77caeb73b66ee0d9600ddf1b7b569883f8d05668872eb088da6446120e"
         }
       }
     }
