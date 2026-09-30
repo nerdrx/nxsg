@@ -60,9 +60,9 @@ namespace NXSG.Editor
             var opacityLink = Input(graph, surface, "opacity");
             if (opacityLink != null || ((double?)surface.Properties["opacity"] ?? 1) < .999 ||
                 ((int?)surface.Properties["useAlbedoAlpha"] ?? 0) != 0 || ((double?)surface.Properties["cutoff"] ?? 0) > 0)
-                throw new InvalidOperationException("Toon Standard is opaque. Disconnect opacity, set it to 1, and disable albedo alpha/cutout before mobile baking.");
+                notes.Add("opacity and cutout flattened to opaque");
             if (Input(graph, surface, "displacement") != null || Math.Abs((double?)surface.Properties["displacement"] ?? 0) > .0001)
-                throw new InvalidOperationException("Mobile baking cannot preserve displacement. Disconnect it and set displacement to 0.");
+                notes.Add("displacement geometry omitted");
 
             var albedoLink = Input(graph, surface, "albedo");
             var emissionLink = Input(graph, surface, "emission");
@@ -93,6 +93,14 @@ namespace NXSG.Editor
                 }
                 else albedo = GraphBaker.RenderSnapshot(graph, albedoLink.From.NodeId, albedoLink.From.PortId, resolution, desktop,
                     snapshotSeconds, audioEnabled, audioValue);
+                // Toon Standard is opaque even when the desktop color branch carries alpha.
+                var albedoPixels = albedo.GetPixels();
+                for (var i = 0; i < albedoPixels.Length; i++)
+                {
+                    var pixel = albedoPixels[i]; pixel.a = 1; albedoPixels[i] = pixel;
+                }
+                albedo.SetPixels(albedoPixels);
+                albedo.Apply();
                 if (emissionLink != null) emission = GraphBaker.RenderSnapshot(graph, emissionLink.From.NodeId, emissionLink.From.PortId,
                     resolution, desktop, snapshotSeconds, audioEnabled, audioValue);
                 if (metallicLink != null) metallic = GraphBaker.RenderSnapshot(graph, metallicLink.From.NodeId, metallicLink.From.PortId,
@@ -171,8 +179,8 @@ namespace NXSG.Editor
                 EditorUtility.SetDirty(registry);
                 AssetDatabase.SaveAssets();
                 MobileMaterialSwap.SyncOpenScenes();
-                var bakedPorts = new[] { "albedo", "emission", "metallic", "roughness", "occlusion", "normal" };
-                var omitted = graph.Connections.Where(e => e.To.NodeId == surface.Id && !bakedPorts.Contains(e.To.PortId))
+                var handledPorts = new[] { "albedo", "emission", "metallic", "roughness", "occlusion", "normal", "opacity", "displacement" };
+                var omitted = graph.Connections.Where(e => e.To.NodeId == surface.Id && !handledPorts.Contains(e.To.PortId))
                     .Select(e => e.To.PortId).Distinct().ToArray();
                 if (omitted.Length > 0) notes.Add("not baked: " + string.Join(", ", omitted));
                 return "Mobile snapshot at " + snapshotSeconds.ToString("F2") + " s: " + materialPath +

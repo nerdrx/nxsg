@@ -58,6 +58,26 @@ ENDCG } } }");
             if (baked.GetPixel(1, 1).r < .8f || baked.GetPixel(1, 1).g > .2f) throw new Exception("Material texture override was not baked");
             UnityEngine.Object.DestroyImmediate(baked);
             var surface = graph.Nodes.Single(n => n.Operation == "core.pbrSurface");
+            var opacity = NodeCatalog.Create("core.value"); opacity.Properties["value"] = .25; graph.Nodes.Add(opacity);
+            var displacement = NodeCatalog.Create("core.value"); displacement.Properties["value"] = .1; graph.Nodes.Add(displacement);
+            graph.Connections.Add(Link(opacity.Id, "value", surface.Id, "opacity"));
+            graph.Connections.Add(Link(displacement.Id, "value", surface.Id, "displacement"));
+            surface.Properties["opacity"] = .25;
+            surface.Properties["useAlbedoAlpha"] = 1;
+            surface.Properties["cutoff"] = .5;
+            surface.Properties["displacement"] = .1;
+            source.SetPixels(Enumerable.Repeat(new Color(1, 0, 0, .25f), 4).ToArray()); source.Apply();
+            var opaqueBefore = GraphJson.Serialize(graph);
+            var opaqueResult = MobileBake.Bake(graph, Path.GetFullPath(GraphPath), desktop, 32);
+            if (!opaqueResult.Contains("opacity and cutout flattened to opaque") || !opaqueResult.Contains("displacement geometry omitted"))
+                throw new Exception("Mobile bake did not report desktop-only surface controls");
+            if (GraphJson.Serialize(graph) != opaqueBefore) throw new Exception("Mobile bake changed desktop surface controls");
+            baked = new Texture2D(2, 2); baked.LoadImage(File.ReadAllBytes(AssetDatabase.GetAssetPath(mobile.GetTexture("_MainTex"))));
+            var opaquePixel = baked.GetPixel(1, 1);
+            if (opaquePixel.a < .99f || opaquePixel.r < .8f)
+                throw new Exception("Mobile albedo lost color or retained desktop transparency: " + opaquePixel);
+            UnityEngine.Object.DestroyImmediate(baked);
+            source.SetPixels(Enumerable.Repeat(Color.red, 4).ToArray()); source.Apply();
             var oldAlbedo = graph.Connections.Single(e => e.To.NodeId == surface.Id && e.To.PortId == "albedo");
             graph.Connections.Remove(oldAlbedo);
             var time = NodeCatalog.Create("core.time"); graph.Nodes.Add(time);
