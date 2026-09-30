@@ -65,8 +65,6 @@ namespace NXSG.Editor
                 throw new InvalidOperationException("Mobile baking cannot preserve displacement. Disconnect it and set displacement to 0.");
 
             var albedoLink = Input(graph, surface, "albedo");
-            if (albedoLink == null)
-                throw new InvalidOperationException("Connect a color branch to the surface albedo before baking.");
             var emissionLink = Input(graph, surface, "emission");
             var metallicLink = Input(graph, surface, "metallic");
             var roughnessLink = Input(graph, surface, "roughness");
@@ -87,7 +85,13 @@ namespace NXSG.Editor
             Texture2D albedo = null, emission = null, metallic = null, gloss = null, occlusion = null, normal = null;
             try
             {
-                albedo = GraphBaker.RenderSnapshot(graph, albedoLink.From.NodeId, albedoLink.From.PortId, resolution, desktop,
+                if (albedoLink == null)
+                {
+                    albedo = new Texture2D(1, 1, TextureFormat.RGBA32, false, true);
+                    albedo.SetPixel(0, 0, new Color(0, 0, 0, 1));
+                    albedo.Apply();
+                }
+                else albedo = GraphBaker.RenderSnapshot(graph, albedoLink.From.NodeId, albedoLink.From.PortId, resolution, desktop,
                     snapshotSeconds, audioEnabled, audioValue);
                 if (emissionLink != null) emission = GraphBaker.RenderSnapshot(graph, emissionLink.From.NodeId, emissionLink.From.PortId,
                     resolution, desktop, snapshotSeconds, audioEnabled, audioValue);

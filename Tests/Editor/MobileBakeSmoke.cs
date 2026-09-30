@@ -103,6 +103,14 @@ ENDCG } } }");
             if(passed.GetPixel(16,16).b<.8f || passed.GetPixel(16,16).r>.2f)
                 throw new Exception("LTCGI input color was not passed through");
             UnityEngine.Object.DestroyImmediate(passed);
+            graph.Connections.RemoveAll(e=>e.To.NodeId==surface.Id&&e.To.PortId=="albedo");
+            MobileBake.Bake(graph,Path.GetFullPath(GraphPath),desktop,32,.5f);
+            baked=new Texture2D(2,2);
+            baked.LoadImage(File.ReadAllBytes(AssetDatabase.GetAssetPath(mobile.GetTexture("_MainTex"))));
+            var emptyAlbedo=baked.GetPixel(0,0);
+            if(emptyAlbedo.r>.01f || emptyAlbedo.g>.01f || emptyAlbedo.b>.01f || emptyAlbedo.a<.99f)
+                throw new Exception("Disconnected albedo should bake opaque black: "+emptyAlbedo);
+            UnityEngine.Object.DestroyImmediate(baked);
             MobileMaterialSwap.SyncOpenScenesForTarget(false);
             if (renderer.sharedMaterial != desktop) throw new Exception("Desktop material not restored");
             if (desktop.shader.name == "VRChat/Mobile/Toon Standard") throw new Exception("Desktop material changed");
