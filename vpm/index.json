@@ -1460,6 +1460,32 @@
           "url": "https://github.com/nerdrx/nxsg/releases/download/v2.4.4/dev.nerdrx.nxsg-2.4.4.zip",
           "version": "2.4.4",
           "zipSHA256": "9172f8fe3fb2a1a9132bd3eeaac831713f420d0c86f73a0d7d9ef4e7eff8cbea"
+        },
+        "2.4.5": {
+          "author": {
+            "name": "nerdrx",
+            "url": "https://github.com/nerdrx"
+          },
+          "changelogUrl": "https://github.com/nerdrx/nxsg/releases",
+          "dependencies": {
+            "com.unity.nuget.newtonsoft-json": "3.2.1"
+          },
+          "description": "Shader graph authoring for VRChat and Unity Built-In, with mobile material baking.",
+          "displayName": "NX Shader Graph",
+          "documentationUrl": "https://github.com/nerdrx/nxsg/blob/main/docs/NODES.md",
+          "name": "dev.nerdrx.nxsg",
+          "samples": [
+            {
+              "description": "Ready-to-edit fur, hologram, procedural and surface graphs.",
+              "displayName": "Example Graphs",
+              "path": "Samples~"
+            }
+          ],
+          "unity": "2022.3",
+          "unityRelease": "22f1",
+          "url": "https://github.com/nerdrx/nxsg/releases/download/v2.4.5/dev.nerdrx.nxsg-2.4.5.zip",
+          "version": "2.4.5",
+          "zipSHA256": "72b470ea1a0a56ee7e78416ba7f6526b2774bafcdb2ee855630cf832a97b1bb4"
         }
       }
     }
