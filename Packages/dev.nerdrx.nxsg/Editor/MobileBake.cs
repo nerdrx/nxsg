@@ -73,7 +73,7 @@ namespace NXSG.Editor
             var occlusionLink = Input(graph, surface, "occlusion");
             var normalLink = Input(graph, surface, "normal");
             if (emissionLink != null && HasUpstream(graph, emissionLink.From.NodeId, "core.ltcgi"))
-                notes.Add("LTCGI scene lighting omitted");
+                notes.Add("LTCGI lighting omitted; input color passed through when connected");
 
             var directory = "Assets/NXSGGenerated/" + graphGuid + "/Mobile/" + desktopGuid + "-" + desktopLocalId;
             Directory.CreateDirectory(directory);

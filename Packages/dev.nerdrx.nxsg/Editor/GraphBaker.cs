@@ -102,15 +102,28 @@ namespace NXSG.Editor
             if(resolution<16||resolution>2048)throw new ArgumentOutOfRangeException(nameof(resolution));
             if(float.IsNaN(seconds)||float.IsInfinity(seconds)||seconds<0)throw new ArgumentOutOfRangeException(nameof(seconds));
             var snapshot=GraphJson.Parse(GraphJson.Serialize(graph));
-            // LTCGI is scene lighting, not texture detail, and its package is
-            // optional. A mobile texture snapshot keeps the other contributors.
+            // LTCGI is world lighting. Keep its input color in a mobile
+            // snapshot, but omit the world-dependent lighting calculation.
             foreach(var lighting in snapshot.Nodes.Where(n=>n.Operation=="core.ltcgi"))
             {
-                lighting.Operation="core.constant";
-                lighting.Properties=new JObject { ["valueType"]="color", ["value"]=new JArray(0,0,0,1) };
+                var albedo=snapshot.Connections.SingleOrDefault(e=>e.To.NodeId==lighting.Id&&e.To.PortId=="albedo");
                 snapshot.Connections.RemoveAll(e=>e.To.NodeId==lighting.Id);
-                foreach(var edge in snapshot.Connections.Where(e=>e.From.NodeId==lighting.Id))edge.From.PortId="value";
-                if(nodeId==lighting.Id)port="value";
+                if(albedo!=null)
+                {
+                    foreach(var edge in snapshot.Connections.Where(e=>e.From.NodeId==lighting.Id))
+                    {
+                        edge.From.NodeId=albedo.From.NodeId;
+                        edge.From.PortId=albedo.From.PortId;
+                    }
+                    if(nodeId==lighting.Id){nodeId=albedo.From.NodeId;port=albedo.From.PortId;}
+                }
+                else
+                {
+                    lighting.Operation="core.constant";
+                    lighting.Properties=new JObject { ["valueType"]="color", ["value"]=new JArray(0,0,0,1) };
+                    foreach(var edge in snapshot.Connections.Where(e=>e.From.NodeId==lighting.Id))edge.From.PortId="value";
+                    if(nodeId==lighting.Id)port="value";
+                }
             }
             var root=snapshot.Nodes.Single(n=>n.Id==nodeId);
             var type=GraphTypes.PortType(snapshot,root,port,GraphTypes.Infer(snapshot));

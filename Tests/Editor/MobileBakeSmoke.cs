@@ -97,6 +97,12 @@ ENDCG } } }");
             baked=new Texture2D(2,2);baked.LoadImage(File.ReadAllBytes(AssetDatabase.GetAssetPath(gloss)));
             if(Mathf.Abs(baked.GetPixel(1,1).r-.75f)>.1f)throw new Exception("Mobile gloss map wrong: "+baked.GetPixel(1,1));
             UnityEngine.Object.DestroyImmediate(baked);
+            var ltcgi=NodeCatalog.Create("core.ltcgi");graph.Nodes.Add(ltcgi);
+            graph.Connections.Add(Link(blue.Id,"value",ltcgi.Id,"albedo"));
+            var passed=GraphBaker.RenderSnapshot(graph,ltcgi.Id,"color",32,desktop,.5f,false,0);
+            if(passed.GetPixel(16,16).b<.8f || passed.GetPixel(16,16).r>.2f)
+                throw new Exception("LTCGI input color was not passed through");
+            UnityEngine.Object.DestroyImmediate(passed);
             MobileMaterialSwap.SyncOpenScenesForTarget(false);
             if (renderer.sharedMaterial != desktop) throw new Exception("Desktop material not restored");
             if (desktop.shader.name == "VRChat/Mobile/Toon Standard") throw new Exception("Desktop material changed");
