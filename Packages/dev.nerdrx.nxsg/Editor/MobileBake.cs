@@ -30,7 +30,8 @@ namespace NXSG.Editor
         const string RegistryPath = "Assets/NXSGGenerated/MobileBakes.asset";
         const string MobileShader = "VRChat/Mobile/Toon Standard";
 
-        public static string Bake(ShaderGraph graph, string sourcePath, Material desktop, int resolution = 1024)
+        public static string Bake(ShaderGraph graph, string sourcePath, Material desktop, int resolution = 1024,
+            float snapshotSeconds = 0, bool audioEnabled = false, float audioValue = 0)
         {
             if (graph == null || desktop == null) throw new InvalidOperationException("Build a graph and choose its desktop material first.");
             var shader = Shader.Find(MobileShader);
@@ -46,6 +47,13 @@ namespace NXSG.Editor
             var output = graph.Nodes.SingleOrDefault(n => n.Operation == "core.output");
             var surfaceLink = graph.Connections.SingleOrDefault(e => output != null && e.To.NodeId == output.Id && e.To.PortId == "surface");
             var surface = graph.Nodes.SingleOrDefault(n => surfaceLink != null && n.Id == surfaceLink.From.NodeId);
+            var notes = new List<string>();
+            while (surface != null && new[] { "core.surfaceParticles", "core.softOutline", "core.outline", "core.fur", "core.shell" }.Contains(surface.Operation))
+            {
+                notes.Add(NodeCatalog.Title(surface.Operation) + " geometry omitted");
+                var baseLink = Input(graph, surface, "base");
+                surface = graph.Nodes.SingleOrDefault(n => baseLink != null && n.Id == baseLink.From.NodeId);
+            }
             if (surface == null || !new[] { "core.toonSurface", "core.pbrSurface", "core.unlitSurface" }.Contains(surface.Operation))
                 throw new InvalidOperationException("Mobile baking needs a direct Toon, PBR, or Unlit surface connected to Output. Geometry, particles, and volume surfaces cannot be flattened into a mobile material.");
 
@@ -58,41 +66,51 @@ namespace NXSG.Editor
 
             var albedoLink = Input(graph, surface, "albedo");
             if (albedoLink == null)
-                throw new InvalidOperationException("Connect a UV-local color branch to the surface albedo before baking.");
-            var notes = new List<string>();
-            var albedoSource = albedoLink.From;
-            var albedoGraph = graph;
-            try { GraphBaker.Prepare(graph, albedoSource.NodeId, albedoSource.PortId); }
-            catch (InvalidOperationException reason)
-            {
-                var fallback = FindUvTexture(graph, albedoSource.NodeId, out albedoGraph);
-                if (fallback == null) throw new InvalidOperationException("Albedo cannot be baked: " + reason.Message + " Add a UV-local texture branch for a mobile base.");
-                albedoSource = fallback;
-                notes.Add("animated/scene albedo effects and UV transforms omitted; used a mesh-UV texture as the base");
-            }
+                throw new InvalidOperationException("Connect a color branch to the surface albedo before baking.");
             var emissionLink = Input(graph, surface, "emission");
-            if (emissionLink != null)
-            {
-                try { GraphBaker.Prepare(graph, emissionLink.From.NodeId, emissionLink.From.PortId); }
-                catch (InvalidOperationException)
-                {
-                    notes.Add("animated/scene emission omitted");
-                    emissionLink = null;
-                }
-            }
+            var metallicLink = Input(graph, surface, "metallic");
+            var roughnessLink = Input(graph, surface, "roughness");
+            var occlusionLink = Input(graph, surface, "occlusion");
+            var normalLink = Input(graph, surface, "normal");
+            if (emissionLink != null && HasUpstream(graph, emissionLink.From.NodeId, "core.ltcgi"))
+                notes.Add("LTCGI scene lighting omitted");
 
             var directory = "Assets/NXSGGenerated/" + graphGuid + "/Mobile/" + desktopGuid + "-" + desktopLocalId;
             Directory.CreateDirectory(directory);
             var albedoPath = directory + "/Albedo.png";
             var emissionPath = directory + "/Emission.png";
+            var metallicPath = directory + "/Metallic.png";
+            var glossPath = directory + "/Gloss.png";
+            var occlusionPath = directory + "/Occlusion.png";
+            var normalPath = directory + "/Normal.png";
             var materialPath = directory + "/Mobile.mat";
-            Texture2D albedo = null, emission = null;
+            Texture2D albedo = null, emission = null, metallic = null, gloss = null, occlusion = null, normal = null;
             try
             {
-                albedo = GraphBaker.Render(albedoGraph, albedoSource.NodeId, albedoSource.PortId, resolution, desktop);
-                if (emissionLink != null) emission = GraphBaker.Render(graph, emissionLink.From.NodeId, emissionLink.From.PortId, resolution, desktop);
+                albedo = GraphBaker.RenderSnapshot(graph, albedoLink.From.NodeId, albedoLink.From.PortId, resolution, desktop,
+                    snapshotSeconds, audioEnabled, audioValue);
+                if (emissionLink != null) emission = GraphBaker.RenderSnapshot(graph, emissionLink.From.NodeId, emissionLink.From.PortId,
+                    resolution, desktop, snapshotSeconds, audioEnabled, audioValue);
+                if (metallicLink != null) metallic = GraphBaker.RenderSnapshot(graph, metallicLink.From.NodeId, metallicLink.From.PortId,
+                    resolution, desktop, snapshotSeconds, audioEnabled, audioValue);
+                if (roughnessLink != null)
+                {
+                    gloss = GraphBaker.RenderSnapshot(graph, roughnessLink.From.NodeId, roughnessLink.From.PortId,
+                        resolution, desktop, snapshotSeconds, audioEnabled, audioValue);
+                    var values = gloss.GetPixels();
+                    for (var i = 0; i < values.Length; i++) values[i] = new Color(1-values[i].r, 1-values[i].r, 1-values[i].r, 1);
+                    gloss.SetPixels(values); gloss.Apply();
+                }
+                if (occlusionLink != null) occlusion = GraphBaker.RenderSnapshot(graph, occlusionLink.From.NodeId, occlusionLink.From.PortId,
+                    resolution, desktop, snapshotSeconds, audioEnabled, audioValue);
+                if (normalLink != null) normal = GraphBaker.RenderSnapshot(graph, normalLink.From.NodeId, normalLink.From.PortId,
+                    resolution, desktop, snapshotSeconds, audioEnabled, audioValue);
                 WriteColorPng(albedo, albedoPath);
                 if (emission != null) WriteColorPng(emission, emissionPath);
+                if (metallic != null) WriteColorPng(metallic, metallicPath, false);
+                if (gloss != null) WriteColorPng(gloss, glossPath, false);
+                if (occlusion != null) WriteColorPng(occlusion, occlusionPath, false);
+                if (normal != null) WriteColorPng(normal, normalPath, false, true);
                 var mobile = AssetDatabase.LoadAssetAtPath<Material>(materialPath);
                 if (mobile == null)
                 {
@@ -106,9 +124,25 @@ namespace NXSG.Editor
                 mobile.enableInstancing = true;
                 if (surface.Operation == "core.pbrSurface")
                 {
-                    mobile.SetFloat("_MetallicStrength", Mathf.Clamp01((float?)surface.Properties["metallic"] ?? 0));
-                    mobile.SetFloat("_GlossStrength", 1 - Mathf.Clamp01((float?)surface.Properties["roughness"] ?? .5f));
+                    mobile.SetTexture("_MetallicMap", metallic == null ? null : AssetDatabase.LoadAssetAtPath<Texture2D>(metallicPath));
+                    mobile.SetFloat("_MetallicMapChannel", 0);
+                    mobile.SetFloat("_MetallicStrength", metallic == null ? Mathf.Clamp01((float?)surface.Properties["metallic"] ?? 0) : 1);
+                    mobile.SetTexture("_GlossMap", gloss == null ? null : AssetDatabase.LoadAssetAtPath<Texture2D>(glossPath));
+                    mobile.SetFloat("_GlossMapChannel", 0);
+                    mobile.SetFloat("_GlossStrength", gloss == null ? 1 - Mathf.Clamp01((float?)surface.Properties["roughness"] ?? .5f) : 1);
                 }
+                else
+                {
+                    mobile.SetTexture("_MetallicMap", null);
+                    mobile.SetFloat("_MetallicStrength", 0);
+                    mobile.SetTexture("_GlossMap", null);
+                    mobile.SetFloat("_GlossStrength", .5f);
+                }
+                mobile.SetTexture("_OcclusionMap", occlusion == null ? null : AssetDatabase.LoadAssetAtPath<Texture2D>(occlusionPath));
+                mobile.SetFloat("_OcclusionMapChannel", 0);
+                mobile.SetFloat("_OcclusionStrength", 1);
+                mobile.SetTexture("_BumpMap", normal == null ? null : AssetDatabase.LoadAssetAtPath<Texture2D>(normalPath));
+                mobile.SetFloat("_BumpScale", normal == null ? 0 : 1);
                 if (emission != null)
                 {
                     mobile.SetTexture("_EmissionMap", AssetDatabase.LoadAssetAtPath<Texture2D>(emissionPath));
@@ -133,45 +167,40 @@ namespace NXSG.Editor
                 EditorUtility.SetDirty(registry);
                 AssetDatabase.SaveAssets();
                 MobileMaterialSwap.SyncOpenScenes();
-                var omitted = graph.Connections.Where(e => e.To.NodeId == surface.Id && e.To.PortId != "albedo" && e.To.PortId != "emission")
+                var bakedPorts = new[] { "albedo", "emission", "metallic", "roughness", "occlusion", "normal" };
+                var omitted = graph.Connections.Where(e => e.To.NodeId == surface.Id && !bakedPorts.Contains(e.To.PortId))
                     .Select(e => e.To.PortId).Distinct().ToArray();
                 if (omitted.Length > 0) notes.Add("not baked: " + string.Join(", ", omitted));
-                return "Mobile bake saved: " + materialPath + (notes.Count == 0 ? "" : ". " + string.Join("; ", notes) + ".");
+                return "Mobile snapshot at " + snapshotSeconds.ToString("F2") + " s: " + materialPath +
+                    (notes.Count == 0 ? "" : ". " + string.Join("; ", notes) + ".");
             }
             finally
             {
                 if (albedo != null) UnityEngine.Object.DestroyImmediate(albedo);
                 if (emission != null) UnityEngine.Object.DestroyImmediate(emission);
+                if (metallic != null) UnityEngine.Object.DestroyImmediate(metallic);
+                if (gloss != null) UnityEngine.Object.DestroyImmediate(gloss);
+                if (occlusion != null) UnityEngine.Object.DestroyImmediate(occlusion);
+                if (normal != null) UnityEngine.Object.DestroyImmediate(normal);
             }
         }
 
         static GraphConnection Input(ShaderGraph graph, GraphNode node, string port) =>
             graph.Connections.SingleOrDefault(e => e.To.NodeId == node.Id && e.To.PortId == port);
 
-        static GraphPortRef FindUvTexture(ShaderGraph graph, string start, out ShaderGraph bakeGraph)
+        static bool HasUpstream(ShaderGraph graph, string nodeId, string operation)
         {
-            bakeGraph = graph;
-            var pending = new Queue<string>();
-            var visited = new HashSet<string>();
-            pending.Enqueue(start);
+            var seen = new HashSet<string>();
+            var pending = new Stack<string>(); pending.Push(nodeId);
             while (pending.Count > 0)
             {
-                var id = pending.Dequeue();
-                if (!visited.Add(id)) continue;
-                var node = graph.Nodes.FirstOrDefault(n => n.Id == id);
-                if (node == null) continue;
-                if (node.Operation == "core.texture2D")
-                {
-                    // A view-dependent UV branch can be discarded for the mobile base map.
-                    var uvGraph = GraphJson.Parse(GraphJson.Serialize(graph));
-                    uvGraph.Connections.RemoveAll(e => e.To.NodeId == id && e.To.PortId == "uv");
-                    try { GraphBaker.Prepare(uvGraph, id, "color"); bakeGraph = uvGraph; return new GraphPortRef { NodeId = id, PortId = "color" }; }
-                    catch (InvalidOperationException) { }
-                }
-                foreach (var edge in graph.Connections.Where(e => e.To.NodeId == id)) pending.Enqueue(edge.From.NodeId);
+                var id = pending.Pop(); if (!seen.Add(id)) continue;
+                if (graph.Nodes.Any(n => n.Id == id && n.Operation == operation)) return true;
+                foreach (var edge in graph.Connections.Where(e => e.To.NodeId == id)) pending.Push(edge.From.NodeId);
             }
-            return null;
+            return false;
         }
+
 
         static string ProjectPath(string absolute)
         {
@@ -182,25 +211,24 @@ namespace NXSG.Editor
             return "Assets/" + path.Substring(root.Length).Replace('\\', '/');
         }
 
-        static void WriteColorPng(Texture2D linear, string path)
+        static void WriteColorPng(Texture2D linear, string path, bool srgb = true, bool normalMap = false)
         {
             // Readback is linear; Unity's color texture importer expects sRGB PNG values.
             var colors = linear.GetPixels();
             for (var i = 0; i < colors.Length; i++)
             {
                 var c = colors[i];
-                var gamma = c.gamma;
-                gamma.a = c.a;
-                colors[i] = gamma;
+                if (srgb) { var gamma = c.gamma; gamma.a = c.a; colors[i] = gamma; }
             }
-            var png = new Texture2D(linear.width, linear.height, TextureFormat.RGBA32, false, false);
+            var png = new Texture2D(linear.width, linear.height, TextureFormat.RGBA32, false, !srgb);
             try { png.SetPixels(colors); png.Apply(); File.WriteAllBytes(path, png.EncodeToPNG()); }
             finally { UnityEngine.Object.DestroyImmediate(png); }
             AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceSynchronousImport);
             var importer = AssetImporter.GetAtPath(path) as TextureImporter;
             if (importer != null)
             {
-                importer.sRGBTexture = true;
+                importer.sRGBTexture = srgb;
+                if (normalMap) { importer.textureType = TextureImporterType.NormalMap; importer.convertToNormalmap = false; }
                 importer.alphaSource = TextureImporterAlphaSource.None;
                 importer.maxTextureSize = linear.width;
                 importer.textureCompression = TextureImporterCompression.Compressed;

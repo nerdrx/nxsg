@@ -17,7 +17,7 @@ The editor generates shaders and materials directly in Unity. Graphs remain edit
   <a href="docs/VPM.md">Installation help</a>
 </p>
 
-Add the NXSG repository and install **NX Shader Graph** in your project. Version **2.3.2** is available without enabling prerelease packages. [Release notes](https://github.com/nerdrx/nxsg/releases/tag/v2.3.2).
+Add the NXSG repository and install **NX Shader Graph** in your project. Version **2.4.1** is available without enabling prerelease packages. [Release notes](https://github.com/nerdrx/nxsg/releases/tag/v2.4.1).
 
 <details>
 <summary>VPM repository URL</summary>

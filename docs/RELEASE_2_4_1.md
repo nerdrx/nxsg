@@ -1,0 +1,7 @@
+# NXSG 2.4.1 — mobile snapshots
+
+**Bake for Mobile** now renders the connected color and data branches at the moment you click. It combines textures, UV effects, color operations, material overrides and time-driven effects into separate albedo, emission, normal, metallic, gloss and occlusion maps for `VRChat/Mobile/Toon Standard`. A Surface Particles wrapper no longer prevents its base surface from baking; particle geometry is omitted and reported.
+
+The capture samples a flat UV0 plane from one front-facing view. It cannot preserve animated motion, geometry effects, view-dependent shading or world lighting on the avatar. The current AudioLink preview value is sampled when preview is enabled. Opaque Toon Standard still rejects connected opacity and displacement. Re-bake after edits and inspect the resulting mobile material on an Android avatar before upload. [Mobile baking guide](MOBILE_BAKING.md).
+
+Validation: hidden Unity 2022.3.22f1 smoke with the SDK's actual Toon Standard shader passed for timed texture mixing, material override, roughness-to-gloss, normal-map import, Surface Particles base unwrapping and desktop/mobile scene swapping. The real NixomiBody color, emission and roughness branches were tested in an isolated fixture with unavailable texture references replaced by built-in whites. LTCGI scene lighting is removed from that mobile snapshot. Android upload and headset appearance remain unverified for this release.
