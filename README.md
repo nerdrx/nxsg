@@ -94,7 +94,7 @@ Rename a frame to keep your own grouping. Existing manual frames and Patterns ar
 
 This builds local assets; avatar uploading still uses the VRChat SDK.
 
-[Editor controls](docs/QUICK_START.md) · [Creator workflow](docs/CREATOR_WORKFLOW.md) · [Material recipes](docs/RECIPES.md) · [Build performance](docs/BUILD_PERFORMANCE.md)
+[Editor controls](docs/QUICK_START.md) · [Creator workflow](docs/CREATOR_WORKFLOW.md) · [Mobile baking](docs/MOBILE_BAKING.md) · [Material recipes](docs/RECIPES.md) · [Build performance](docs/BUILD_PERFORMANCE.md)
 
 ## Example materials
 

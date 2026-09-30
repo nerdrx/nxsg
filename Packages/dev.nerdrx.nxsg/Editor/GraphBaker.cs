@@ -54,6 +54,11 @@ namespace NXSG.Editor
 
         public static Texture2D Render(ShaderGraph graph,string nodeId,string port,int resolution)
         {
+            return Render(graph,nodeId,port,resolution,null);
+        }
+
+        public static Texture2D Render(ShaderGraph graph,string nodeId,string port,int resolution,Material context)
+        {
             if(resolution<16||resolution>2048)throw new ArgumentOutOfRangeException(nameof(resolution));
             var prepared=Prepare(graph,nodeId,port);
             var old=RenderTexture.active;
@@ -61,8 +66,11 @@ namespace NXSG.Editor
             Texture2D texture=null;
             try
             {
-                using(var preview=GraphPreview.Create(prepared,null))
+                using(var preview=GraphPreview.Create(prepared,context))
                 {
+                    // GraphPreview assigns graph defaults after copying the material. Restore
+                    // matching material overrides so this bake reflects the selected material.
+                    if(context!=null)preview.Material.CopyMatchingPropertiesFromMaterial(context);
                     preview.Material.SetFloat("_NXSG_PreviewClock",1); preview.Material.SetFloat("_NXSG_PreviewTime",0);
                     // Blit binds its source as _MainTex; keep the graph's first texture intact.
                     var source=preview.Material.HasProperty("_MainTex")?preview.Material.GetTexture("_MainTex"):null;

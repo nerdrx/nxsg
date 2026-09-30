@@ -150,6 +150,7 @@ namespace NXSG.Editor
             AddPatternToolbar(toolbar);
             AddFrameToolbar(toolbar);
             toolbar.Add(new VisualElement { style = { flexGrow = 1, minWidth = 8 } });
+            toolbar.Add(new ToolbarButton(BakeForMobile) { name = "nxsg-mobile-bake", text = "Bake for Mobile", tooltip = "Bake UV-local color into VRChat's mobile shader, then swap scene materials with the Unity build target." });
             toolbar.Add(buildButton);
             rootVisualElement.Add(toolbar);
             identity = new Label { name = "nxsg-identity", style = { whiteSpace = WhiteSpace.Normal, paddingLeft = 10, paddingTop = 5, paddingBottom = 5 } };
@@ -404,6 +405,18 @@ namespace NXSG.Editor
                 SetStatus("Built in " + buildWatch.Elapsed.TotalSeconds.ToString("F2") + " s. Preview updated. Client validation is separate.");
             }
             catch (Exception exception) { SceneBuildFailed(exception); SetStatus(exception.Message); }
+        }
+
+        void BakeForMobile()
+        {
+            if (!SaveGraph()) return;
+            try
+            {
+                var built = GraphBuild.Build(graph, sourcePath);
+                var desktop = MobileBake.DesktopFor(contextMaterial, built);
+                SetStatus(MobileBake.Bake(graph, sourcePath, desktop));
+            }
+            catch (Exception exception) { SetStatus("Mobile bake: " + exception.Message); Debug.LogException(exception); }
         }
 
         void ClearPreview()

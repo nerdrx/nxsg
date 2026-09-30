@@ -1,0 +1,9 @@
+# Mobile baking
+
+Open an NXSG graph with the material used by your avatar, then click **Bake for Mobile** beside **Build for VRChat**. NXSG builds the desktop graph, bakes a 1024 px albedo texture (and a static emission texture when available), and creates a separate material using the VRChat SDK's `VRChat/Mobile/Toon Standard` shader. The desktop graph and material remain intact.
+
+The baked assets live under `Assets/NXSGGenerated/<graph GUID>/Mobile/<material GUID>/`. NXSG records the desktop/mobile material pair in `Assets/NXSGGenerated/MobileBakes.asset`. When Unity's active build target changes to Android, NXSG replaces matching **open-scene renderer slots** with the mobile material. Switching back to a desktop target restores the desktop material. It also syncs when a scene opens or an avatar is added to an open scene. Save the scene after the swap before uploading that platform's avatar.
+
+The graph's albedo must lead to a UV-local color branch. If the full branch depends on view, animation, geometry, or scene data, NXSG uses an upstream Texture node on mesh UV0 as a mobile base and reports the omitted effects. Static emission is baked; animated emission is omitted and reported. Connected opacity or displacement is rejected because Toon Standard is opaque and this mobile bake cannot reproduce displaced geometry. Other surface controls, fur, particles, special lighting, normals, and geometry effects are not represented by this first mobile material. Inspect the generated mobile material and avatar in Unity before upload.
+
+Rebake after changing the graph or source material. The generated mobile material is a snapshot; changing the desktop graph alone does not update its texture. The automatic swap acts on renderers in open scenes, not on prefab assets on disk. VRChat still needs its normal Android avatar upload for mobile users to see that version.

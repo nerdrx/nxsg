@@ -25,6 +25,8 @@
 .nxsg-window .unity-toolbar-toggle:checked { background-color: rgb(66,49,92); color: rgb(231,216,255); }
 #nxsg-build { -unity-text-align: middle-center; padding-top: 0; padding-bottom: 0; height: 28px; background-color: rgb(119,0,255); color: white; padding-left: 14px; padding-right: 14px; }
 #nxsg-build:hover { background-color: rgb(142,51,255); }
+#nxsg-mobile-bake { -unity-text-align: middle-center; padding-top: 0; padding-bottom: 0; height: 28px; background-color: rgb(51,79,91); color: white; padding-left: 12px; padding-right: 12px; }
+#nxsg-mobile-bake:hover { background-color: rgb(65,101,115); }
 #nxsg-identity { background-color: rgb(39,42,46); color: rgb(215,219,226); }
 #nxsg-scene-status { background-color: rgb(39,42,46); font-size: 11px; }
 #nxsg-status { background-color: rgb(37,40,44); color: rgb(177,184,194); border-top-width: 1px; border-top-color: rgb(59,63,69); font-size: 11px; }
