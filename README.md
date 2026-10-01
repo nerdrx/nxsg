@@ -3,24 +3,29 @@
 </p>
 
 <p align="center">
-  <code>2.3.2</code> &nbsp; <code>Unity 2022.3.22f1</code> &nbsp; <code>Built-In</code> &nbsp; <code>PC VRChat</code>
+  <code>v2.4.5</code> &nbsp; <code>Unity 2022.3.22f1</code> &nbsp; <code>Built-In</code> &nbsp; <code>PC VRChat + mobile bake</code>
 </p>
 
-NXSG is a shader graph editor for Unity's Built-In Render Pipeline, developed for PC VRChat avatars. It includes Toon, PBR and Unlit shading, procedural textures, fur, particles, and animated effects. Materials are built by connecting nodes, with controls for lighting, color, masks, and movement.
+<p align="center"><strong>Build materials by connecting nodes in Unity.</strong><br />Toon, PBR, fur, particles, procedural textures, animation, and lighting for PC VRChat avatars.</p>
 
-The editor generates shaders and materials directly in Unity. Graphs remain editable as `.nxsg` files, and included examples provide starting points for common effects.
-
-<h2 align="center"><a href="https://nerdrx.github.io/nxsg/#install">Install NXSG</a></h2>
 <p align="center">
-  ALCOM / Creator Companion<br /><br />
-  <a href="https://github.com/nerdrx/nxsg/releases">Download releases</a> &nbsp;·&nbsp;
-  <a href="docs/VPM.md">Installation help</a>
+  <a href="https://nerdrx.github.io/nxsg/#install"><strong>Install</strong></a> &nbsp;·&nbsp;
+  <a href="docs/QUICK_START.md">First material</a> &nbsp;·&nbsp;
+  <a href="docs/NODES.md">Node guide</a> &nbsp;·&nbsp;
+  <a href="https://github.com/nerdrx/nxsg/releases/tag/v2.4.5">Latest release</a>
 </p>
 
-Add the NXSG repository and install **NX Shader Graph** in your project. Version **2.4.5** is available without enabling prerelease packages. [Release notes](https://github.com/nerdrx/nxsg/releases/tag/v2.4.5).
+---
 
-<details>
-<summary>VPM repository URL</summary>
+## Make your first material
+
+1. Add the [NXSG VPM repository](https://nerdrx.github.io/nxsg/#install) to ALCOM or Creator Companion and install **NX Shader Graph**.
+2. In Unity, open **Tools → NXSG → Open Graph Editor**. Import an [example graph](Packages/dev.nerdrx.nxsg/Samples~/README.md) or create one.
+3. Save the `.nxsg` file inside **Assets**, select **Build for VRChat**, and assign the generated material from **Assets/NXSGGenerated**.
+
+The graph stays editable. Building creates local Unity assets; uploading your avatar remains a VRChat SDK step. [Full installation guide](docs/VPM.md) · [First material walkthrough](docs/QUICK_START.md)
+
+<details><summary>Manual VPM repository URL</summary>
 
 ```text
 https://nerdrx.github.io/nxsg/index.json
@@ -28,73 +33,39 @@ https://nerdrx.github.io/nxsg/index.json
 
 </details>
 
-<p align="center">
-  <a href="docs/QUICK_START.md"><strong>Getting started</strong></a> &nbsp;·&nbsp;
-  <a href="docs/NODES.md"><strong>Documentation</strong></a> &nbsp;·&nbsp;
-  <a href="Packages/dev.nerdrx.nxsg/Samples~/README.md"><strong>Example graphs</strong></a>
-</p>
+<a href="docs/CREATOR_WORKFLOW.md"><img src="docs/images/auto-organize-branches.png" alt="NXSG editor in Unity with labelled material branches and a live particle preview" /></a>
 
----
+*An actual Unity editor capture: the graph, labelled branches, and material preview.*
 
-## Features
+## What you can build
 
-| Feature | Includes |
+| | In the graph |
 | :--- | :--- |
-| **Surface shading** | Toon, PBR and Unlit surfaces, clearcoat, velvet sheen, directional hair highlights, stretched probe reflections, subsurface controls, specular anti-aliasing, face-shadow masks, bent-normal ambient lighting and reflection occlusion, normal maps, and matcaps. |
-| **Material effects** | Color adjustment (hue, saturation, lift, gamma, gain, contrast, exposure), shaped glitter, animated constellations and multichannel pathing, skin tone LUTs, gem refraction and interior sparkles, emission, iridescence, holograms, dissolve, stickers, and wireframes. |
-| **Fur** | Shell fur, silhouette fins, and cards generated from mesh edges, with root/tip coloring, masks, grooming, wind, local self-shadowing, and shell distance LOD. |
-| **Procedural textures** | 1D–4D noise, Voronoi, Musgrave-style fractals, checkerboards, waves, ramps, distortion, and texture bombing. |
-| **Texture coordinates** | Mesh UVs, object/world projection, Polar and Panosphere coordinates, scrolling, rotation, and other UV transforms. |
-| **Geometry effects** | Nested shells, layered Infinity Parallax, parallax occlusion, tessellation, XYZ vertex deformation with a near-camera push, triangle disintegration, and mesh-emitted particles with shapes, atlas frames and area-scaled emission. |
-| **Animation and AudioLink** | Flipbooks, a VRChat network clock, vertex animation, animatable properties, spectrum bars and bins, chronotensity, and world theme colors. |
-| **Rendering controls** | Layered shadows with separate reception controls, light-aware Toon rims, brightness and saturation limits, multiple-band or texture-ramp lighting, world/pixel-width outlines, feathered silhouette fins, depth rims, screen-space AO and contact shadows, light-direction overrides, and Output controls for alpha-to-coverage and back/front transparency passes. |
-| **Decals and displays** | MSDF decals, SDF numeric text with an atlas generator, and viewer-local rendering stats. |
-| **Volumes** | Raymarched distance fields and procedural volume rendering. |
-| **Lighting integrations** | Additional pixel lights for Toon/PBR base surfaces, optional VRC Light Volumes, and LTCGI support. |
+| **Surfaces and light** | Toon, PBR, and Unlit materials; layered shadows, rims, matcaps, normal maps, face shadows, clearcoat, and brightness controls. |
+| **Texture and color** | Named texture slots, UV transforms, Panosphere, procedural noise and patterns, color grading, masks, and ramps. |
+| **Fur and geometry** | Shell fur, silhouette fins, mesh-edge cards, outlines, parallax, displacement, tessellation, and mesh-emitted particles. |
+| **Effects and motion** | Glitter, holograms, emission, iridescence, dissolve, decals, flipbooks, AudioLink inputs, and animatable properties. |
+| **Advanced effects** | Raymarched volumes, screen-space depth effects, SDF text, optional LTCGI and VRC Light Volumes. |
 
-**Depth Bulge** adds camera-depth dents and bulges near other geometry. Connect its displacement output to a surface; [setup and limits](docs/DEPTH_BULGE.md).
-
-The [surface detail guide](docs/SURFACE_DETAILS.md) covers Soft Outline, Geometry Dissolve, Gem, SDF Face Shadow, and the expanded lighting controls.
-
-The [advanced controls guide](docs/ADVANCED_CONTROLS.md) covers face, transparency, lighting, deformation, parallax, clock and text features. [Constellation](docs/CONSTELLATION.md), [Pathing](docs/PATHING.md), and [Skin Tone LUT](docs/SKIN_TONE_LUT.md) have short wiring guides.
-
-See the [node guide](docs/NODES.md) for individual nodes, inputs, and settings, or the [rendering features guide](docs/RENDERING_FEATURES.md) for toon modes, outlines, depth effects, textures, and render state. The [AudioLink guide](docs/AUDIOLINK_DATA_NODES.md), [screen-space lighting notes](docs/SCREEN_SPACE_LIGHTING.md), and [VRC Light Volumes setup](docs/LIGHT_VOLUMES.md) cover their integration details.
+Only the connected graph branches contribute to a generated shader. Use the [node guide](docs/NODES.md) for every input, the [rendering guide](docs/RENDERING_FEATURES.md) for setup, and [example graphs](Packages/dev.nerdrx.nxsg/Samples~/README.md) to see complete materials. Expensive effects are optional; the **Cost** panel estimates passes and costly operations, not GPU frame time.
 
 ## Graph editor
 
-[![NXSG running in Unity on Linux, showing a particle graph and live material preview](docs/images/editor-ui-pass.png)](docs/UI_POLISH.md)
+Search for a node or drop a wire into empty space to add a compatible one. Preview intermediate outputs, then build a shader containing the branches your material uses.
 
-The editor supports searching for nodes, connecting from either socket direction, and adding compatible nodes by dropping a wire on empty space. Related operations can be switched directly from node headers.
+- **Keep large graphs readable.** [Auto-organize](docs/CREATOR_WORKFLOW.md#organizing-the-canvas) groups connected branches into labelled frames; selection layout and grid snapping are available too. Organization is one Undo step and leaves connections unchanged.
+- **Work in context.** Named texture slots appear in both graph and material inspector. Changed settings carry `*` markers; advanced inputs and inspector sections fold away without hiding connected sockets.
+- **Iterate safely.** Use live previews, time scrubbing, A/B material snapshots, Undo/Redo, and recovery snapshots.
+- **Bring existing work.** Import texture sets or use assisted Poiyomi/lilToon material translation with a backup. Review the generated graph and material after conversion.
+- **Watch cost.** The **Cost** panel estimates passes and highlights expensive nodes. It does not measure GPU time.
 
-Other editor features include:
+[Editor controls](docs/QUICK_START.md) · [Creator workflow](docs/CREATOR_WORKFLOW.md) · [Material recipes](docs/RECIPES.md) · [Build performance](docs/BUILD_PERFORMANCE.md)
 
-- Box selection, copy/paste, duplication, and reusable node groups called **Patterns**.
-- [Auto-organize](docs/CREATOR_WORKFLOW.md#organizing-the-canvas) with labelled branches for complex graphs, selection layout, and optional grid snapping with Alt for free movement.
-- Named texture slots shared between the graph and material inspector.
-- Collapsible inspector sections and advanced node inputs, with connected sockets kept visible.
-- `*` markers beside changed settings and their section headings, plus full-width XYZ controls.
-- Intermediate output previews, A/B material snapshots, and animation scrubbing.
-- Texture-set import, Poiyomi/lilToon material import with backup and editable graph, channel packing, atlas building, batch preset application, and static texture baking.
-- Automatic scene updates for saved edits, build diagnostics, and recovery snapshots.
-- A **Cost** panel with pass budgets, costly-node explanations and click-to-focus navigation. Estimates describe generated work, not GPU timings.
+## Mobile material snapshots
 
-### Automatic organization
+**Bake for Mobile** captures a selected desktop material at one moment and creates a separate `VRChat/Mobile/Toon Standard` material. NXSG bakes connected albedo, emission, normal, metallic, roughness, and occlusion branches. It swaps matching material slots in open scenes when you switch Unity's build target to Android, and restores desktop materials when you switch back.
 
-**Tools → Auto-organize graph** follows the connections and creates labelled frames for albedo, emission, particle controls and other surface inputs. Shared controls and the final surface/output chain stay in their own groups. Short value chains sit near the nodes they control.
-
-[![NXSG 2.1.1 in Unity, with automatically labelled material and particle branches](docs/images/auto-organize-branches.png)](docs/CREATOR_WORKFLOW.md#organizing-the-canvas)
-
-Rename a frame to keep your own grouping. Existing manual frames and Patterns are preserved, and the entire organization is one Undo step. You can also organize a selection or enable grid snapping. Connections and shader settings stay unchanged; dense graphs can still have crossing wires.
-
-### Basic workflow
-
-1. Open **Tools → NXSG → Open Graph Editor**.
-2. Save your graph inside **Assets**, then select **Build for VRChat**.
-3. Assign the generated material from **Assets/NXSGGenerated** to your mesh.
-
-This builds local assets; avatar uploading still uses the VRChat SDK.
-
-[Editor controls](docs/QUICK_START.md) · [Creator workflow](docs/CREATOR_WORKFLOW.md) · [Mobile baking](docs/MOBILE_BAKING.md) · [Material recipes](docs/RECIPES.md) · [Build performance](docs/BUILD_PERFORMANCE.md)
+This is a snapshot, not full shader parity: mobile output is opaque, particles and displaced geometry are omitted, and view-dependent effects are sampled from one preview angle. Rebake after edits and inspect the Android avatar before upload. [How mobile baking works](docs/MOBILE_BAKING.md) · [Latest bake fix](docs/RELEASE_2_4_5.md)
 
 ## Example materials
 
@@ -120,7 +91,7 @@ This sculpture is drawn inside a cube using distance fields. The same volume too
 
 ## Compatibility
 
-NXSG currently targets **Unity 2022.3.22f1** and the **Built-In Render Pipeline** for **PC VRChat**. Development and editor testing take place on Linux. Native Windows/D3D, headset, and live VRChat validation remain incomplete. Quest/mobile avatars are not supported.
+NXSG generates **PC Built-In** shaders for **Unity 2022.3.22f1**. Mobile avatars use the separate baked Toon Standard material described above; the PC shader itself does not run on Quest. Development and editor tests run on Linux. The creator has reported VR and mirror use, while a reproducible native Windows/client/headset test matrix remains open.
 
 AudioLink and animatable properties are implemented, but live AudioLink and VRCFury integration checks are still pending. Keyboard undo can be unreliable in the Linux Unity editor; toolbar undo/redo is available.
 
