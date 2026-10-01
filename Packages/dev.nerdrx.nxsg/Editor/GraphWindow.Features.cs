@@ -93,6 +93,10 @@ namespace NXSG.Editor
                     return true;
                 case "core.parallaxUV": AddCoordinateChoice(node); AddNumber(node, "height", "Height", .5f, "height"); AddNumber(node, "strength", "Depth strength", .05f); AddNumber(node, "reference", "Reference height", .5f); return true;
                 case "core.avatarMotion": FeatureNote("Create an FX motion driver from Tools → Scene, then merge its layers into your avatar FX controller. Reads locomotion, not individual bones. Matching properties on other materials on this renderer are animated too.");return true;
+                case "core.avatarScaleFactor":
+                    inspector.Add(new Button(OpenScaleSetup) { text = "Set up on avatar…", tooltip = "Create a VRCFury Full Controller component that drives this graph's Scale Factor from VRChat's built-in ScaleFactor." });
+                    FeatureNote("Multiply this output by particle Size. Preview stays at 1 until VRChat drives it. Setup needs VRCFury and a saved avatar scene.");
+                    return true;
                 case "core.motionResponse": AddNumber(node,"startSpeed","Start speed (m/s)",.1f);AddNumber(node,"fullSpeed","Full speed (m/s)",4);AddNumber(node,"curve","Response curve",1);return true;
                 case "core.motionSway": AddNumber(node,"strength","Maximum displacement",.02f);AddNumber(node,"frequency","Frequency (Hz)",2);AddNumber(node,"spatialScale","Spatial scale",3);AddNumber(node,"fullSpeed","Full speed (m/s)",4);FeatureNote("Connect Speed and send Value to a surface Displacement input. Mask zero or speed zero removes motion. Expand renderer bounds for large displacement.");return true;
                 case "core.motionStretchUV": AddNumber(node,"strength","Stretch per m/s",.25f);AddNumber(node,"maxStretch","Maximum stretch",3);AddIndexedChoice(node,"axis","Axis",new[]{"Horizontal","Vertical"});return true;

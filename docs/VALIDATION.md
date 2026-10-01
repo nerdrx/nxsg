@@ -1093,3 +1093,15 @@ cover editor layout and interaction; this change does not alter shader output.
 The layout is heuristic: dense graphs can still have crossing wires, and
 automatic branch inference falls back to ordinary layout for unusually large
 graphs. Manual frames are preserved.
+
+## Avatar Scale Factor — 2026-10-01
+
+- `AvatarScaleSmoke.Run` passed in an isolated Unity 2022.3.22f1 editor under
+  headless Gamescope/OpenGL. It compiled a live Scale Factor to Surface Particles
+  Size path, checked the material default of 1, created and refreshed the FX
+  controller, and confirmed that Animator `ScaleFactor = 2` animated the skinned
+  material property to 2.
+- The existing NXSG Unity smoke, portable graph/compiler suite, and 11 packaging
+  tests passed. The VRCFury Full Controller calls were checked against the
+  installed VRCFury public API source. A VRCFury avatar build and live VRChat
+  height change have not yet been tested.

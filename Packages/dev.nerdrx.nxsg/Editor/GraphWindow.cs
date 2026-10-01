@@ -996,6 +996,7 @@ namespace NXSG.Editor
                         case "Coordinates": return new Color(.30f,.58f,.95f);
                         case "Textures": return new Color(.94f,.50f,.22f);
                         case "Inputs": return new Color(.22f,.76f,.79f);
+                        case "External": return new Color(.72f,.42f,.94f);
                         default: return new Color(.28f,.28f,.28f);
                     }
             }
@@ -1033,7 +1034,7 @@ namespace NXSG.Editor
                 var searching = !string.IsNullOrWhiteSpace(query);
                 var matches = NodeCatalog.All.Where(op => op != "core.previewVector" &&
                     MatchesNodeSearch(op, query)).ToList();
-                foreach (var category in new[] { "Inputs", "Coordinates", "Textures", "Math", "Color", "Animation", "Surface", "Volumes" })
+                foreach (var category in new[] { "Inputs", "External", "Coordinates", "Textures", "Math", "Color", "Animation", "Surface", "Volumes" })
                 {
                     var operations = matches.Where(op => NodeCatalog.Category(op) == category).ToList();
                     if (operations.Count == 0) continue;

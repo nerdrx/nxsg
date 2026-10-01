@@ -45,7 +45,7 @@ namespace NXSG.Backend
         public static bool IsAdvanced(ShaderGraph graph)
         {
             if (graph?.Nodes == null) return false;
-            var ops = new HashSet<string> { "core.volumeSurface", "core.rayPosition", "core.sdfSphere", "core.sdfBox", "core.sdfTorus", "core.sdfBlend", "core.unlitSurface", "core.pbrSurface", "core.particleSurface", "core.particleColor", "core.particleInfo", "core.surfaceParticles", "core.fur", "core.tessellation", "core.fresnel", "core.colorRamp", "core.layer", "core.sticker", "core.dissolve", "core.flipbook", "core.uvDistort", "core.vertexMotion", "core.audioLink", "core.ltcgi", "core.darknessGlow", "core.shell", "core.normalMap", "core.previewVector", "core.musgrave", "core.voronoi", "core.checker", "core.wave", "core.gradient", "core.uvTile", "core.posterize", "core.absolute", "core.power", "core.sqrt", "core.sine", "core.cosine", "core.fraction", "core.floor", "core.ceil", "core.round", "core.step", "core.smoothstep", "core.remap", "core.pingPong", "core.splitColor", "core.combineColor", "core.luminance", "core.contrast", "core.saturation", "core.hueShift", "core.colorAdjust", "core.colorMask", "core.replaceColor", "core.splitUV", "core.combineUV", "core.position", "core.normalDirection", "core.viewDirection", "core.vertexColor", "core.cameraDistance", "core.screenUV", "core.circleMask", "core.boxMask", "core.polygonMask", "core.starMask", "core.radialRays", "core.spiral", "core.brick", "core.hexGrid", "core.triplanarTexture", "core.matcapTexture", "core.rimGlow", "core.heightMask", "core.slopeMask", "core.distanceFade", "core.wireframe" };
+            var ops = new HashSet<string> { "core.volumeSurface", "core.rayPosition", "core.sdfSphere", "core.sdfBox", "core.sdfTorus", "core.sdfBlend", "core.unlitSurface", "core.pbrSurface", "core.particleSurface", "core.particleColor", "core.particleInfo", "core.surfaceParticles", "core.fur", "core.tessellation", "core.fresnel", "core.colorRamp", "core.layer", "core.sticker", "core.dissolve", "core.flipbook", "core.uvDistort", "core.vertexMotion", "core.audioLink", "core.avatarScaleFactor", "core.ltcgi", "core.darknessGlow", "core.shell", "core.normalMap", "core.previewVector", "core.musgrave", "core.voronoi", "core.checker", "core.wave", "core.gradient", "core.uvTile", "core.posterize", "core.absolute", "core.power", "core.sqrt", "core.sine", "core.cosine", "core.fraction", "core.floor", "core.ceil", "core.round", "core.step", "core.smoothstep", "core.remap", "core.pingPong", "core.splitColor", "core.combineColor", "core.luminance", "core.contrast", "core.saturation", "core.hueShift", "core.colorAdjust", "core.colorMask", "core.replaceColor", "core.splitUV", "core.combineUV", "core.position", "core.normalDirection", "core.viewDirection", "core.vertexColor", "core.cameraDistance", "core.screenUV", "core.circleMask", "core.boxMask", "core.polygonMask", "core.starMask", "core.radialRays", "core.spiral", "core.brick", "core.hexGrid", "core.triplanarTexture", "core.matcapTexture", "core.rimGlow", "core.heightMask", "core.slopeMask", "core.distanceFade", "core.wireframe" };
             // Only reachable effects select the extended lowering; disconnected nodes never change shading.
             var connected = new HashSet<string>();
             var queue = new Queue<string>(graph.Nodes.Where(n => n?.Operation == "core.output").Select(n => n.Id));
@@ -264,6 +264,8 @@ namespace NXSG.Backend
             b.AppendLine(PreviewClock.Properties);
             if(live.Any(id=>nodes[id].Operation=="core.avatarMotion"))
                 b.AppendLine("[Header(Avatar Motion Driver)] _NXSG_MotionSpeed (\"Motion speed (m/s)\", Float) = 0\n_NXSG_MotionX (\"Sideways speed (m/s)\", Float) = 0\n_NXSG_MotionY (\"Vertical speed (m/s)\", Float) = 0\n_NXSG_MotionZ (\"Forward speed (m/s)\", Float) = 0");
+            if(live.Any(id=>nodes[id].Operation=="core.avatarScaleFactor"))
+                b.AppendLine("[HideInInspector] _NXSG_AvatarScaleFactor (\"Avatar scale factor\", Float) = 1");
             b.AppendLine("[HideInInspector] _NXSG_AudioLinkPreview (\"Preview audio\", Float) = 0\n[HideInInspector] _NXSG_AudioLinkValue (\"Preview value\", Float) = 0");
             if (audioData) b.AppendLine(AudioDataShader.PreviewProperties);
             var symbols = new HashSet<string>(properties.Select(p => p.Name));
@@ -316,6 +318,7 @@ namespace NXSG.Backend
             if(refracts) b.AppendLine("GrabPass { \"_NXSG_GrabTexture\" }");
             b.AppendLine("CGINCLUDE\n#include \"UnityCG.cginc\"\n#include \"Lighting.cginc\"\n#include \"AutoLight.cginc\"\n#include \"UnityPBSLighting.cginc\"");
             b.AppendLine("float4 _Color;");
+            if(live.Any(id=>nodes[id].Operation=="core.avatarScaleFactor")) b.AppendLine("float _NXSG_AvatarScaleFactor;");
             foreach (var prop in properties) b.AppendLine(prop.Type == GraphValueType.Cubemap ? "samplerCUBE " + prop.Name + ";" : prop.Type == GraphValueType.Texture2DArray ? "UNITY_DECLARE_TEX2DARRAY(" + prop.Name + "); float " + prop.Name + "_Layers;" : prop.Type == GraphValueType.Texture2D ? "sampler2D " + prop.Name + "; float4 " + prop.Name + "_ST; float4 " + prop.Name + "_TexelSize;" : (prop.Type == GraphValueType.Float ? "float " : "float4 ") + prop.Name + ";");
             if (audioData || live.Any(id => nodes[id].Operation == "core.audioLink")) b.AppendLine(AudioLinkShader.Hlsl);
             if (audioData) b.AppendLine(AudioDataShader.Hlsl);
@@ -662,6 +665,7 @@ namespace NXSG.Backend
                 case "core.vertexMotion": body = "(sin(" + P("time", "NXSG_Time()", "float") + "*" + Prop(n, "speed", 1) + "+input.local.y*" + Prop(n, "frequency", 2) + ")*" + S("strength", .02) + ")"; break;
                 case "core.avatarMotion":
                     body=port=="speed"?"max(0,_NXSG_MotionSpeed)":port=="sideways"?"_NXSG_MotionX":port=="vertical"?"_NXSG_MotionY":port=="forward"?"_NXSG_MotionZ":"float3(_NXSG_MotionX,_NXSG_MotionY,_NXSG_MotionZ)";break;
+                case "core.avatarScaleFactor": body = "_NXSG_AvatarScaleFactor"; break;
                 case "core.darknessGlow":
                     if(vertex)throw new InvalidOperationException("Darkness Glow is a fragment lighting effect. Connect it to Emission.");
                     body="NX_DarkGlow(input,"+P("color","float4(1,1,1,1)","color")+","+S("strength",1)+","+S("threshold",.4)+","+S("softness",.2)+")"; break;
