@@ -1,6 +1,6 @@
 {
   "name": "dev.nerdrx.nxsg",
-  "version": "2.4.7",
+  "version": "2.4.8",
   "displayName": "NX Shader Graph",
   "description": "Shader graph authoring for VRChat and Unity Built-In, with mobile material baking.",
   "unity": "2022.3",
@@ -12,7 +12,7 @@
   "dependencies": {
     "com.unity.nuget.newtonsoft-json": "3.2.1"
   },
-  "url": "https://github.com/nerdrx/nxsg/releases/download/v2.4.7/dev.nerdrx.nxsg-2.4.7.zip",
+  "url": "https://github.com/nerdrx/nxsg/releases/download/v2.4.8/dev.nerdrx.nxsg-2.4.8.zip",
   "documentationUrl": "https://github.com/nerdrx/nxsg/blob/main/docs/NODES.md",
   "changelogUrl": "https://github.com/nerdrx/nxsg/releases",
   "samples": [
