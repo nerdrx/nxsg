@@ -1097,8 +1097,8 @@ graphs. Manual frames are preserved.
 ## Avatar Scale Factor — 2026-10-01
 
 - `AvatarScaleSmoke.Run` passed in an isolated Unity 2022.3.22f1 editor under
-  headless Gamescope/OpenGL. It compiled a live Scale Factor to Surface Particles
-  Size path, checked the material default of 1, created and refreshed the FX
+  headless Gamescope/OpenGL. It compiled a live Scale Factor through Surface Particles,
+  checked the material default of 1, created and refreshed the FX
   controller, and confirmed that Animator `ScaleFactor = 2` animated the skinned
   material property to 2.
 - The existing NXSG Unity smoke, portable graph/compiler suite, and 11 packaging
