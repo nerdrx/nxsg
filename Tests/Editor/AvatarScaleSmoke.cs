@@ -24,15 +24,11 @@ public static class AvatarScaleSmoke
             var surface = NodeCatalog.Create("core.unlitSurface");
             var particles = NodeCatalog.Create("core.surfaceParticles");
             var scale = NodeCatalog.Create("core.avatarScaleFactor");
-            var size = NodeCatalog.Create("core.value"); size.Properties["value"] = .03;
-            var multiply = NodeCatalog.Create("core.multiply"); multiply.Properties["valueType"] = "float";
             var output = NodeCatalog.Create("core.output");
-            graph.Nodes.AddRange(new[] { color, surface, particles, scale, size, multiply, output });
+            graph.Nodes.AddRange(new[] { color, surface, particles, scale, output });
             Connect(graph, color, "value", surface, "albedo");
             Connect(graph, surface, "surface", particles, "base");
-            Connect(graph, scale, "value", multiply, "a");
-            Connect(graph, size, "value", multiply, "b");
-            Connect(graph, multiply, "value", particles, "size");
+            Connect(graph, scale, "value", particles, "opacity");
             Connect(graph, particles, "surface", output, "surface");
             if (NodeCatalog.Category(scale.Operation) != "External") throw new Exception("Scale Factor missing from External nodes.");
             var emitted = ShaderEmitter.Emit(graph, new EmitterOptions { ShaderName = "NXSG/Smoke/AvatarScale" });
