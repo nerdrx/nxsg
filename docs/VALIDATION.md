@@ -1151,3 +1151,9 @@ graphs. Manual frames are preserved.
   packaging tests, archive checksum checks, and hosted listing verification
   are recorded with the release. Unity interaction timing remains unmeasured
   until the licensing client allows the hidden editor fixture to run.
+- Published ZIP SHA-256:
+  `9973cd78ea6b715b4c5efda2f77942fa245ed53887af9ac30e99e275a45daaab`.
+  [Package validation](https://github.com/nerdrx/nxsg/actions/runs/37133090511)
+  and [VPM Pages deployment](https://github.com/nerdrx/nxsg/actions/runs/37133177944)
+  passed. On 2026-10-03, `scripts/verify-vpm.py` passed against the hosted
+  `https://nerdrx.github.io/nxsg/index.json` listing, including 2.4.9.
