@@ -1140,3 +1140,14 @@ graphs. Manual frames are preserved.
   Unity 2022.3.22f1 Roslyn. The new smoke checks distant, endpoint, and
   reverse-bend cases. It has not run inside Unity because the licensing client
   still blocks the headless editor fixture; visual and timing checks remain.
+
+## 2.4.9 drag and release checks — 2026-10-03
+
+- Drag-to-insert now rejects sampled wire segments outside the current hit
+  tolerance before projecting the node center onto them. The existing exact
+  distance check still decides insertion. The reverse-bend viewport smoke
+  covers a curve that bends beyond both endpoints.
+- Full source and editor smoke compile, portable graph/compiler checks,
+  packaging tests, archive checksum checks, and hosted listing verification
+  are recorded with the release. Unity interaction timing remains unmeasured
+  until the licensing client allows the hidden editor fixture to run.

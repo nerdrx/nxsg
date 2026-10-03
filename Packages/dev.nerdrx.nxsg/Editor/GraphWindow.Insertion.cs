@@ -61,6 +61,8 @@ namespace NXSG.Editor
                 for(var i=1;i<=32;i++)
                 {
                     var previous = candidate.points[i - 1]; var point = candidate.points[i];
+                    if (center.x < Mathf.Min(previous.x, point.x) - best || center.x > Mathf.Max(previous.x, point.x) + best ||
+                        center.y < Mathf.Min(previous.y, point.y) - best || center.y > Mathf.Max(previous.y, point.y) + best) continue;
                     var segment=point-previous;var closest=previous+segment*Mathf.Clamp01(Vector2.Dot(center-previous,segment)/Mathf.Max(.0001f,segment.sqrMagnitude));
                     var distanceSquared=(center-closest).sqrMagnitude;
                     if(distanceSquared<bestSquared){bestSquared=distanceSquared;best=Mathf.Sqrt(distanceSquared);insertionEdge=edge.Id;}

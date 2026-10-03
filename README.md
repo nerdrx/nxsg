@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <code>v2.4.5</code> &nbsp; <code>Unity 2022.3.22f1</code> &nbsp; <code>Built-In</code> &nbsp; <code>PC VRChat + mobile bake</code>
+  <code>v2.4.9</code> &nbsp; <code>Unity 2022.3.22f1</code> &nbsp; <code>Built-In</code> &nbsp; <code>PC VRChat + mobile bake</code>
 </p>
 
 <p align="center"><strong>Build materials by connecting nodes in Unity.</strong><br />Toon, PBR, fur, particles, procedural textures, animation, and lighting for PC VRChat avatars.</p>
@@ -12,7 +12,7 @@
   <a href="https://nerdrx.github.io/nxsg/#install"><strong>Install</strong></a> &nbsp;·&nbsp;
   <a href="docs/QUICK_START.md">First material</a> &nbsp;·&nbsp;
   <a href="docs/NODES.md">Node guide</a> &nbsp;·&nbsp;
-  <a href="https://github.com/nerdrx/nxsg/releases/tag/v2.4.5">Latest release</a>
+  <a href="https://github.com/nerdrx/nxsg/releases/tag/v2.4.9">Latest release</a>
 </p>
 
 ---

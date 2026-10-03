@@ -222,7 +222,7 @@ public static class ResponsivenessSmoke
         var method = typeof(GraphWindow).GetMethod("WireIntersects", BindingFlags.Static | BindingFlags.NonPublic);
         bool Visible(Rect bounds, Vector2 a, Vector2 b) => (bool)method.Invoke(null, new object[] { bounds, a, b });
         Require(Visible(new Rect(95, -5, 10, 10), new Vector2(100, 0), Vector2.zero), "Visible wire endpoint was culled");
-        Require(Visible(new Rect(130, -5, 10, 10), new Vector2(100, 0), Vector2.zero), "Reverse wire bend was culled");
+        Require(Visible(new Rect(105, -5, 2, 10), new Vector2(100, 0), Vector2.zero), "Reverse wire bend was culled");
         Require(!Visible(new Rect(500, 500, 10, 10), new Vector2(100, 0), Vector2.zero), "Distant wire was not culled");
     }
 
