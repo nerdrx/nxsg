@@ -67,6 +67,7 @@ public static class ResponsivenessSmoke
                 CheckSocketLookup();
                 CheckDeferredSceneHash();
                 CheckSelectionAndDiagnostics();
+                CheckWireVisibility();
                 UnityEngine.Debug.Log("NXSG RESPONSIVENESS SMOKE PASSED");
                 Finish(0);
                 return;
@@ -214,6 +215,15 @@ public static class ResponsivenessSmoke
         Set("diagnosticsDue", 0d);
         Invoke("UpdateDiagnostics");
         Require(!(bool)Field("diagnosticsPending"), "Opening Problems did not run diagnostics");
+    }
+
+    static void CheckWireVisibility()
+    {
+        var method = typeof(GraphWindow).GetMethod("WireIntersects", BindingFlags.Static | BindingFlags.NonPublic);
+        bool Visible(Rect bounds, Vector2 a, Vector2 b) => (bool)method.Invoke(null, new object[] { bounds, a, b });
+        Require(Visible(new Rect(95, -5, 10, 10), new Vector2(100, 0), Vector2.zero), "Visible wire endpoint was culled");
+        Require(Visible(new Rect(130, -5, 10, 10), new Vector2(100, 0), Vector2.zero), "Reverse wire bend was culled");
+        Require(!Visible(new Rect(500, 500, 10, 10), new Vector2(100, 0), Vector2.zero), "Distant wire was not culled");
     }
 
     static void Finish(int code)

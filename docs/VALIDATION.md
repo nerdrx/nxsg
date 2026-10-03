@@ -1129,3 +1129,14 @@ graphs. Manual frames are preserved.
   locally compiled current Core and Backend assemblies. Portable checks and
   11 packaging tests passed. The Unity interaction smoke remains blocked by
   the licensing-client timeout described above, so no UI timing claim is made.
+
+## Offscreen wire drawing — 2026-10-03
+
+- The graph canvas now skips drawing wires whose conservative Bézier bounds
+  are outside the visible viewport. Bounds include both endpoints and control
+  points, plus an eight-screen-pixel margin. Unmeasured zero-size viewports
+  draw all wires during initial layout.
+- The current Editor source and expanded responsiveness smoke compiled with
+  Unity 2022.3.22f1 Roslyn. The new smoke checks distant, endpoint, and
+  reverse-bend cases. It has not run inside Unity because the licensing client
+  still blocks the headless editor fixture; visual and timing checks remain.

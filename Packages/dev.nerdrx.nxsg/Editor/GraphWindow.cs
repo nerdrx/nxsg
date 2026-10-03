@@ -1866,14 +1866,26 @@ namespace NXSG.Editor
             if (graph == null) return;
             var painter = context.painter2D; painter.lineWidth = 3;
             DrawFrameBackgrounds(painter);
+            var viewportReady = canvas.worldBound.width > 0 && canvas.worldBound.height > 0;
+            var visible = new Rect();
+            if (viewportReady)
+            {
+                var min = layer.WorldToLocal(canvas.worldBound.min);
+                var max = layer.WorldToLocal(canvas.worldBound.max);
+                var margin = 8f / Mathf.Max(.1f, zoom);
+                visible = Rect.MinMaxRect(min.x - margin, min.y - margin, max.x + margin, max.y + margin);
+            }
             foreach (var edge in graph.Connections)
             {
                 socketLookup.TryGetValue((edge.From.NodeId, edge.From.PortId, true), out var from);
                 socketLookup.TryGetValue((edge.To.NodeId, edge.To.PortId, false), out var to);
                 if (from == null || to == null) continue;
+                var a = layer.WorldToLocal(from.hit.worldBound.center);
+                var b = layer.WorldToLocal(to.hit.worldBound.center);
+                if (viewportReady && !WireIntersects(visible, a, b)) continue;
                 painter.lineWidth = edge.Id == insertionEdge ? 7 : 3;
                 painter.strokeGradient = WireGradient(from.type, to.type);
-                DrawWire(painter, layer.WorldToLocal(from.hit.worldBound.center), layer.WorldToLocal(to.hit.worldBound.center));
+                DrawWire(painter, a, b);
             }
             socketLookup.TryGetValue((pendingNode, pendingPort, pendingOutput), out var pending);
             if (pending != null)
@@ -1905,6 +1917,13 @@ namespace NXSG.Editor
             var bend = Mathf.Max(45, Mathf.Abs(b.x - a.x) * .45f);
             painter.BeginPath(); painter.MoveTo(a);
             painter.BezierCurveTo(a + Vector2.right * bend, b - Vector2.right * bend, b); painter.Stroke();
+        }
+        static bool WireIntersects(Rect visible, Vector2 a, Vector2 b)
+        {
+            var bend = Mathf.Max(45, Mathf.Abs(b.x - a.x) * .45f);
+            return visible.Overlaps(Rect.MinMaxRect(
+                Mathf.Min(a.x, b.x - bend), Mathf.Min(a.y, b.y),
+                Mathf.Max(a.x + bend, b.x), Mathf.Max(a.y, b.y)));
         }
         void SetStatus(string message) { if (status != null) status.text = message; }
         static string Title(string operation) { return NodeCatalog.Title(operation); }
