@@ -164,10 +164,20 @@ namespace NXSG.Editor
             performancePanel.Add(row);
         }
 
-        void QueueDiagnostics() { diagnosticsPending = true; diagnosticsDue = EditorApplication.timeSinceStartup + .4; QueuePerformance(); }
+        void QueueDiagnostics()
+        {
+            diagnosticsPending = true;
+            diagnosticsDue = EditorApplication.timeSinceStartup + .4;
+            if (sidebarTab != 2 && problemsButton != null)
+            {
+                problemsButton.text = "Problems";
+                problemsButton.tooltip = "Open to check the current graph.";
+            }
+            QueuePerformance();
+        }
         void UpdateDiagnostics()
         {
-            if (!diagnosticsPending || graph == null || problemsPanel == null || EditorApplication.timeSinceStartup < diagnosticsDue
+            if (!diagnosticsPending || sidebarTab != 2 || graph == null || problemsPanel == null || EditorApplication.timeSinceStartup < diagnosticsDue
                 || EditorApplication.isCompiling || EditorApplication.isUpdating) return;
             diagnosticsPending = false;
             var hash = GraphJson.ComputeSemanticHash(graph);

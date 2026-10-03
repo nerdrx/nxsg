@@ -30,7 +30,7 @@ namespace NXSG.Editor
         [SerializeField] Vector2 pan = new Vector2(30, 70);
         [SerializeField] float zoom = 1;
         ShaderGraph graph;
-        VisualElement canvas, layer, inspector;
+        VisualElement canvas, layer, inspector, addNodeLibrary;
         Label status, identity;
         readonly Dictionary<string, VisualElement> nodes = new Dictionary<string, VisualElement>();
         string pendingNode, pendingPort;
@@ -109,7 +109,7 @@ namespace NXSG.Editor
             ClearPreview();
         }
 
-        void OnFocus() { canvas?.Focus(); previewHash = null; QueueLivePreview(); }
+        void OnFocus() { canvas?.Focus(); QueueLivePreview(); }
 
         void OnProjectChange()
         {
@@ -121,6 +121,7 @@ namespace NXSG.Editor
         public void CreateGUI()
         {
             rootVisualElement.Clear();
+            addNodeLibrary = null;
             rootVisualElement.AddToClassList("nxsg-window");
             var chrome = AssetDatabase.LoadAssetAtPath<StyleSheet>("Packages/dev.nerdrx.nxsg/Editor/GraphWindow.uss");
             if (chrome != null && !rootVisualElement.styleSheets.Contains(chrome)) rootVisualElement.styleSheets.Add(chrome);
@@ -450,10 +451,10 @@ namespace NXSG.Editor
                 UnityEditor.Editor candidateEditor = null;
                 try
                 {
-                    var previewGraph = PreparePreviewGraph();
                     var hash = GraphJson.ComputeSemanticHash(graph) + ":" + previewNodeId + ":" + previewNodePort + ":" + OptionalIntegrations.Fingerprint;
                     if (hash != previewHash)
                     {
+                        var previewGraph = PreparePreviewGraph();
                         previewHash = hash;
                         candidate = GraphPreview.Create(previewGraph, string.IsNullOrEmpty(previewNodeId) ? contextMaterial : null);
                         candidateEditor = UnityEditor.Editor.CreateEditor(candidate.Material);
@@ -691,6 +692,9 @@ namespace NXSG.Editor
 
         void SelectNode(string id, bool additive = false)
         {
+            if (sidebarTab == 0 && selected == id &&
+                (additive ? id != null && selection.Contains(id)
+                    : id == null ? selection.Count == 0 : selection.Count == 1 && selection[0] == id)) return;
             if (!additive) selection.Clear();
             if (id != null && !selection.Contains(id)) selection.Add(id);
             selected = id;
@@ -1023,45 +1027,48 @@ namespace NXSG.Editor
             inspectorProperties.Clear(); inspectorSectionUpdates.Clear();
             previewHost = new VisualElement { style = { marginBottom = 10 } };
             inspector.Add(previewHost); RefreshPreviewPanel();
-            var library = new VisualElement { name = "node-library", style = { marginTop = 14 } };
-            library.Add(new Label("ADD NODES") { style = { unityFontStyleAndWeight = FontStyle.Bold, fontSize = 13, marginBottom = 8 } });
-            var search = new ToolbarSearchField { name = "node-search", tooltip = "Search nodes, descriptions, or categories" };
-            search.SetValueWithoutNotify(nodeSearch); library.Add(search);
-            var choices = new VisualElement(); library.Add(choices);
-            Action<string> filter = query =>
+            if (addNodeLibrary == null)
             {
-                choices.Clear();
-                var searching = !string.IsNullOrWhiteSpace(query);
-                var matches = NodeCatalog.All.Where(op => op != "core.previewVector" &&
-                    MatchesNodeSearch(op, query)).ToList();
-                foreach (var category in new[] { "Inputs", "External", "Coordinates", "Textures", "Math", "Color", "Animation", "Surface", "Volumes" })
+                var library = new VisualElement { name = "node-library", style = { marginTop = 14 } };
+                library.Add(new Label("ADD NODES") { style = { unityFontStyleAndWeight = FontStyle.Bold, fontSize = 13, marginBottom = 8 } });
+                var search = new ToolbarSearchField { name = "node-search", tooltip = "Search nodes, descriptions, or categories" };
+                search.SetValueWithoutNotify(nodeSearch); library.Add(search);
+                var choices = new VisualElement(); library.Add(choices);
+                Action<string> filter = query =>
                 {
-                    var operations = matches.Where(op => NodeCatalog.Category(op) == category).ToList();
-                    if (operations.Count == 0) continue;
-                    var group = new Foldout { name = "category-" + category, text = category + "  ·  " + operations.Count,
-                        value = searching || expandedNodeCategories.Contains(category), style = {
-                            marginTop = 6, paddingTop = 4, paddingBottom = 4, paddingRight = 4,
-                            borderLeftWidth = 3, borderLeftColor = NodeColor(operations[0]),
-                            backgroundColor = new Color(.14f, .14f, .14f), borderTopRightRadius = 4, borderBottomRightRadius = 4 } };
-                    group.RegisterValueChangedCallback(evt =>
+                    choices.Clear();
+                    var searching = !string.IsNullOrWhiteSpace(query);
+                    var matches = NodeCatalog.All.Where(op => op != "core.previewVector" &&
+                        MatchesNodeSearch(op, query)).ToList();
+                    foreach (var category in new[] { "Inputs", "External", "Coordinates", "Textures", "Math", "Color", "Animation", "Surface", "Volumes" })
                     {
-                        if (!string.IsNullOrWhiteSpace(nodeSearch)) return;
-                        expandedNodeCategories.Remove(category);
-                        if (evt.newValue) expandedNodeCategories.Add(category);
-                    });
-                    foreach (var operation in operations)
-                    {
-                        var op = operation;
-                        group.Add(new Button(() => AddNode(op)) { text = "+  " + Title(op), tooltip = NodeCatalog.Description(op),
-                            style = { height = 25, unityTextAlign = TextAnchor.MiddleLeft, paddingLeft = 8, marginTop = 2, marginBottom = 2 } });
+                        var operations = matches.Where(op => NodeCatalog.Category(op) == category).ToList();
+                        if (operations.Count == 0) continue;
+                        var group = new Foldout { name = "category-" + category, text = category + "  ·  " + operations.Count,
+                            value = searching || expandedNodeCategories.Contains(category), style = {
+                                marginTop = 6, paddingTop = 4, paddingBottom = 4, paddingRight = 4,
+                                borderLeftWidth = 3, borderLeftColor = NodeColor(operations[0]),
+                                backgroundColor = new Color(.14f, .14f, .14f), borderTopRightRadius = 4, borderBottomRightRadius = 4 } };
+                        group.RegisterValueChangedCallback(evt =>
+                        {
+                            if (!string.IsNullOrWhiteSpace(nodeSearch)) return;
+                            expandedNodeCategories.Remove(category);
+                            if (evt.newValue) expandedNodeCategories.Add(category);
+                        });
+                        foreach (var operation in operations)
+                        {
+                            var op = operation;
+                            group.Add(new Button(() => AddNode(op)) { text = "+  " + Title(op), tooltip = NodeCatalog.Description(op),
+                                style = { height = 25, unityTextAlign = TextAnchor.MiddleLeft, paddingLeft = 8, marginTop = 2, marginBottom = 2 } });
+                        }
+                        choices.Add(group);
                     }
-                    choices.Add(group);
-                }
-                if (matches.Count == 0) choices.Add(new Label("No matching nodes. Try ‘UV’, ‘blend’, or ‘color’.")
-                    { style = { whiteSpace = WhiteSpace.Normal, marginTop = 8 } });
-            };
-            search.RegisterValueChangedCallback(evt => { nodeSearch = evt.newValue; filter(nodeSearch); }); filter(nodeSearch);
-            AddNodeFinder(library);
+                    if (matches.Count == 0) choices.Add(new Label("No matching nodes. Try ‘UV’, ‘blend’, or ‘color’.")
+                        { style = { whiteSpace = WhiteSpace.Normal, marginTop = 8 } });
+                };
+                search.RegisterValueChangedCallback(evt => { nodeSearch = evt.newValue; filter(nodeSearch); }); filter(nodeSearch);
+                addNodeLibrary = library;
+            }
             if (selection.Count > 1)
             {
                 inspector.Add(new Label(selection.Count + " nodes selected") { style = { marginTop = 15 } });
@@ -1183,7 +1190,7 @@ namespace NXSG.Editor
                 inspector.Add(new Button(() => Edit("Disconnect node", () => graph.Connections.RemoveAll(e => e.From.NodeId == selected || e.To.NodeId == selected))) { text = "Disconnect node" });
                 inspector.Add(new Button(DeleteSelection) { text = "Delete node" });
             }
-            if (libraryPanel != null) { libraryPanel.Clear(); libraryPanel.Add(library); }
+            if (libraryPanel != null) { libraryPanel.Clear(); libraryPanel.Add(addNodeLibrary); AddNodeFinder(libraryPanel); }
             AddParameterControls();
             AddFrameControls();
             RefreshInspectorMarkers();

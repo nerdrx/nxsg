@@ -1105,3 +1105,16 @@ graphs. Manual frames are preserved.
   tests passed. The VRCFury Full Controller calls were checked against the
   installed VRCFury public API source. A VRCFury avatar build and live VRChat
   height change have not yet been tested.
+
+## Editor response time — 2026-10-03
+
+- Repeated selection of the same node now keeps its inspector. Switching nodes
+  reuses the Add Nodes library. Problems diagnostics wait until the Problems tab
+  is opened; the tab clears its stale count while a new check is pending.
+  Focusing the window no longer discards an unchanged preview shader.
+- The current Core, Backend, and Editor source assemblies compiled with the
+  Unity 2022.3.22f1 Roslyn compiler against the project's saved references.
+  Portable graph/compiler checks and 11 packaging tests passed.
+- The expanded `ResponsivenessSmoke` was attempted in headless Gamescope, but
+  Unity's licensing client timed out before opening the project. Selection,
+  diagnostics, and live UI response remain unverified in this change.

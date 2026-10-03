@@ -66,6 +66,7 @@ public static class ResponsivenessSmoke
                 CheckInsertionGeometryInvalidation();
                 CheckSocketLookup();
                 CheckDeferredSceneHash();
+                CheckSelectionAndDiagnostics();
                 UnityEngine.Debug.Log("NXSG RESPONSIVENESS SMOKE PASSED");
                 Finish(0);
                 return;
@@ -188,6 +189,31 @@ public static class ResponsivenessSmoke
         Set("sceneDue", 0d); Invoke("UpdateScene");
         Require(!(bool)Field("scenePending") && ((Label)Field("sceneStatus")).text.IndexOf("changes not applied", StringComparison.OrdinalIgnoreCase) >= 0,
             "Deferred scene hash did not preserve Auto scene off behavior");
+    }
+
+    static void CheckSelectionAndDiagnostics()
+    {
+        Invoke("ShowSidebarTab", 0);
+        Invoke("SelectNode", "source", false);
+        var previewHost = Field("previewHost");
+        var library = Field("addNodeLibrary");
+        Invoke("SelectNode", "source", false);
+        Require(ReferenceEquals(previewHost, Field("previewHost")), "Reselecting the same node rebuilt its inspector");
+        Invoke("SelectNode", "target", false);
+        Require(ReferenceEquals(library, Field("addNodeLibrary")), "Selecting another node rebuilt the Add Nodes library");
+
+        Set("previewHash", "cached-preview");
+        Invoke("OnFocus");
+        Require((string)Field("previewHash") == "cached-preview", "Focus discarded an unchanged preview");
+
+        Invoke("QueueDiagnostics");
+        Set("diagnosticsDue", 0d);
+        Invoke("UpdateDiagnostics");
+        Require((bool)Field("diagnosticsPending"), "Hidden Problems tab ran diagnostics");
+        Invoke("ShowSidebarTab", 2);
+        Set("diagnosticsDue", 0d);
+        Invoke("UpdateDiagnostics");
+        Require(!(bool)Field("diagnosticsPending"), "Opening Problems did not run diagnostics");
     }
 
     static void Finish(int code)
