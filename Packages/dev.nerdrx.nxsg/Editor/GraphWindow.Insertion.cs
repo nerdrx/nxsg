@@ -51,6 +51,7 @@ namespace NXSG.Editor
             PrepareInsertionCache(node);
             var center=layer.WorldToLocal(nodes[nodeId].worldBound.center);
             var best=18f/Mathf.Max(.1f,zoom);
+            var bestSquared=best*best;
             foreach(var candidate in insertionCandidates)
             {
                 var edge = candidate.edge; var a = candidate.a; var b = candidate.b; var bend = candidate.bend;
@@ -61,7 +62,8 @@ namespace NXSG.Editor
                 {
                     var previous = candidate.points[i - 1]; var point = candidate.points[i];
                     var segment=point-previous;var closest=previous+segment*Mathf.Clamp01(Vector2.Dot(center-previous,segment)/Mathf.Max(.0001f,segment.sqrMagnitude));
-                    var distance=Vector2.Distance(center,closest);if(distance<best){best=distance;insertionEdge=edge.Id;}
+                    var distanceSquared=(center-closest).sqrMagnitude;
+                    if(distanceSquared<bestSquared){bestSquared=distanceSquared;best=Mathf.Sqrt(distanceSquared);insertionEdge=edge.Id;}
                 }
             }
         }

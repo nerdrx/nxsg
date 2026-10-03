@@ -44,7 +44,8 @@ namespace NXSG.Editor
                 if (nodesFound.Count == 0 && !string.IsNullOrWhiteSpace(query)) matches.Add(new Label("No existing nodes found."));
             };
             search.RegisterValueChangedCallback(e => { existingNodeSearch = e.newValue; refresh(existingNodeSearch); });
-            refresh(existingNodeSearch);
+            section.RegisterValueChangedCallback(e => { if (e.newValue) refresh(existingNodeSearch); });
+            if (section.value) refresh(existingNodeSearch);
             parent.Add(section);
         }
 
@@ -58,21 +59,23 @@ namespace NXSG.Editor
         {
             if (graph == null) return;
             var section = new Foldout { text = "FRAMES", value = false, style = { marginTop = 10 } };
-            var name = new TextField("Name") { value = frameName, tooltip = "Frame name." };
-            var note = new TextField("Note") { value = frameNote, multiline = true, maxLength = 1000, tooltip = "Optional note for this frame." };
-            name.RegisterValueChangedCallback(e => frameName = e.newValue);
-            note.RegisterValueChangedCallback(e => frameNote = e.newValue);
-            section.Add(name); section.Add(note);
-            section.Add(new Button(() => CreateFrame(frameName, frameNote)) { text = "Frame selected nodes" });
-            var frames = GraphGroups.All(graph).Where(g => (bool?)g["frame"] == true);
-            if (frames != null)
-                foreach (var token in frames.OfType<JObject>())
+            section.RegisterValueChangedCallback(e =>
+            {
+                if (!e.newValue || section.contentContainer.childCount > 0) return;
+                var name = new TextField("Name") { value = frameName, tooltip = "Frame name." };
+                var note = new TextField("Note") { value = frameNote, multiline = true, maxLength = 1000, tooltip = "Optional note for this frame." };
+                name.RegisterValueChangedCallback(change => frameName = change.newValue);
+                note.RegisterValueChangedCallback(change => frameNote = change.newValue);
+                section.Add(name); section.Add(note);
+                section.Add(new Button(() => CreateFrame(frameName, frameNote)) { text = "Frame selected nodes" });
+                foreach (var token in GraphGroups.All(graph).Where(g => (bool?)g["frame"] == true).OfType<JObject>())
                 {
                     var item = token;
                     var label = (string)item["name"] ?? "Frame";
                     var button = new Button(() => { selection = GraphGroups.Members(graph, item).ToList(); selected = selection.LastOrDefault(); UpdateSelectionOutline(); RebuildInspector(); FrameNodes(true); }) { text = "▸ " + label, tooltip = (string)item["note"] ?? "" };
                     section.Add(button);
                 }
+            });
             inspector.Add(section);
         }
 

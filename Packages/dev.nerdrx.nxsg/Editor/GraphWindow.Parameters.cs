@@ -25,20 +25,26 @@ namespace NXSG.Editor
             var selectedParameter = graph.Parameters.FirstOrDefault(p => p != null && p.Id == selectedParameterId);
             var section = new Foldout { text = "Parameters", value = parameterLibraryStateSet
                 ? parameterLibraryExpanded : node != null || selectedParameter != null };
+            Action populate = () =>
+            {
+                if (section.contentContainer.childCount > 0) return;
+                section.Add(new Button(() => AddParameter(GraphValueType.Float)) { text = "+ Float parameter" });
+                section.Add(new Button(() => AddParameter(GraphValueType.Color)) { text = "+ Color parameter" });
+                foreach (var parameter in graph.Parameters.Where(p => p != null)) AddParameterRow(section, parameter);
+                if (selectedParameter != null)
+                {
+                    var editor = new Foldout { text = "Edit parameter · " + selectedParameter.Name, value = true };
+                    AddParameterEditor(editor, selectedParameter);
+                    section.Add(editor);
+                }
+            };
             section.RegisterValueChangedCallback(e =>
             {
                 if (e.target != section) return;
                 parameterLibraryExpanded = e.newValue; parameterLibraryStateSet = true;
+                if (e.newValue) populate();
             });
-            section.Add(new Button(() => AddParameter(GraphValueType.Float)) { text = "+ Float parameter" });
-            section.Add(new Button(() => AddParameter(GraphValueType.Color)) { text = "+ Color parameter" });
-            foreach (var parameter in graph.Parameters.Where(p => p != null).ToList()) AddParameterRow(section, parameter);
-            if (selectedParameter != null)
-            {
-                var editor = new Foldout { text = "Edit parameter · " + selectedParameter.Name, value = true };
-                AddParameterEditor(editor, selectedParameter);
-                section.Add(editor);
-            }
+            if (section.value) populate();
             inspector.Add(section);
         }
 

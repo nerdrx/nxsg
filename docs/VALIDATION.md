@@ -1118,3 +1118,14 @@ graphs. Manual frames are preserved.
 - The expanded `ResponsivenessSmoke` was attempted in headless Gamescope, but
   Unity's licensing client timed out before opening the project. Selection,
   diagnostics, and live UI response remain unverified in this change.
+
+## Additional editor response work — 2026-10-03
+
+- The existing-node finder, Parameters list, and Frames list now build their
+  controls only when their foldouts open. Marquee selection skips border style
+  writes for nodes whose selected state did not change. Drag-to-insert proximity
+  uses squared distances for rejected wire segments.
+- Current Editor source compiled with Unity 2022.3.22f1 Roslyn against the
+  locally compiled current Core and Backend assemblies. Portable checks and
+  11 packaging tests passed. The Unity interaction smoke remains blocked by
+  the licensing-client timeout described above, so no UI timing claim is made.

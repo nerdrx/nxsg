@@ -33,6 +33,8 @@ namespace NXSG.Editor
         VisualElement canvas, layer, inspector, addNodeLibrary;
         Label status, identity;
         readonly Dictionary<string, VisualElement> nodes = new Dictionary<string, VisualElement>();
+        readonly HashSet<string> outlinedSelection = new HashSet<string>();
+        bool outlinesInitialized;
         string pendingNode, pendingPort;
         string lastPaste;
         int pasteCount;
@@ -511,6 +513,7 @@ namespace NXSG.Editor
             if (layer == null) return;
             CancelWire();
             layer.Clear(); nodes.Clear(); sockets.Clear(); socketLookup.Clear(); insertionNodeId = null;
+            outlinedSelection.Clear(); outlinesInitialized = false;
             inferredTypes = GraphTypes.Infer(graph);
             if (graph != null)
                 foreach (var node in graph.Nodes)
@@ -708,12 +711,14 @@ namespace NXSG.Editor
             var selectedIds = new HashSet<string>(selection);
             foreach (var pair in nodes)
             {
+                if (outlinesInitialized && selectedIds.Contains(pair.Key) == outlinedSelection.Contains(pair.Key)) continue;
                 var outline = selectedIds.Contains(pair.Key) ? new Color(.78f, .65f, 1f) : new Color(.27f, .29f, .32f);
                 pair.Value.style.borderLeftColor = outline;
                 pair.Value.style.borderRightColor = outline;
                 pair.Value.style.borderTopColor = outline;
                 pair.Value.style.borderBottomColor = outline;
             }
+            outlinedSelection.Clear(); outlinedSelection.UnionWith(selectedIds); outlinesInitialized = true;
         }
 
         IEnumerable<string> VisibleInputPorts(GraphNode node)
