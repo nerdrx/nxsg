@@ -1157,3 +1157,9 @@ graphs. Manual frames are preserved.
   and [VPM Pages deployment](https://github.com/nerdrx/nxsg/actions/runs/37133177944)
   passed. On 2026-10-03, `scripts/verify-vpm.py` passed against the hosted
   `https://nerdrx.github.io/nxsg/index.json` listing, including 2.4.9.
+
+## Fur shell refinement — 2026-10-19
+
+- Shell distance LOD now changes shell height continuously and fades the departing outer layer. Fragment LOD uses the undisplaced mesh position, matching the vertex distance basis. Zero density or length hides fur, and Fur Strand Mask returns zero at zero density; animated negative length is clamped to zero. Unconnected authored zero length, density, or mask removes fur passes at build time while connected inputs retain them; zero fin/card opacity removes that pass. Shell length is evaluated once per vertex. Fin/card displacement uses a unit mesh normal, and its root-to-tip color follows the same linear ramp as shells.
+- Portable graph and shader-source checks passed, including static zero fur pass elimination, connected zero retention, zero-strength self-shadow cost suppression, and card cost reporting. Eleven VPM packaging tests passed. The pinned Unity 2022.3.22f1 Roslyn compiler compiled the current Core, Backend, Editor, and fur render smoke sources using the fixture's saved references.
+- A Unity Editor import was attempted, but the Licensing Client failed before project load (`Unable to read ProductVersion from:`). New fur shaders have **not** been compiled or rendered on the GPU in this pass. Visual continuity, VRChat mirrors, stereo, and GPU performance still need a graphics-enabled Unity check.

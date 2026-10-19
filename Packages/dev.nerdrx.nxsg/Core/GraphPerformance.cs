@@ -74,15 +74,18 @@ namespace NXSG.Core
                 }
                 else if (op == "core.fur")
                 {
-                    if (Int(node, "cardsOnly", 0, 0, 1) == 1)
+                    if (!FurVisible(node, incoming)) continue;
+                    var cardsOnly = Int(node, "cardsOnly", 0, 0, 1) == 1;
+                    if (cardsOnly)
                         items.Add(Item(node, "3 cards per selected source triangle", "Cards use one geometry pass. Triangle count and density determine generated geometry."));
                     else
                     {
                         var layers = Int(node, "layers", 16, 4, 32);
-                        items.Add(Item(node, layers + " fur shell passes", "Distance LOD can reduce active fragments but does not remove shell draw calls."));
-                        if (Int(node, "selfShadowQuality", 0, 0, 3) > 0)
-                            loops.Add("Fur self-shadow: " + new[] { 0, 4, 8, 16 }[Int(node, "selfShadowQuality", 0, 0, 3)] + " local samples per shaded fur fragment, multiplied across active shells.");
+                        items.Add(Item(node, layers + " fur shell passes", "Distance LOD fades outer shells but does not remove shell draw calls."));
                     }
+                    var shadowQuality = Int(node, "selfShadowQuality", 0, 0, 3);
+                    if (shadowQuality > 0 && Number(node, "selfShadowStrength", 1) > 0)
+                        loops.Add("Fur self-shadow: " + new[] { 0, 4, 8, 16 }[shadowQuality] + " local samples per shaded fur fragment" + (cardsOnly ? " on cards." : ", multiplied across active shells."));
                     if (Connected(node, "density", incoming) || Connected(node, "mask", incoming)) unknown.Add("Fur coverage depends on connected density or mask values and screen coverage.");
                 }
                 else if (op == "core.surfaceParticles")
@@ -182,13 +185,13 @@ namespace NXSG.Core
             }
             if (leafSurfaces.Count > 0 && HasShadowPass(leafSurfaces[0], nodes, incoming)) total++;
             if (root.Operation == "core.surfaceParticles") total++; // specialized particle pass follows the base surface
-            if (fur != null)
+            if (fur != null && FurVisible(fur, incoming))
             {
                 if (Int(fur, "cardsOnly", 0, 0, 1) == 1) total++;
                 else
                 {
                     total += Int(fur, "layers", 16, 4, 32);
-                    if (Int(fur, "fins", 0, 0, 1) == 1) total++;
+                    if (Int(fur, "fins", 0, 0, 1) == 1 && Number(fur, "finOpacity", .7) > 0) total++;
                 }
             }
             note = "Static pass declarations, including the shadow caster only when its inputs allow one. ForwardAdd runs once per additional pixel light; Unity variants are not counted.";
@@ -266,6 +269,11 @@ namespace NXSG.Core
             return GraphDependencies.IsLayerActive(n, port, Connected(n, port, incoming));
         }
         static bool Connected(GraphNode n, string port, ILookup<string, GraphConnection> incoming) => incoming[n.Id].Any(e => e.To.PortId == port);
+        static bool FurVisible(GraphNode n, ILookup<string, GraphConnection> incoming) =>
+            (Connected(n, "length", incoming) || Number(n, "length", .04) > 0) &&
+            (Connected(n, "density", incoming) || Number(n, "density", 100) > 0) &&
+            (Connected(n, "mask", incoming) || Number(n, "mask", 1) > 0) &&
+            (Int(n, "cardsOnly", 0, 0, 1) == 0 || Number(n, "finOpacity", .7) > 0);
         static int Int(GraphNode n, string key, int fallback, int min, int max)
         {
             var t = n.Properties?[key];

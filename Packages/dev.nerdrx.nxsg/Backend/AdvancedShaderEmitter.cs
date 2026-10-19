@@ -292,13 +292,19 @@ namespace NXSG.Backend
             else for (var i = 0; i < passes.Count; i++) passCode.Append(Pass(passes[i].Surface, i, passes[i].Offset, tessNode, refracts));
             if (outline != null) passCode.Append(outline.Operation == "core.softOutline" ? SoftOutlinePass(outline, passes[0], tessNode) : OutlinePass(outline, passes[0], tessNode));
             bool cardsOnly = furNode != null && IntProp(furNode, "cardsOnly", 0, 0, 1) == 1;
-            if (furNode != null) diagnostics.Add(new Diagnostic(DiagnosticSeverity.Warning, "lighting.forwardAdd", furNode.Id, "Additional pixel lights affect the lit base surface only; fur overlays use the main light and ambient lighting."));
-            if (furNode != null && !cardsOnly)
+            bool finsVisible = furNode != null && double.Parse(RawProp(furNode,"finOpacity",.7),CultureInfo.InvariantCulture) > 0;
+            bool furVisible = furNode != null &&
+                (Source(furNode,"length") != null || double.Parse(RawProp(furNode,"length",.04),CultureInfo.InvariantCulture) > 0) &&
+                (Source(furNode,"density") != null || double.Parse(RawProp(furNode,"density",100),CultureInfo.InvariantCulture) > 0) &&
+                (Source(furNode,"mask") != null || double.Parse(RawProp(furNode,"mask",1),CultureInfo.InvariantCulture) > 0) &&
+                (!cardsOnly || finsVisible);
+            if (furVisible) diagnostics.Add(new Diagnostic(DiagnosticSeverity.Warning, "lighting.forwardAdd", furNode.Id, "Additional pixel lights affect the lit base surface only; fur overlays use the main light and ambient lighting."));
+            if (furVisible && !cardsOnly)
             {
                 passCode.Append(FurShader.Pass(
                     Input(furNode, "rootColor", "float4(.2,.1,.05,1)", "color"), Input(furNode, "tipColor", "float4(.8,.6,.3,1)", "color"), Scalar(furNode, "length", .04, true), Scalar(furNode, "density", 100), Scalar(furNode, "thickness", .35), Scalar(furNode, "mask", 1), Input(furNode, "groom", "float3(0,0,0)", "vector3", true), Input(furNode, "time", "NXSG_Time()", "float", true), IntProp(furNode, "layers", 16, 4, 32), double.Parse(RawProp(furNode, "taper", 1), CultureInfo.InvariantCulture), double.Parse(RawProp(furNode, "gravity", .1), CultureInfo.InvariantCulture), double.Parse(RawProp(furNode, "windStrength", .1), CultureInfo.InvariantCulture), double.Parse(RawProp(furNode, "windSpeed", 1), CultureInfo.InvariantCulture), double.Parse(RawProp(furNode, "windScale", 2), CultureInfo.InvariantCulture), double.Parse(RawProp(furNode, "rimStrength", .25), CultureInfo.InvariantCulture), double.Parse(RawProp(furNode, "lodNear", 5), CultureInfo.InvariantCulture), double.Parse(RawProp(furNode, "lodFar", 15), CultureInfo.InvariantCulture), IntProp(furNode, "minLayers", 4, 1, 32), IntProp(furNode,"receiveShadows",1,0,1)==1));
             }
-            if (furNode != null && (cardsOnly || IntProp(furNode, "fins", 0, 0, 1) == 1))
+            if (furVisible && finsVisible && (cardsOnly || IntProp(furNode, "fins", 0, 0, 1) == 1))
             {
                 passCode.Append(FurFinShader.Pass(Input(furNode,"rootColor","float4(.2,.1,.05,1)","color"),Input(furNode,"tipColor","float4(.8,.6,.3,1)","color"),Scalar(furNode,"length",.04,true),Scalar(furNode,"density",100,true),Scalar(furNode,"thickness",.35),Scalar(furNode,"mask",1),Input(furNode,"groom","float3(0,0,0)","vector3",true),Input(furNode,"time","NXSG_Time()","float",true),double.Parse(RawProp(furNode,"taper",1),CultureInfo.InvariantCulture),double.Parse(RawProp(furNode,"gravity",.1),CultureInfo.InvariantCulture),double.Parse(RawProp(furNode,"windStrength",.1),CultureInfo.InvariantCulture),double.Parse(RawProp(furNode,"windSpeed",1),CultureInfo.InvariantCulture),double.Parse(RawProp(furNode,"windScale",2),CultureInfo.InvariantCulture),double.Parse(RawProp(furNode,"rimStrength",.25),CultureInfo.InvariantCulture),double.Parse(RawProp(furNode,"finOpacity",.7),CultureInfo.InvariantCulture), IntProp(furNode,"receiveShadows",1,0,1)==1, cardsOnly));
                 diagnostics.Add(new Diagnostic(DiagnosticSeverity.Warning,"cost.furFins",furNode.Id,cardsOnly ? "Fur cards use one geometry pass with three cards per selected triangle, no shells. Shared edges duplicate cards; mesh density controls coverage and cost. Expand renderer bounds; transparent sorting still applies." : "Fur fins add one geometry pass with three edge strips per source triangle. Grazing opacity approximates silhouettes without mesh adjacency; bounds and transparent sorting still apply."));
@@ -345,10 +351,11 @@ namespace NXSG.Backend
             if (bentLightingEnabled) b.AppendLine(BentLightingHelpers);
             if (lightDirectionEnabled) b.AppendLine(LightDirectionHelper);
             if (needsFeatureHelpers) b.AppendLine(FeatureShader.Helpers);
-            if(furNode!=null) {
+            if(furVisible) {
                 int quality=IntProp(furNode,"selfShadowQuality",0,0,3);
-                b.AppendLine(FurLighting.Helpers(quality,double.Parse(RawProp(furNode,"selfShadowStrength",1),CultureInfo.InvariantCulture),double.Parse(RawProp(furNode,"selfShadowBias",.03),CultureInfo.InvariantCulture)));
-                if(quality>0)diagnostics.Add(new Diagnostic(DiagnosticSeverity.Warning,"cost.furSelfShadow",furNode.Id,"Fur self-shadowing samples the local strand volume "+(quality==1?4:quality==2?8:16)+" times per shaded fur fragment. Cost grows with shell layers and screen coverage; it approximates local straight fur, not shadows across separate body parts."));
+                double shadowStrength=double.Parse(RawProp(furNode,"selfShadowStrength",1),CultureInfo.InvariantCulture);
+                b.AppendLine(FurLighting.Helpers(quality,shadowStrength,double.Parse(RawProp(furNode,"selfShadowBias",.03),CultureInfo.InvariantCulture)));
+                if(quality>0 && shadowStrength>0)diagnostics.Add(new Diagnostic(DiagnosticSeverity.Warning,"cost.furSelfShadow",furNode.Id,"Fur self-shadowing samples the local strand volume "+(quality==1?4:quality==2?8:16)+" times per shaded fur fragment. Cost grows with "+(cardsOnly?"card coverage":"shell layers and screen coverage")+"; it approximates local straight fur, not shadows across separate body parts."));
             }
             if (ltcgiEnabled) b.AppendLine(LtcgiShader.Hlsl);
             if (coatEnabled) b.AppendLine(LayeredPbrShader.CoatHelpers);
@@ -376,7 +383,7 @@ namespace NXSG.Backend
             if (live.Any(id => nodes[id].Operation == "core.vertexMotion")) diagnostics.Add(new Diagnostic(DiagnosticSeverity.Warning, "bounds.displacement", "$", "Vertex displacement requires mesh/SkinnedMeshRenderer bounds large enough for the motion."));
             if (surfaceParticles) diagnostics.Add(new Diagnostic(DiagnosticSeverity.Warning, "cost.surfaceParticles", root.Id, "An extra PC geometry pass processes every source triangle; density controls selected triangles, not geometry work. Four particles are emitted per generated subtriangle; high rates use tessellation up to level 64 and approximate the requested source-triangle rate. Particles follow the current pose; expand renderer bounds for outward motion. Stereo and VRChat client behavior need validation."));
             if (tessNode != null) diagnostics.Add(new Diagnostic(DiagnosticSeverity.Warning, "cost.tessellation", tessNode.Id, "Adaptive fractional-odd tessellation is PC-only. Detail factor is capped at 63; triangle cost grows roughly quadratically. Expand renderer bounds for height displacement; mobile, Fur composition and Surface Particles Base are unsupported."));
-            if (furNode != null && !cardsOnly) diagnostics.Add(new Diagnostic(DiagnosticSeverity.Warning, "cost.fur", furNode.Id, "Fur emits " + IntProp(furNode, "layers", 16, 4, 32) + " transparent shell passes per view. Distance LOD reduces active shell coverage but does not remove draw calls; expand renderer bounds for strand length."));
+            if (furVisible && !cardsOnly) diagnostics.Add(new Diagnostic(DiagnosticSeverity.Warning, "cost.fur", furNode.Id, "Fur emits " + IntProp(furNode, "layers", 16, 4, 32) + " transparent shell passes per view. Distance LOD fades outer shells but does not remove draw calls; expand renderer bounds for strand length."));
             if (particle && root.Properties["softDistance"] != null && (double)root.Properties["softDistance"] > 0)
                 diagnostics.Add(new Diagnostic(DiagnosticSeverity.Warning, "cost.particleDepth", root.Id, "Soft intersections require a camera depth texture. Set soft distance to 0 when unavailable; transparent overdraw and depth sampling add cost."));
             // Unity 2022.3 still selects vs_4_0 for stereo variants with only

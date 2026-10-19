@@ -52,6 +52,10 @@ public static class FurCardRenderSmoke
         using (var preview = GraphPreview.Create(on, null))
         { subject.GetComponent<Renderer>().sharedMaterial = preview.Material; masked = Capture(); }
         if (Changed(visible, masked) < 100) throw new InvalidOperationException("Cards did not render or mask had no effect.");
+        var zeroDensity = Graph(1);
+        zeroDensity.Nodes.Single(n => n.Id == "fur").Properties["density"] = 0;
+        using (var preview = GraphPreview.Create(zeroDensity, null))
+        { subject.GetComponent<Renderer>().sharedMaterial = preview.Material; if (Changed(masked, Capture()) > 4) throw new InvalidOperationException("Card density 0 remained visible."); }
         // The front centre is not a silhouette: cards must not inherit the fins' grazing-only gate.
         var centreChanges = 0;
         for (int y=Size/2-35;y<Size/2+35;y++) for(int x=Size/2-35;x<Size/2+35;x++)

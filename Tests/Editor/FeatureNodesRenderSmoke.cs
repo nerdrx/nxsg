@@ -35,6 +35,17 @@ public static class FeatureNodesRenderSmoke
                         var bright=pixels.Count(c=>c.r>.1f);var dark=pixels.Count(c=>c.r<.05f);
                         if(bright<10||dark<100)throw new Exception(operation+" did not render a mask: "+bright+" / "+dark);
                     }
+                    if(operation=="furMask")
+                    {
+                        graph.Nodes.First(n=>n.Id=="test").Properties["density"]=0;
+                        using(var empty=GraphPreview.Create(graph,null))
+                        {
+                            quad.GetComponent<Renderer>().sharedMaterial=empty.Material;camera.Render();RenderTexture.active=target;
+                            var zero=new Texture2D(96,96,TextureFormat.RGBAFloat,false,true);zero.ReadPixels(new Rect(0,0,96,96),0,0);zero.Apply();
+                            if(zero.GetPixels().Any(c=>c.r>.02f))throw new Exception("Fur Strand Mask density 0 remained visible.");
+                            UnityEngine.Object.DestroyImmediate(zero);RenderTexture.active=null;
+                        }
+                    }
                     if(operation=="distanceFade"&&Mathf.Abs(center.r-.8f)>.02f)throw new Exception("Distance fade value mismatch "+center.r);
                     collage.SetPixels(index%8*96,(4-index/8)*96,96,96,pixels);
                 }

@@ -4,7 +4,9 @@
 
 `Parallax Tiles.nxsg` sends UV0 through Parallax Occlusion, then into a checker pattern and Toon surface. It starts with a builtin white placeholder. In the Unity editor, select the Parallax Occlusion node and use its height texture picker to assign a height map; the picker updates the resource reference for you.
 
-Fur adds shell passes and draw calls. Fins add one geometry pass with three edge strips per source triangle. The fin pattern is unchanged; fins approximate grazing silhouettes and have no mesh adjacency. Expand renderer bounds for long fur and review transparent sorting. LOD settings reduce shell layers at distance, but every active LOD still draws a pass. More layers and fins increase geometry cost.
+Fur adds shell passes and draw calls. Shell strand density counts cells per UV0 axis, so cells per UV tile grow with the square of the value. Apparent density depends on the mesh UV layout; it is not strands per square metre. Zero density, length, or mask hides fur. When an unconnected authored value is zero, fur passes are omitted at build time. Zero fin/card opacity also omits the fin/card pass. Connected values keep their passes so they can change at runtime. Zero density makes the Fur Strand Mask output zero. Animated negative length is treated as zero.
+
+Fins add one geometry pass with three edge strips per source triangle. The fin pattern is unchanged; fins approximate grazing silhouettes and have no mesh adjacency. Expand renderer bounds for long fur and review transparent sorting. Distance LOD fades outer shells and redistributes the remaining shells smoothly, but still submits every shell pass. More layers and fins increase geometry cost.
 
 Fins require shader target 4.5 with geometry support. Shell-only fur keeps target 3.5.
 
@@ -24,8 +26,8 @@ On Fur, choose **Fur geometry → Cards only**. Three cards are generated from e
 selected source triangle's edges, with no fur shells. Coverage follows mesh
 topology, and shared edges can overlap. This is a PC geometry pass, not an exported
 card mesh. Existing color, length, mask, grooming and wind inputs apply. Card
-opacity controls transparency. Density 100 selects all triangles; larger values
-change strand pattern density but do not generate more cards.
+opacity controls transparency; at zero, the card pass is omitted. Density 100
+selects all triangles; larger values change strand pattern density but do not
+generate more cards.
 
-Shell LOD controls do not affect cards and are hidden. Expand renderer bounds;
-transparent sorting can remain visible. Local self-shadowing is an approximation.
+Shell LOD controls do not affect cards and are hidden. Root-to-tip color blends linearly along both cards and shells; tip taper changes strand width. Expand renderer bounds; transparent sorting can remain visible. Local self-shadowing is an approximation.

@@ -264,10 +264,10 @@ namespace NXSG.Editor
             {
                 if (!cardsOnly) AddIntegerField(node, "layers", "Shell layers", 4, 32, 16);
                 AddNumber(node, "length", "Length (m)", .04f, "length");
-                AddNumber(node, "density", cardsOnly ? "Card density" : "Strands / m²", 100, "density",
-                    cardsOnly ? "100 covers all source triangles. Cards follow mesh edges; shared edges can overlap." : null);
+                AddNumber(node, "density", cardsOnly ? "Card density" : "UV strand density", 100, "density",
+                    cardsOnly ? "100 covers all source triangles. Cards follow mesh edges; shared edges can overlap." : "Cells per UV0 axis. The total grows with the square of this value; visible density depends on UV layout.");
                 AddBoundedNumber(node, "thickness", "Strand thickness", 0, 1, .35f, "thickness");
-                AddBoundedNumber(node, "taper", "Tip taper", 0, 1, 1);
+                AddBoundedNumber(node, "taper", "Tip taper", 0, 1, 1, help: "Narrows strands toward their tips. Root-to-tip color stays linear.");
                 if (cardsOnly) AddBoundedNumber(node, "finOpacity", "Card opacity", 0, 1, .7f);
             }, true);
             if (!cardsOnly) InspectorSection(node, "fur-fins", "Silhouette fins", () =>
@@ -303,7 +303,7 @@ namespace NXSG.Editor
                 AddIntegerField(node, "minLayers", "Minimum shell layers", 1, 32, 4);
                 AddNumber(node, "lodNear", "Full detail distance (m)", 5);
                 AddNumber(node, "lodFar", "Fade out distance (m)", 15);
-                FeatureNote("Distance reduces active shell coverage; it does not remove draw calls.");
+                FeatureNote("Minimum layers are capped by Shell layers. Distance fades outer shells and smoothly redistributes the rest. Draw calls stay the same.");
             });
         }
 

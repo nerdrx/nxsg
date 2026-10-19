@@ -47,6 +47,11 @@ public static class FurRenderSmoke
         if (CountColored(longPixels) <= CountColored(shortPixels) + 8) throw new InvalidOperationException("Long fur did not extend the visible silhouette.");
         var masked = Graph(false, 0, .2, 0);
         using (var preview = GraphPreview.Create(masked, null)) { subject.GetComponent<Renderer>().sharedMaterial = preview.Material; if (CountColored(Capture()) > CountColored(basePixels) + 4) throw new InvalidOperationException("Fur mask 0 remained visible."); }
+        var zeroLength = Graph(false, 1, 0, 0);
+        using (var preview = GraphPreview.Create(zeroLength, null)) { subject.GetComponent<Renderer>().sharedMaterial = preview.Material; if (CountColored(Capture()) > CountColored(basePixels) + 4) throw new InvalidOperationException("Fur length 0 remained visible."); }
+        var zeroDensity = Graph(false, 1, .2, 0);
+        zeroDensity.Nodes.Single(n => n.Id == "fur").Properties["density"] = 0;
+        using (var preview = GraphPreview.Create(zeroDensity, null)) { subject.GetComponent<Renderer>().sharedMaterial = preview.Material; if (CountColored(Capture()) > CountColored(basePixels) + 4) throw new InvalidOperationException("Fur density 0 remained visible."); }
     }
 
     static void CheckWindAndLod()

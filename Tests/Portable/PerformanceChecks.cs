@@ -97,6 +97,24 @@ public static class PerformanceChecks
         check(shellBuild.Succeeded && Regex.Matches(shellBuild.ShaderSource, @"\bPass\s*\{").Count == shellReport.StaticPassBudget && shellReport.StaticPassBudget == 4,
             "shared nested shell leaves count once per emitted surface plus base add and shadow passes");
 
+        var fur = new ShaderGraph { GraphId = "performance-fur-shadow" };
+        var furNode = NodeCatalog.Create("core.fur"); furNode.Id = "fur";
+        furNode.Properties["selfShadowQuality"] = 2; furNode.Properties["selfShadowStrength"] = 0;
+        fur.Nodes.Add(NodeCatalog.Create("core.unlitSurface")); fur.Nodes[0].Id = "base";
+        fur.Nodes.Add(furNode); fur.Nodes.Add(NodeCatalog.Create("core.output")); fur.Nodes[2].Id = "out";
+        Connect(fur, "fur-base", "base", "surface", "fur", "base");
+        Connect(fur, "fur-out", "fur", "surface", "out", "surface");
+        check(!GraphPerformance.Analyze(fur).LoopBudgets.Any(s => s.Contains("Fur self-shadow")) &&
+            !ShaderEmitter.Emit(fur).Diagnostics.Any(d => d.Code == "cost.furSelfShadow"),
+            "zero self-shadow strength has no sampling cost warning");
+        furNode.Properties["selfShadowStrength"] = 1;
+        check(GraphPerformance.Analyze(fur).LoopBudgets.Any(s => s.Contains("8 local samples") && s.Contains("shells")),
+            "shell self-shadow cost includes active layers");
+        furNode.Properties["cardsOnly"] = 1;
+        check(GraphPerformance.Analyze(fur).LoopBudgets.Any(s => s.Contains("8 local samples") && s.Contains("cards")) &&
+            ShaderEmitter.Emit(fur).Diagnostics.Any(d => d.Code == "cost.furSelfShadow" && d.Message.Contains("card coverage")),
+            "card self-shadow cost is reported without a shell multiplier");
+
         particles.Nodes.Single(n=>n.Id=="particles").Properties["emissionRate"] = 1e20;
         check(GraphPerformance.Analyze(particles).HotSpots.Any(item=>item.Estimate.Contains("factor 64")), "Very large particle rates retain the maximum cost estimate without integer overflow");
 
