@@ -26,6 +26,6 @@ A caught write or import failure restores the previous maps, material, registry,
 
 ## Validation
 
-The release record is in [VALIDATION.md](VALIDATION.md#2410-quality-and-release-checks--2026-10-22). Checks distinguish portable CPU emission, Unity editor interaction, graphics rendering, and D3D11 cross-compilation. These checks do not establish live VRChat, headset, or mirror behavior for this update.
+The release record is in [VALIDATION.md](VALIDATION.md#2410-quality-and-release-checks--2026-10-22). Checks distinguish portable CPU emission, Unity editor interaction, graphics rendering, and D3D11 cross-compilation. Two Linux batch starts hit native Mono assertions; successful retries and the failed attempts are documented in that record. These checks do not establish live VRChat, headset, or mirror behavior for this update.
 
-Existing graphs do not need migration. This is a prepared release candidate; the public VPM listing stays on the currently published version until publication.
+Existing graphs do not need migration. Update **NX Shader Graph** to **2.4.10** through the [NXSG VPM repository](https://nerdrx.github.io/nxsg/).
