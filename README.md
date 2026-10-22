@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <code>v2.4.9</code> &nbsp; <code>Unity 2022.3.22f1</code> &nbsp; <code>Built-In</code> &nbsp; <code>PC VRChat + mobile bake</code>
+  <code>v2.4.10</code> &nbsp; <code>Unity 2022.3.22f1</code> &nbsp; <code>Built-In</code> &nbsp; <code>PC VRChat + mobile bake</code>
 </p>
 
 <p align="center"><strong>Build materials by connecting nodes in Unity.</strong><br />Toon, PBR, fur, particles, procedural textures, animation, and lighting for PC VRChat avatars.</p>
@@ -12,7 +12,7 @@
   <a href="https://nerdrx.github.io/nxsg/#install"><strong>Install</strong></a> &nbsp;·&nbsp;
   <a href="docs/QUICK_START.md">First material</a> &nbsp;·&nbsp;
   <a href="docs/NODES.md">Node guide</a> &nbsp;·&nbsp;
-  <a href="https://github.com/nerdrx/nxsg/releases/tag/v2.4.9">Latest release</a>
+  <a href="https://github.com/nerdrx/nxsg/releases/tag/v2.4.10">Latest release</a>
 </p>
 
 ---
@@ -65,7 +65,7 @@ Search for a node or drop a wire into empty space to add a compatible one. Previ
 
 **Bake for Mobile** captures a selected desktop material at one moment and creates a separate `VRChat/Mobile/Toon Standard` material. NXSG bakes connected albedo, emission, normal, metallic, roughness, and occlusion branches. It swaps matching material slots in open scenes when you switch Unity's build target to Android, and restores desktop materials when you switch back.
 
-This is a snapshot, not full shader parity: mobile output is opaque, particles and displaced geometry are omitted, and view-dependent effects are sampled from one preview angle. Rebake after edits and inspect the Android avatar before upload. [How mobile baking works](docs/MOBILE_BAKING.md) · [Latest bake fix](docs/RELEASE_2_4_5.md)
+This is a snapshot, not full shader parity: mobile output is opaque, particles and displaced geometry are omitted, and view-dependent effects are sampled from one preview angle. Rebake after edits and inspect the Android avatar before upload. [How mobile baking works](docs/MOBILE_BAKING.md) · [Latest bake fix](docs/RELEASE_2_4_10.md)
 
 ## Example materials
 
