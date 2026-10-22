@@ -22,6 +22,7 @@ public static class DynamicTypeChecks
         CheckClipboardInference(assert);
         CheckRamp(assert);
         CheckUnboundDemand(assert);
+        CheckEmissionAfterEdit(assert);
     }
 
     private static void CheckFloatMix(Action<bool, string> assert)
@@ -32,6 +33,22 @@ public static class DynamicTypeChecks
             "float math drives Mix factor");
         assert(GraphValidator.Validate(graph).IsValid && ShaderEmitter.Emit(graph).Succeeded,
             "float math Mix graph validates and emits");
+    }
+
+    private static void CheckEmissionAfterEdit(Action<bool, string> assert)
+    {
+        var graph = ColorMixGraph();
+        var original = ShaderEmitter.Emit(graph);
+        graph.Connections.Single(e => e.Id == "value-math-b").From.NodeId = "color";
+        var edited = ShaderEmitter.Emit(graph);
+        var reopened = ShaderEmitter.Emit(GraphJson.Parse(GraphJson.Serialize(graph)));
+        assert(original.Succeeded && edited.Succeeded && edited.ShaderSource != original.ShaderSource &&
+            edited.ShaderSource == reopened.ShaderSource,
+            "consecutive builds infer changed operand types without stale graph state");
+        graph.Connections.Single(e => e.Id == "value-math-b").From.NodeId = "missing";
+        var invalid = ShaderEmitter.Emit(graph);
+        assert(!invalid.Succeeded && invalid.ShaderSource == null && invalid.Diagnostics.Any(d => d.Code == "connection.node"),
+            "an invalid edit is validated before advanced lowering");
     }
 
     private static void CheckFloatUvAngle(Action<bool, string> assert)

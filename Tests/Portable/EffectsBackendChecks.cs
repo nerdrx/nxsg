@@ -54,6 +54,48 @@ public static class EffectsBackendChecks
         assert(GraphGroups.All(pasted.Graph).Count()==2,"Pattern clipboard preserves groups with remapped members");
         GraphGroups.Remove(grouped,group);assert(GraphGroups.All(grouped).Count()==0&&GraphJson.ComputeSemanticHash(grouped)==hash,"ungroup preserves nodes");
 
+        var rawGroupGraph = new ShaderGraph { GraphId="raw-groups", Layout=new GraphLayout { ExtensionData=new System.Collections.Generic.Dictionary<string,JToken>() } };
+        rawGroupGraph.Nodes.Add(new GraphNode { Id="a", Operation="core.constant" });
+        rawGroupGraph.Nodes.Add(new GraphNode { Id="b", Operation="core.constant" });
+        var rawUnknown = new JArray {
+            new JObject { ["id"]="affected", ["name"]="Affected", ["members"]=new JArray("a", new JObject { ["futureMember"]=true }), ["futureField"]=42 },
+            JValue.CreateString("future group record"),
+            new JObject { ["id"]="bad-name", ["name"]=7, ["members"]=new JArray("b") },
+            new JObject { ["id"]="unaffected", ["name"]="Unaffected", ["members"]=new JArray("b") }
+        };
+        var expectedRawAfterMove = (JArray)rawUnknown.DeepClone();
+        expectedRawAfterMove[0]["members"] = new JArray(rawUnknown[0]["members"][1].DeepClone());
+        rawGroupGraph.Layout.ExtensionData["groups"] = rawUnknown.DeepClone();
+        var insertedGroup = GraphGroups.Add(rawGroupGraph,new[] {"a"},"Inserted");
+        var afterRawAdd = (JArray)rawGroupGraph.Layout.ExtensionData["groups"];
+        assert(JToken.DeepEquals(afterRawAdd[1],rawUnknown[1]) && JToken.DeepEquals(afterRawAdd[2],rawUnknown[2]) &&
+            (int?)afterRawAdd[0]["futureField"]==42 && JToken.DeepEquals(afterRawAdd[0]["members"][0],rawUnknown[0]["members"][1]),
+            "add preserves unknown group records, fields, and member data");
+        GraphGroups.Remove(rawGroupGraph,insertedGroup);
+        assert(JToken.DeepEquals(expectedRawAfterMove,rawGroupGraph.Layout.ExtensionData["groups"]),"remove preserves unrecognized group data");
+
+        var beyondCap = new ShaderGraph { GraphId="groups-beyond-cap", Layout=new GraphLayout { ExtensionData=new System.Collections.Generic.Dictionary<string,JToken>() } };
+        beyondCap.Nodes.Add(new GraphNode { Id="a", Operation="core.constant" });
+        beyondCap.Nodes.Add(new GraphNode { Id="b", Operation="core.constant" });
+        var beyondGroups = new JArray {
+            new JObject { ["id"]="a-group", ["name"]="A", ["members"]=new JArray("a") },
+            new JObject { ["id"]="b-group", ["name"]="B", ["members"]=new JArray("b") }
+        };
+        for (var i=0;i<1022;i++) beyondGroups.Add(new JObject { ["id"]="visible"+i, ["name"]="Visible", ["members"]=new JArray("missing") });
+        var beyondRecord = new JObject { ["id"]="beyond-view", ["name"]="Beyond", ["members"]=new JArray("a") };
+        beyondGroups.Add(beyondRecord.DeepClone());
+        beyondCap.Layout.ExtensionData["groups"] = beyondGroups;
+        var beyondInserted = GraphGroups.Add(beyondCap,new[] {"a","b"},"Replacement");
+        var afterBeyondAdd = (JArray)beyondCap.Layout.ExtensionData["groups"];
+        assert(afterBeyondAdd.Count==1024 && afterBeyondAdd.Any(g=>JToken.DeepEquals(g,beyondRecord)),"add preserves raw group records beyond All view cap");
+        GraphGroups.Remove(beyondCap,beyondInserted);
+        var afterBeyondRemove = (JArray)beyondCap.Layout.ExtensionData["groups"];
+        assert(afterBeyondRemove.Any(g=>JToken.DeepEquals(g,beyondRecord)),"remove preserves raw group records beyond All view cap");
+
+        var nonArrayGroups = new ShaderGraph { GraphId="non-array-groups", Layout=new GraphLayout { ExtensionData=new System.Collections.Generic.Dictionary<string,JToken> { ["groups"]=new JObject { ["future"]=true } } } };
+        GraphGroups.Remove(nonArrayGroups,new JObject());
+        assert(JToken.DeepEquals(nonArrayGroups.Layout.ExtensionData["groups"],new JObject { ["future"]=true }),"remove leaves non-array group data intact");
+
         var fullGroups = new ShaderGraph { GraphId="group-limit", Layout=new GraphLayout { ExtensionData=new System.Collections.Generic.Dictionary<string,JToken>() } };
         fullGroups.Nodes.Add(new GraphNode { Id="a", Operation="core.constant" });
         fullGroups.Nodes.Add(new GraphNode { Id="b", Operation="core.constant" });

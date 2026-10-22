@@ -27,28 +27,53 @@ namespace NXSG.Core
             var members = new HashSet<string>(ids);
             members.IntersectWith(graph.Nodes.Select(n => n.Id));
             if (members.Count == 0) throw new InvalidOperationException("Select nodes to group.");
-            if (graph.Layout == null) graph.Layout = new GraphLayout();
-            if (graph.Layout.ExtensionData == null) graph.Layout.ExtensionData = new Dictionary<string, JToken>();
-            // Build the post-edit groups on copies so a rejected edit cannot mutate the graph.
-            var groups = new JArray(All(graph).Select(g =>
+            JToken rawValue = null;
+            var hasGroups = graph.Layout?.ExtensionData != null && graph.Layout.ExtensionData.TryGetValue("groups", out rawValue);
+            if (hasGroups && !(rawValue is JArray)) throw new InvalidOperationException("Group data is not an array.");
+
+            var rawGroups = rawValue as JArray ?? new JArray();
+            var rewritten = new JArray();
+            var visibleCount = 0;
+            foreach (var token in rawGroups)
             {
-                var remaining = Members(graph, g).Where(id => !members.Contains(id)).ToArray();
-                if (remaining.Length == 0) return null;
-                var copy = (JObject)g.DeepClone();
-                copy["members"] = new JArray(remaining);
-                return copy;
-            }).Where(g => g != null));
-            if (groups.Count >= 1024) throw new InvalidOperationException("Too many groups.");
+                var existingGroup = token as JObject;
+                var recognized = existingGroup != null && (existingGroup["name"] == null || existingGroup["name"].Type == JTokenType.String) && visibleCount < 1024;
+                if (recognized) visibleCount++;
+                if (!recognized || !(existingGroup["members"] is JArray groupMembers))
+                {
+                    rewritten.Add(token.DeepClone());
+                    continue;
+                }
+
+                var hasSelectedMember = groupMembers.Any(member => member.Type == JTokenType.String && members.Contains((string)member));
+                if (!hasSelectedMember)
+                {
+                    rewritten.Add(token.DeepClone());
+                    continue;
+                }
+
+                var remaining = new JArray(groupMembers.Where(member => member.Type != JTokenType.String || !members.Contains((string)member)).Select(member => member.DeepClone()));
+                if (remaining.Count == 0) continue;
+                var copy = (JObject)existingGroup.DeepClone();
+                copy["members"] = remaining;
+                rewritten.Add(copy);
+            }
+            if (rewritten.Count >= 1024) throw new InvalidOperationException("Too many groups.");
             var group = new JObject { ["id"] = Guid.NewGuid().ToString("N"), ["name"] = string.IsNullOrWhiteSpace(name) ? "Pattern" : name.Substring(0, Math.Min(name.Length, 80)),
                 ["collapsed"] = true, ["members"] = new JArray(members.OrderBy(id => id, StringComparer.Ordinal)) };
-            groups.Add(group); graph.Layout.ExtensionData["groups"] = groups;
+            rewritten.Add(group);
+
+            if (graph.Layout == null) graph.Layout = new GraphLayout();
+            if (graph.Layout.ExtensionData == null) graph.Layout.ExtensionData = new Dictionary<string, JToken>();
+            graph.Layout.ExtensionData["groups"] = rewritten;
             return group;
         }
 
         public static void Remove(ShaderGraph graph, JObject group)
         {
-            if (graph?.Layout?.ExtensionData == null) return;
-            graph.Layout.ExtensionData["groups"] = new JArray(All(graph).Where(g => g != group).Select(g => g.DeepClone()));
+            if (graph?.Layout?.ExtensionData == null || group == null || !graph.Layout.ExtensionData.TryGetValue("groups", out var raw) || !(raw is JArray groups)) return;
+            if (!All(graph).Any(candidate => ReferenceEquals(candidate, group))) return;
+            graph.Layout.ExtensionData["groups"] = new JArray(groups.Where(token => !ReferenceEquals(token, group)).Select(token => token.DeepClone()));
         }
     }
 }

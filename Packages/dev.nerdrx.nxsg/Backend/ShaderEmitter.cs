@@ -145,8 +145,9 @@ namespace NXSG.Backend
             // Keep the original compact toon emitter stable while routing the
             // extended surface/effect contract through its own backend. This
             // also lets older graphs retain byte-for-byte compatible output.
-            if (AdvancedShaderEmitter.IsAdvanced(graph))
-                return AdvancedShaderEmitter.Emit(graph, options ?? new EmitterOptions());
+            var inferredTypes = GraphTypes.Infer(graph);
+            if (AdvancedShaderEmitter.IsAdvanced(graph, inferredTypes))
+                return AdvancedShaderEmitter.EmitValidated(graph, options, inferredTypes);
 
             if (graph.Format != "nxsg")
             {
@@ -161,7 +162,6 @@ namespace NXSG.Backend
             var shaderName = ValidateShaderName(options.ShaderName, diagnostics);
             var fallback = ValidateFallback(options, diagnostics);
             var nodes = IndexNodes(graph, diagnostics);
-            var inferredTypes = GraphTypes.Infer(graph);
             nodes = ApplyInferredTypes(nodes, inferredTypes);
             var incoming = IndexIncoming(graph, nodes, diagnostics);
             var output = FindSingleNode(nodes, OutputOperation, diagnostics);

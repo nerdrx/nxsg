@@ -42,7 +42,7 @@ namespace NXSG.Backend
             public string Offset;
         }
 
-        public static bool IsAdvanced(ShaderGraph graph)
+        public static bool IsAdvanced(ShaderGraph graph, Dictionary<string, string> inferred)
         {
             if (graph?.Nodes == null) return false;
             var ops = new HashSet<string> { "core.volumeSurface", "core.rayPosition", "core.sdfSphere", "core.sdfBox", "core.sdfTorus", "core.sdfBlend", "core.unlitSurface", "core.pbrSurface", "core.particleSurface", "core.particleColor", "core.particleInfo", "core.surfaceParticles", "core.fur", "core.tessellation", "core.fresnel", "core.colorRamp", "core.layer", "core.sticker", "core.dissolve", "core.flipbook", "core.uvDistort", "core.vertexMotion", "core.audioLink", "core.avatarScaleFactor", "core.ltcgi", "core.darknessGlow", "core.shell", "core.normalMap", "core.previewVector", "core.musgrave", "core.voronoi", "core.checker", "core.wave", "core.gradient", "core.uvTile", "core.posterize", "core.absolute", "core.power", "core.sqrt", "core.sine", "core.cosine", "core.fraction", "core.floor", "core.ceil", "core.round", "core.step", "core.smoothstep", "core.remap", "core.pingPong", "core.splitColor", "core.combineColor", "core.luminance", "core.contrast", "core.saturation", "core.hueShift", "core.colorAdjust", "core.colorMask", "core.replaceColor", "core.splitUV", "core.combineUV", "core.position", "core.normalDirection", "core.viewDirection", "core.vertexColor", "core.cameraDistance", "core.screenUV", "core.circleMask", "core.boxMask", "core.polygonMask", "core.starMask", "core.radialRays", "core.spiral", "core.brick", "core.hexGrid", "core.triplanarTexture", "core.matcapTexture", "core.rimGlow", "core.heightMask", "core.slopeMask", "core.distanceFade", "core.wireframe" };
@@ -58,7 +58,6 @@ namespace NXSG.Backend
                 foreach (var edge in GraphDependencies.ActiveIncoming(current, incoming[id])) queue.Enqueue(edge.From.NodeId);
             }
             var live = graph.Nodes.Where(n => n != null && connected.Contains(n.Id)).ToArray();
-            var inferred = GraphTypes.Infer(graph);
             var liveById = live.ToDictionary(n => n.Id);
             var hasColorScalarEdge = (graph.Connections ?? new List<GraphConnection>()).Any(edge =>
                 edge?.From != null && edge.To != null && connected.Contains(edge.From.NodeId) && connected.Contains(edge.To.NodeId) &&
@@ -102,23 +101,22 @@ namespace NXSG.Backend
             return n.Properties?["coordinateSource"] != null && (string)n.Properties["coordinateSource"] != "uv0";
         }
 
-        AdvancedShaderEmitter(ShaderGraph graph, EmitterOptions options)
+        AdvancedShaderEmitter(ShaderGraph graph, EmitterOptions options, Dictionary<string, string> inferred)
         {
             this.graph = graph; this.options = options;
             nodes = (graph.Nodes ?? new List<GraphNode>()).ToDictionary(n => n.Id, n => new GraphNode { Id=n.Id, Operation=n.Operation, Version=n.Version, Properties=n.Properties ?? new JObject() });
             edges = (graph.Connections ?? new List<GraphConnection>()).ToDictionary(e => Key(e.To.NodeId, e.To.PortId));
             incoming = edges.Values.ToLookup(e => e.To.NodeId);
-            types = GraphTypes.Infer(graph);
+            types = inferred;
         }
 
-        public static EmissionResult Emit(ShaderGraph graph, EmitterOptions options)
+        // ShaderEmitter owns validation and type inference for this build. Do not cache across mutable graph revisions.
+        public static EmissionResult EmitValidated(ShaderGraph graph, EmitterOptions options, Dictionary<string, string> inferred)
         {
-            var validation = GraphValidator.Validate(graph);
-            if (!validation.IsValid) return new EmissionResult(null, validation.Diagnostics, new List<MaterialProperty>(), new List<SourceMapEntry>());
             AdvancedShaderEmitter emitter = null;
             try
             {
-                emitter = new AdvancedShaderEmitter(graph, options);
+                emitter = new AdvancedShaderEmitter(graph, options, inferred);
                 var source = emitter.Build();
                 if (Encoding.UTF8.GetByteCount(source) > 8 * 1024 * 1024) throw new InvalidOperationException("Generated shader exceeds 8 MiB.");
                 return new EmissionResult(source, emitter.diagnostics, emitter.properties, new List<SourceMapEntry>());
