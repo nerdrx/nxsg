@@ -59,9 +59,9 @@ namespace NXSG.Core
             graph.Layout.Nodes = new System.Collections.Generic.Dictionary<string, GraphNodeLayout>
             {
                 ["uv0"] = new GraphNodeLayout { X = 0, Y = 80 },
-                ["texture"] = new GraphNodeLayout { X = 180, Y = 80 },
-                ["toon"] = new GraphNodeLayout { X = 380, Y = 80 },
-                ["output"] = new GraphNodeLayout { X = 620, Y = 80 }
+                ["texture"] = new GraphNodeLayout { X = 240, Y = 80 },
+                ["toon"] = new GraphNodeLayout { X = 500, Y = 80 },
+                ["output"] = new GraphNodeLayout { X = 780, Y = 80 }
             };
             return graph;
         }

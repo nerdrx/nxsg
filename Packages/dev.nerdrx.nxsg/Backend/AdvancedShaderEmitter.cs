@@ -642,7 +642,10 @@ namespace NXSG.Backend
                     var heightAxis = IntProp(n, "axis", 1, 0, 2);
                     var heightComponent = heightAxis == 0 ? ".x" : heightAxis == 2 ? ".z" : ".y";
                     body = "saturate(NX_Div(" + heightPosition + heightComponent + "-" + Prop(n, "low", 0) + "," + Prop(n, "high", 1) + "-" + Prop(n, "low", 0) + "))"; break;
-                case "core.slopeMask": body = "saturate(NX_Div(normalize(" + P("normal", "input.n", "vector3") + ").y-" + Prop(n, "low", 0) + "," + Prop(n, "high", 1) + "-" + Prop(n, "low", 0) + "))"; break;
+                case "core.slopeMask":
+                    var slopeNormal = P("normal", "input.n", "vector3");
+                    body = "float3 normal=" + slopeNormal + "; return saturate(NX_Div(normal.y*rsqrt(max(dot(normal,normal),1e-12))-" + Prop(n, "low", 0) + "," + Prop(n, "high", 1) + "-" + Prop(n, "low", 0) + "));";
+                    break;
                 case "core.distanceFade": body = "saturate(NX_Div(" + Prop(n, "far", 10) + "-distance(_WorldSpaceCameraPos,input.ws)," + Prop(n, "far", 10) + "-" + Prop(n, "near", 0) + "))"; break;
                 case "core.emission": body = "(" + P("color", "float4(0,0,0,1)", "color") + "*" + S("strength", 1) + ")"; break;
                 case "core.ramp":

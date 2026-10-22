@@ -65,6 +65,30 @@ public static class NodePackChecks
             "clipboard accepts node pack operations");
         assert(pasted.Connections.Count == 3, "clipboard preserves node pack internal edges");
 
+        var tooManyParameters = GraphSamples.CreateDefault();
+        for (var i = 0; i < 4097; i++) tooManyParameters.Parameters.Add(new GraphParameter { Id = "p" + i, Name = "P", Type = GraphValueType.Float, Binding = GraphBindingKind.Material, DefaultValue = .5 });
+        var oversizedSnippet = GraphJson.Serialize(tooManyParameters);
+        var emptyTarget = new ShaderGraph { GraphId = "parameter-limit-target" };
+        var emptyTargetBefore = GraphJson.Serialize(emptyTarget);
+        var rejectedOversized = false;
+        try { GraphClipboard.Paste(emptyTarget, oversizedSnippet, 0, 0); }
+        catch (GraphParseException) { rejectedOversized = true; }
+        assert(oversizedSnippet.Length < 1024 * 1024 && rejectedOversized && GraphJson.Serialize(emptyTarget) == emptyTargetBefore,
+            "clipboard rejects snippets over parameter limit without mutating target");
+
+        var oneParameterSource = GraphSamples.CreateDefault();
+        oneParameterSource.Parameters.Add(new GraphParameter { Id = "single", Name = "Single", Type = GraphValueType.Float, Binding = GraphBindingKind.Material, DefaultValue = .5 });
+        oneParameterSource.Nodes.Single(n => n.Id == "toon").Properties["thresholdParameterId"] = "single";
+        var oneParameterSnippet = GraphClipboard.Copy(oneParameterSource, new[] { "toon" });
+        var fullParameterTarget = GraphSamples.CreateDefault();
+        for (var i = 0; i < 4096; i++) fullParameterTarget.Parameters.Add(new GraphParameter { Id = "existing" + i, Name = "Existing", Type = GraphValueType.Float, Binding = GraphBindingKind.Material, DefaultValue = .5 });
+        var fullTargetBefore = GraphJson.Serialize(fullParameterTarget);
+        var rejectedCombined = false;
+        try { GraphClipboard.Paste(fullParameterTarget, oneParameterSnippet, 0, 0); }
+        catch (GraphParseException) { rejectedCombined = true; }
+        assert(rejectedCombined && GraphJson.Serialize(fullParameterTarget) == fullTargetBefore,
+            "clipboard rejects combined parameter limit without mutating target");
+
         CheckUvContracts(assert);
         CheckUvChains(assert);
         CheckUvDceAndClipboard(assert);

@@ -44,7 +44,7 @@ public static class FurFinRenderSmoke
             if (preview.Material.passCount < 2) throw new InvalidOperationException("Fur fins pass was not emitted.");
             for (var pass = 0; pass < preview.Material.passCount; pass++) if (!preview.Material.SetPass(pass)) throw new InvalidOperationException("Fur fin pass failed: " + pass);
             var source = ShaderEmitter.Emit(on).ShaderSource;
-            if (source == null || !source.Contains("maxvertexcount(12)") || !source.Contains("#pragma target 4.0")) throw new InvalidOperationException("Fur fin geometry contract missing.");
+            if (source == null || !source.Contains("maxvertexcount(12)") || !source.Contains("#pragma target 4.5")) throw new InvalidOperationException("Fur fin geometry contract missing.");
             var finPixels = Capture(); EnsureFinite(finPixels); Save(finPixels, "fur-fins-on.png");
             if (Changed(basePixels, finPixels) < 8) throw new InvalidOperationException("Enabling fur fins did not change GPU pixels.");
         }

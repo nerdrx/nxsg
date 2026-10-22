@@ -35,7 +35,7 @@ namespace NXSG.Editor
         readonly Dictionary<string, VisualElement> nodes = new Dictionary<string, VisualElement>();
         readonly HashSet<string> outlinedSelection = new HashSet<string>();
         bool outlinesInitialized;
-        string pendingNode, pendingPort;
+        string pendingNode, pendingPort, detachedInputNode, detachedInputPort;
         string lastPaste;
         int pasteCount;
         Dictionary<string, string> inferredTypes = new Dictionary<string, string>();
@@ -205,6 +205,11 @@ namespace NXSG.Editor
             rootVisualElement.Add(status);
             rootVisualElement.RegisterCallback<KeyDownEvent>(evt =>
             {
+                if (evt.keyCode == KeyCode.Escape && spawnMenu != null)
+                {
+                    CancelWire(); canvas.Focus(); SetStatus("Cancelled.");
+                    evt.StopPropagation(); evt.PreventDefault(); return;
+                }
                 if (!evt.actionKey) return;
                 var element = evt.target as VisualElement;
                 if (IsEditingText(element) || IsEditingText(rootVisualElement.panel?.focusController.focusedElement as VisualElement)) return;
@@ -296,9 +301,10 @@ namespace NXSG.Editor
                 var source = File.ReadAllText(path);
                 var parsed = GraphJson.Parse(source);
                 CheckEditableShape(parsed);
+                var serialized = GraphJson.Serialize(parsed, true);
                 previewNodeId = previewNodePort = null;
                 graph = parsed; sourcePath = Path.GetFullPath(path); diskSource = source; contextMaterial = null;
-                session.json = GraphJson.Serialize(parsed, true);
+                session.json = serialized;
                 Undo.ClearUndo(session); selected = null; selection.Clear(); hasUnsavedChanges = false;
                 ClearPreview(); Rebuild(); SetStatus(Path.GetFileName(path));
             }
@@ -963,6 +969,7 @@ namespace NXSG.Editor
             Edit("Detach input wire", () => graph.Connections.Remove(edge));
             // Rebuild clears the old gesture. Continue with the original output's loose wire.
             pendingNode = edge.From.NodeId; pendingPort = edge.From.PortId; pendingOutput = true;
+            detachedInputNode = edge.To.NodeId; detachedInputPort = edge.To.PortId;
             wiring = true; wireMoved = true; wirePointer = pointer; wireStart = start; wirePosition = position;
             canvas.CapturePointer(pointer);
             layer.MarkDirtyRepaint();
@@ -975,6 +982,7 @@ namespace NXSG.Editor
             spawnMenu?.RemoveFromHierarchy(); spawnMenu = null;
             if (canvas != null && canvas.HasPointerCapture(wirePointer)) canvas.ReleasePointer(wirePointer);
             pendingNode = null; pendingPort = null;
+            detachedInputNode = detachedInputPort = null;
             foreach (var socket in sockets) socket.dot.style.opacity = 1f;
             layer?.MarkDirtyRepaint();
         }
@@ -1849,8 +1857,15 @@ namespace NXSG.Editor
             {
                 wiring = false;
                 canvas.ReleasePointer(evt.pointerId);
-                var target = sockets.FirstOrDefault(s => s.output != pendingOutput && IsSocketDropTarget(s) && s.hit.worldBound.Contains(evt.position));
-                if (target != null) { Connect(target.node, target.port, target.output); CancelWire(); }
+                var target = sockets.FirstOrDefault(s => (s.output != pendingOutput || (pendingOutput && detachedInputNode != null && s.output)) && IsSocketDropTarget(s) && s.hit.worldBound.Contains(evt.position));
+                if (target != null)
+                {
+                    if (pendingOutput && target.output && detachedInputNode != null)
+                    {
+                        pendingNode = detachedInputNode; pendingPort = detachedInputPort; pendingOutput = false;
+                    }
+                    Connect(target.node, target.port, target.output); CancelWire();
+                }
                 else if (wireMoved)
                 {
                     if (canvas.worldBound.Contains(evt.position) && !nodes.Values.Any(n => n.worldBound.Contains(evt.position))) ShowSpawnMenu(evt.position);

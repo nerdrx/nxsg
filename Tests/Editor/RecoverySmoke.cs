@@ -38,6 +38,20 @@ public static class RecoverySmoke
             if(restored==null||GraphJson.Serialize(restored)!=before)throw new Exception("Blank window did not restore snapshot");
             if(Get(window,"contextMaterial")!=null||material.shader==null)throw new Exception("Recovery changed original material context");
 
+            var originalGraph=Get(window,"graph");
+            var originalJson=((GraphSession)Get(window,"session")).json;
+            var previousPath=Path.GetFullPath("Assets/Previous.nxsg");
+            Set(window,"sourcePath",previousPath);Set(window,"diskSource",before);Set(window,"contextMaterial",material);
+            File.WriteAllText(checkpoint,before.Insert(1,"\"nonfinite\":NaN,"));
+            foreach(var method in new[]{"LoadPath","RestoreRecovery"})
+            {
+                typeof(GraphWindow).GetMethod(method,Flags).Invoke(window,new object[]{checkpoint});
+                if(!ReferenceEquals(Get(window,"graph"),originalGraph)||((GraphSession)Get(window,"session")).json!=originalJson
+                    ||(string)Get(window,"sourcePath")!=previousPath||(string)Get(window,"diskSource")!=before||Get(window,"contextMaterial")!=material)
+                    throw new Exception("Rejected non-finite graph changed the open session through "+method);
+            }
+            Set(window,"sourcePath",null);Set(window,"diskSource",null);Set(window,"contextMaterial",null);
+
             var insertion=GraphSamples.CreateDefault();var ramp=NodeCatalog.Create("core.oneMinus");ramp.Id="inserted";insertion.Nodes.Add(ramp);
             var session=(GraphSession)Get(window,"session");Set(window,"graph",insertion);session.json=GraphJson.Serialize(insertion,true);Invoke(window,"Rebuild");
             Undo.ClearUndo(session); Undo.IncrementCurrentGroup();
@@ -65,7 +79,7 @@ public static class RecoverySmoke
             var restored=(ShaderGraph)Get(pendingWindow,"graph");
             if(restored==null||restored.Connections.Count!=expectedConnections)throw new Exception("Wire insertion undo did not restore original connections");
             pendingWindow.DiscardChanges(); pendingWindow.Close(); UnityEngine.Object.DestroyImmediate(pendingMaterial);
-            Debug.Log("NXSG RECOVERY SMOKE PASSED: snapshot roundtrip, blank-window restore, material isolation, insertion undo, corrupt snapshot rejection");
+            Debug.Log("NXSG RECOVERY SMOKE PASSED: snapshot roundtrip, blank-window restore, material isolation, insertion undo, corrupt/non-finite input rejection without session mutation");
             EditorApplication.Exit(0);
         }
         catch(Exception e)

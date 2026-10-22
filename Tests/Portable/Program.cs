@@ -21,7 +21,7 @@ internal static class Program
         var texture = pasted.Graph.Nodes.Single(n => n.Operation == "core.texture2D");
         var resource = (string)texture.Properties["resourceId"];
         Assert(resource != "white" && pasted.Graph.Resources.Single().Id == resource && (string)pasted.Graph.Adapter["textures"][resource] == "texture-asset-guid", "clipboard remaps resource and texture binding");
-        Assert(pasted.Graph.Layout.Nodes[texture.Id].X == 220, "clipboard layout offset");
+        Assert(pasted.Graph.Layout.Nodes[texture.Id].X == source.Layout.Nodes["texture"].X + 40, "clipboard layout offset");
         var again = GraphClipboard.Paste(pasted.Graph, text, 80, 80);
         Assert(again.NodeIds.All(id => !pasted.NodeIds.Contains(id)), "clipboard fresh IDs each paste");
         var withParameter = GraphSamples.CreateDefault();

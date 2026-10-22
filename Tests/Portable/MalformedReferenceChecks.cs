@@ -22,6 +22,21 @@ public static class MalformedReferenceChecks
         CheckBadProperty(check, "core.sticker", "resourceId", null, "resource.missing");
         CheckLegacyMissingTypes(check);
 
+        var nullPatternCall = new ShaderGraph { GraphId = "null-pattern-call" };
+        nullPatternCall.Patterns.Add(new GraphPattern { Id = "pattern", Calls = new System.Collections.Generic.List<string> { null } });
+        var nullCallResult = GraphValidator.Validate(nullPatternCall);
+        check(nullCallResult.Diagnostics.Any(item => item.Code == "pattern.missing"),
+            "null pattern call reports a validation diagnostic");
+
+        var oversized = new ShaderGraph { GraphId = "oversized-nodes" };
+        for (var i = 0; i <= GraphLimits.MaxNodes; i++) oversized.Nodes.Add(null);
+        var oversizedResult = GraphValidator.Validate(oversized);
+        check(oversizedResult.Diagnostics.Any(item => item.Code == "limit.nodes") &&
+              !oversizedResult.Diagnostics.Any(item => item.Code == "node.null"),
+            "node overlimit reports the cap without traversing entries");
+
+        CheckLargeIntegerProperties(check);
+
         var oldConstant = SurfaceGraph();
         var constant = NodeCatalog.Create("core.constant"); constant.Id = "constant"; constant.Properties.Remove("valueType");
         oldConstant.Nodes.Add(constant); Link(oldConstant, "constant", "value", "surface", "albedo");
@@ -58,6 +73,37 @@ public static class MalformedReferenceChecks
             check(validation.IsValid && ShaderEmitter.Emit(graph).Succeeded, operation + " missing valueType stays valid for old graphs");
             check(GraphTypes.PortType(graph, node, "value") == "color", operation + " missing valueType keeps legacy color inference");
         }
+    }
+
+    private static void CheckLargeIntegerProperties(Action<bool, string> check)
+    {
+        var values = new[]
+        {
+            "99999999999999999999999999999999999999999999999",
+            "-99999999999999999999999999999999999999999999999",
+            new string('9', 309)
+        };
+        foreach (var value in values)
+        {
+            CheckLargeInteger(check, "core.absolute", "a", (node, token) => node.Properties["a"] = token, value, "value.nonfinite");
+            CheckLargeInteger(check, "core.vertexDeform", "translation", (node, token) => node.Properties["translation"] = new JArray(token, 0, 0), value, "value.nonfinite");
+            CheckLargeInteger(check, "core.ramp", "points", (node, token) => node.Properties["points"] = new JArray(new JArray(0, 0), new JArray(1, token)), value, "value.nonfinite");
+            CheckLargeInteger(check, "core.colorRamp", "stops", (node, token) => node.Properties["stops"] = new JArray(new JArray(0, 0, 0, 0, 1), new JArray(1, token, 1, 1, 1)), value, "value.nonfinite");
+            CheckLargeInteger(check, "core.wave", "mode", (node, token) => node.Properties["mode"] = token, value, "value.range");
+        }
+    }
+
+    private static void CheckLargeInteger(Action<bool, string> check, string operation, string property,
+        Action<GraphNode, JToken> set, string value, string diagnostic)
+    {
+        var graph = GraphSamples.CreateDefault();
+        var node = NodeCatalog.Create(operation);
+        node.Id = "large-integer";
+        set(node, JToken.Parse(value));
+        graph.Nodes.Add(node);
+        var validation = GraphValidator.Validate(graph);
+        check(validation.Diagnostics.Any(item => item.Code == diagnostic), operation + "." + property + " oversized integer reports " + diagnostic);
+        check(!ShaderEmitter.Emit(graph).Succeeded, operation + "." + property + " oversized integer blocks emission");
     }
 
     private static void CheckBadProperty(Action<bool, string> check, string operation, string property, JToken value, string diagnostic)

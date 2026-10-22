@@ -281,14 +281,22 @@ namespace NXSG.Editor
         {
             var target = RenderTexture.GetTemporary(source.width, source.height, 0, RenderTextureFormat.ARGB32);
             var previous = RenderTexture.active;
+            Texture2D image = null;
             try
             {
                 Graphics.Blit(source, target);
                 RenderTexture.active = target;
-                var image = new Texture2D(source.width, source.height, TextureFormat.RGBA32, false) { name = "NXSG Snapshot " + name };
+                image = new Texture2D(source.width, source.height, TextureFormat.RGBA32, false) { name = "NXSG Snapshot " + name };
                 image.ReadPixels(new Rect(0, 0, target.width, target.height), 0, 0);
                 image.Apply(false, false);
-                return image;
+                var captured = image;
+                image = null;
+                return captured;
+            }
+            catch
+            {
+                Destroy(image);
+                throw;
             }
             finally
             {

@@ -1,4 +1,5 @@
 using System;
+using Newtonsoft.Json.Linq;
 using NXSG.Backend;
 using NXSG.Core;
 
@@ -26,6 +27,15 @@ public static class SpatialChecks
         var additive = SpatialShader.InfinityParallaxBody("_Interior", "uv", "view", ".5", ".3", ".05", "tint", ".7", "mask", 4, 1);
         var maximum = SpatialShader.InfinityParallaxBody("_Interior", "uv", "view", ".5", ".3", ".05", "tint", ".7", "mask", 4, 2);
         assert(additive.Contains("nxAccum.rgb+=") && maximum.Contains("nxAccum=max("), "fixed blend choices generate additive and maximum layer rules");
+        var zeroSlope = SlopeMaskGraph(new JArray(0, 0, 0));
+        var zeroSlopeValidation = GraphValidator.Validate(zeroSlope);
+        var zeroSlopeEmission = ShaderEmitter.Emit(zeroSlope);
+        assert(zeroSlopeValidation.IsValid && zeroSlopeEmission.Succeeded &&
+            zeroSlopeEmission.ShaderSource.Contains("normal.y*rsqrt(max(dot(normal,normal),1e-12))"),
+            "slope mask accepts zero normal and emits a guarded normalization");
+        var nonzeroSlope = ShaderEmitter.Emit(SlopeMaskGraph(new JArray(0, 2, 0)));
+        assert(nonzeroSlope.Succeeded && nonzeroSlope.ShaderSource.Contains("normal.y*rsqrt(max(dot(normal,normal),1e-12))"),
+            "slope mask keeps normalized nonzero normal math");
         AssertInvalid(assert, () => SpatialShader.TransformFunction("NX_Deform", 2, 0), "invalid deformation enum rejected");
         AssertInvalid(assert, () => SpatialShader.InfinityParallaxBody("_Interior", "uv", "view", ".5", ".3", ".05", "tint", ".7", "mask", 33), "iteration cap rejected");
         AssertInvalid(assert, () => SpatialShader.InfinityParallaxBody("_Interior", "uv", "view", ".5", ".3", ".05", "tint", ".7", "mask", 4, 3), "invalid blend enum rejected");
@@ -35,5 +45,19 @@ public static class SpatialChecks
     {
         try { action(); assert(false, name); }
         catch (ArgumentException) { assert(true, name); }
+    }
+
+    static ShaderGraph SlopeMaskGraph(JArray normal)
+    {
+        var graph = GraphSamples.CreateDefault();
+        graph.Connections.RemoveAll(edge => edge.Id == "edge-color");
+        graph.Nodes.Add(new GraphNode { Id = "zero-normal", Operation = "core.constant",
+            Properties = new JObject { ["valueType"] = "vector3", ["value"] = normal } });
+        var slope = NodeCatalog.Create("core.slopeMask");
+        slope.Id = "slope";
+        graph.Nodes.Add(slope);
+        graph.Connections.Add(new GraphConnection { Id = "normal", From = new GraphPortRef { NodeId = "zero-normal", PortId = "value" }, To = new GraphPortRef { NodeId = "slope", PortId = "normal" } });
+        graph.Connections.Add(new GraphConnection { Id = "color", From = new GraphPortRef { NodeId = "slope", PortId = "value" }, To = new GraphPortRef { NodeId = "toon", PortId = "albedo" } });
+        return graph;
     }
 }

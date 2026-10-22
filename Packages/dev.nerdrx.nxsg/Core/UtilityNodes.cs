@@ -117,7 +117,7 @@ namespace NXSG.Core
             if (double.IsNaN(value) || double.IsInfinity(value)) return new string(' ', integerDigits + (decimals == 0 ? 0 : decimals + 1) + 1);
             var scale = (long)Math.Pow(10, decimals);
             var max = (long)Math.Pow(10, integerDigits + decimals) - 1;
-            var scaled = Math.Min((long)Math.Floor(Math.Abs(value) * scale + .5000001), max);
+            var scaled = (long)Math.Min(Math.Floor(Math.Abs(value) * scale + .5000001), max);
             var whole = scaled / scale;
             var fraction = scaled % scale;
             var text = new char[integerDigits + (decimals == 0 ? 0 : decimals + 1) + 1];

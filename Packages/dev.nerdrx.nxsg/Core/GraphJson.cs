@@ -94,6 +94,13 @@ namespace NXSG.Core
             }
 
             var document = PrepareDocument(graph, indented);
+            foreach (var value in document.Descendants().OfType<JValue>())
+            {
+                if (value.Type != JTokenType.Float) continue;
+                var number = (double)value;
+                if (double.IsNaN(number) || double.IsInfinity(number))
+                    throw new InvalidDataException("Graph numbers must be finite: " + value.Path);
+            }
             return indented ? document.ToString(Formatting.Indented) : Canonicalize(document);
         }
 
@@ -104,6 +111,8 @@ namespace NXSG.Core
                 throw new ArgumentNullException(nameof(graph));
             }
 
+            // Invalid drafts still need revision tracking so diagnostics can explain them.
+            // Serialize enforces finite numbers before anything is persisted.
             var semantic = PrepareDocument(graph, false);
             semantic.Remove("layout");
 

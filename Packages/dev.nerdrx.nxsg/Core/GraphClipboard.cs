@@ -103,6 +103,10 @@ namespace NXSG.Core
                 !UniqueIds(snippet.Nodes.Select(node => node.Id)) || !UniqueIds((snippet.Parameters ?? new List<GraphParameter>()).Where(p => p != null).Select(p => p.Id)) ||
                 !UniqueIds((snippet.Resources ?? new List<GraphResource>()).Where(r => r != null).Select(r => r.Id))) throw Invalid("Clipboard graph is unsupported or exceeds its limits.");
 
+            var snippetParameterCount = snippet.Parameters == null ? 0 : snippet.Parameters.Count;
+            if (snippetParameterCount > GraphLimits.MaxNodes || (target.Parameters == null ? 0 : target.Parameters.Count) > GraphLimits.MaxNodes - snippetParameterCount)
+                throw Invalid("Pasted graph exceeds graph limits.");
+
             var result = Clone(target);
             EnsureCollections(result);
             if (result.Adapter == null && snippet.Adapter != null) result.Adapter = new JObject();

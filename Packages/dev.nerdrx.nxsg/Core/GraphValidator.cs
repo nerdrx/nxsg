@@ -41,6 +41,11 @@ namespace NXSG.Core
             CheckCount(diagnostics, "nodes", "$.nodes", nodes.Count, GraphLimits.MaxNodes);
             CheckCount(diagnostics, "connections", "$.connections", connections.Count, GraphLimits.MaxConnections);
             CheckCount(diagnostics, "resources", "$.resources", resources.Count, GraphLimits.MaxResources);
+            if (nodes.Count > GraphLimits.MaxNodes || connections.Count > GraphLimits.MaxConnections ||
+                resources.Count > GraphLimits.MaxResources)
+            {
+                return new ValidationResult(diagnostics);
+            }
 
             var nodeById = new Dictionary<string, GraphNode>(StringComparer.Ordinal);
             for (var i = 0; i < nodes.Count; i++)
@@ -507,8 +512,8 @@ namespace NXSG.Core
                 CheckNumber(point[1], pointPath + "[1]", diagnostics);
                 if (point[0].Type != JTokenType.Integer && point[0].Type != JTokenType.Float) continue;
                 if (point[1].Type != JTokenType.Integer && point[1].Type != JTokenType.Float) continue;
-                var x = point[0].Value<double>();
-                var y = point[1].Value<double>();
+                var x = (double)point[0];
+                var y = (double)point[1];
                 if (x < 0 || x > 1 || y < 0 || y > 1)
                     Add(diagnostics, DiagnosticSeverity.Error, "value.range", pointPath, "Ramp point values must be between 0 and 1.");
                 if (i > 0 && x <= previousX)
@@ -540,10 +545,10 @@ namespace NXSG.Core
                 if (!IsNumber(stop[0]) || !IsNumber(stop[1]) || !IsNumber(stop[2]) || !IsNumber(stop[3]) || !IsNumber(stop[4])) continue;
                 for (var component = 0; component < stop.Count; component++)
                 {
-                    var value = stop[component].Value<double>();
+                    var value = (double)stop[component];
                     if (value < 0 || value > 1) Add(diagnostics, DiagnosticSeverity.Error, "value.range", stopPath, "Color ramp stop components must be between 0 and 1.");
                 }
-                var position = stop[0].Value<double>();
+                var position = (double)stop[0];
                 if (i > 0 && position <= previous) Add(diagnostics, DiagnosticSeverity.Error, "value.order", stopPath + "[0]", "Color ramp stop positions must be strictly increasing.");
                 previous = position;
             }
@@ -586,7 +591,7 @@ namespace NXSG.Core
                 Add(diagnostics, DiagnosticSeverity.Error, "property.type", path, "Property must be an integer.");
                 return;
             }
-            var value = token.Value<double>();
+            var value = (double)token;
             if (value < minimum || value > maximum) Add(diagnostics, DiagnosticSeverity.Error, "value.range", path, "Integer property is outside its supported range.");
         }
 
@@ -600,7 +605,7 @@ namespace NXSG.Core
             if (token == null) return;
             if (token.Type != JTokenType.Integer && token.Type != JTokenType.Float)
             { Add(diagnostics, DiagnosticSeverity.Error, "property.type", path, "Property must be a finite number."); return; }
-            var value = token.Value<double>();
+            var value = (double)token;
             if (double.IsNaN(value) || double.IsInfinity(value) || Math.Abs(value) > float.MaxValue) Add(diagnostics, DiagnosticSeverity.Error, "value.nonfinite", path, "Numeric values must fit a finite shader float.");
         }
 
@@ -727,7 +732,7 @@ namespace NXSG.Core
             {
                 foreach (var call in pattern.Calls)
                 {
-                    if (!patterns.ContainsKey(call))
+                    if (string.IsNullOrWhiteSpace(call) || !patterns.ContainsKey(call))
                     {
                         Add(diagnostics, DiagnosticSeverity.Error, "pattern.missing", "$.patterns", "Pattern call references a missing pattern.");
                     }
@@ -929,7 +934,7 @@ namespace NXSG.Core
             if (token == null) return;
             if (token.Type == JTokenType.Float)
             {
-                var value = token.Value<double>();
+                var value = (double)token;
                 if (double.IsNaN(value) || double.IsInfinity(value))
                 {
                     Add(diagnostics, DiagnosticSeverity.Error, "value.nonfinite", path, "Numeric values must be finite.");

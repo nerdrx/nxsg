@@ -29,6 +29,8 @@ namespace NXSG.Editor
     {
         const string RegistryPath = "Assets/NXSGGenerated/MobileBakes.asset";
         const string MobileShader = "VRChat/Mobile/Toon Standard";
+        // Development failure injection; production baking does not depend on it.
+        public static Action<string> Checkpoint;
 
         public static string Bake(ShaderGraph graph, string sourcePath, Material desktop, int resolution = 1024,
             float snapshotSeconds = 0, bool audioEnabled = false, float audioValue = 0)
@@ -83,6 +85,7 @@ namespace NXSG.Editor
             var normalPath = directory + "/Normal.png";
             var materialPath = directory + "/Mobile.mat";
             Texture2D albedo = null, emission = null, metallic = null, gloss = null, occlusion = null, normal = null;
+            BakeBackup backup = null;
             try
             {
                 if (albedoLink == null)
@@ -117,6 +120,7 @@ namespace NXSG.Editor
                     resolution, desktop, snapshotSeconds, audioEnabled, audioValue);
                 if (normalLink != null) normal = GraphBaker.RenderSnapshot(graph, normalLink.From.NodeId, normalLink.From.PortId,
                     resolution, desktop, snapshotSeconds, audioEnabled, audioValue);
+                backup = new BakeBackup(new[] { albedoPath, emissionPath, metallicPath, glossPath, occlusionPath, normalPath, materialPath, RegistryPath });
                 WriteColorPng(albedo, albedoPath);
                 if (emission != null) WriteColorPng(emission, emissionPath);
                 if (metallic != null) WriteColorPng(metallic, metallicPath, false);
@@ -169,6 +173,7 @@ namespace NXSG.Editor
                     mobile.DisableKeyword("_EMISSION");
                 }
                 EditorUtility.SetDirty(mobile);
+                Checkpoint?.Invoke("material-updated");
                 var registry = LoadRegistry(true);
                 var entry = registry.entries.FirstOrDefault(e => e.desktop == desktop);
                 if (entry == null) { entry = new MobileBakeEntry(); registry.entries.Add(entry); }
@@ -177,7 +182,10 @@ namespace NXSG.Editor
                 entry.graphPath = graphPath;
                 entry.graphHash = GraphJson.ComputeSemanticHash(graph);
                 EditorUtility.SetDirty(registry);
+                Checkpoint?.Invoke("registry-updated");
                 AssetDatabase.SaveAssets();
+                Checkpoint?.Invoke("assets-saved");
+                backup.Commit();
                 MobileMaterialSwap.SyncOpenScenes();
                 var handledPorts = new[] { "albedo", "emission", "metallic", "roughness", "occlusion", "normal", "opacity", "displacement" };
                 var omitted = graph.Connections.Where(e => e.To.NodeId == surface.Id && !handledPorts.Contains(e.To.PortId))
@@ -185,6 +193,12 @@ namespace NXSG.Editor
                 if (omitted.Length > 0) notes.Add("not baked: " + string.Join(", ", omitted));
                 return "Mobile snapshot at " + snapshotSeconds.ToString("F2") + " s: " + materialPath +
                     (notes.Count == 0 ? "" : ". " + string.Join("; ", notes) + ".");
+            }
+            catch (Exception exception)
+            {
+                try { backup?.Restore(); }
+                catch (Exception rollback) { throw new AggregateException("Mobile bake failed and restoring the previous bake needs attention.", exception, rollback); }
+                throw;
             }
             finally
             {
@@ -245,6 +259,76 @@ namespace NXSG.Editor
                 importer.maxTextureSize = linear.width;
                 importer.textureCompression = TextureImporterCompression.Compressed;
                 importer.SaveAndReimport();
+            }
+            if (AssetDatabase.LoadAssetAtPath<Texture2D>(path) == null)
+                throw new InvalidOperationException("Mobile bake texture failed to import: " + path);
+            Checkpoint?.Invoke("texture-imported:" + Path.GetFileNameWithoutExtension(path));
+        }
+
+        // Roll back caught write/import failures without replacing stable Unity asset identities.
+        // A process crash during promotion still requires a persistent recovery journal.
+        sealed class BakeBackup
+        {
+            readonly Dictionary<string, byte[]> files = new Dictionary<string, byte[]>(StringComparer.Ordinal);
+            readonly List<(UnityEngine.Object asset, string json, bool dirty)> objects = new List<(UnityEngine.Object, string, bool)>();
+            readonly string[] paths;
+            bool committed;
+
+            public BakeBackup(string[] paths)
+            {
+                this.paths = paths;
+                foreach (var path in paths)
+                {
+                    if (Directory.Exists(path) || Directory.Exists(path + ".meta"))
+                        throw new IOException("A bake output path is a directory: " + path);
+                    files[path] = File.Exists(path) ? File.ReadAllBytes(path) : null;
+                    files[path + ".meta"] = File.Exists(path + ".meta") ? File.ReadAllBytes(path + ".meta") : null;
+                    var asset = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(path);
+                    if (asset is Material || asset is MobileBakeRegistry)
+                        objects.Add((asset, asset is MobileBakeRegistry ? JsonUtility.ToJson(asset) : EditorJsonUtility.ToJson(asset), EditorUtility.IsDirty(asset)));
+                }
+            }
+
+            public void Commit() { committed = true; }
+
+            public void Restore()
+            {
+                if (committed) return;
+                var errors = new List<Exception>();
+                foreach (var path in paths)
+                {
+                    try
+                    {
+                        if (files[path] == null && File.Exists(path)) AssetDatabase.DeleteAsset(path);
+                        RestoreFile(path);
+                        RestoreFile(path + ".meta");
+                        // Texture pixels/import settings need reloading. Restore the live
+                        // material and registry below without replacing their managed state.
+                        if (files[path] != null && path.EndsWith(".png", StringComparison.Ordinal))
+                            AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate);
+                    }
+                    catch (Exception error) { errors.Add(error); }
+                }
+                foreach (var state in objects)
+                {
+                    try
+                    {
+                        if (state.asset == null) continue;
+                        if (state.asset is MobileBakeRegistry) JsonUtility.FromJsonOverwrite(state.json, state.asset);
+                        else EditorJsonUtility.FromJsonOverwrite(state.json, state.asset);
+                        if (state.dirty) EditorUtility.SetDirty(state.asset);
+                        else EditorUtility.ClearDirty(state.asset);
+                    }
+                    catch (Exception error) { errors.Add(error); }
+                }
+                if (errors.Count > 0) throw new AggregateException("Some previous mobile bake assets could not be restored.", errors);
+            }
+
+            void RestoreFile(string path)
+            {
+                var original = files[path];
+                if (original == null) { if (File.Exists(path)) File.Delete(path); return; }
+                if (!File.Exists(path) || !File.ReadAllBytes(path).SequenceEqual(original)) File.WriteAllBytes(path, original);
             }
         }
 

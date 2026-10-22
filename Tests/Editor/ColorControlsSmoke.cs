@@ -17,6 +17,7 @@ public static class ColorControlsSmoke
     const BindingFlags Private = BindingFlags.Instance | BindingFlags.NonPublic;
     static GraphWindow window;
     static int phase, ticks;
+    static double screenshotDeadline;
     static object Field(string key) => typeof(GraphWindow).GetField(key, Private).GetValue(window);
     static void Invoke(string method, params object[] args) => typeof(GraphWindow).GetMethod(method, Private).Invoke(window, args);
     static ShaderGraph Graph => (ShaderGraph)Field("graph");
@@ -87,11 +88,13 @@ public static class ColorControlsSmoke
                 Require(fields.All(f => f.worldBound.xMax <= Inspector.worldBound.xMax + 1), "Color field overflowed inspector");
                 Require(Inspector.Q<Button>("reset-color-adjustments").worldBound.yMax < window.position.height, "Reset control is clipped");
                 if (File.Exists("/tmp/nxsg-color-controls.png")) File.Delete("/tmp/nxsg-color-controls.png");
+                screenshotDeadline = EditorApplication.timeSinceStartup + 5;
                 var process = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("gamescopectl", "screenshot /tmp/nxsg-color-controls.png") { UseShellExecute = false });
                 if (process != null) process.Dispose();
             }
             else
             {
+                if (!File.Exists("/tmp/nxsg-color-controls.png") && EditorApplication.timeSinceStartup < screenshotDeadline) return;
                 Require(File.Exists("/tmp/nxsg-color-controls.png"), "Editor screenshot missing");
                 Debug.Log("NXSG COLOR CONTROLS PASSED: field identity, invalid input recovery, dropdown persistence, reset/Undo, header switching, layout bounds");
                 Finish(0); return;

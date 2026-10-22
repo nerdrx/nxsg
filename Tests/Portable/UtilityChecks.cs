@@ -14,6 +14,9 @@ public static class UtilityChecks
         assert(NumericTextMath.Format(-12.34, 4, 2) == "-  12.34", "numeric SDF format handles sign and fractional digits");
         assert(NumericTextMath.Format(12.345, 3, 2) == "12.35", "numeric SDF format rounds at requested precision");
         assert(NumericTextMath.Format(0.04, 3, 2) == "0.04", "numeric SDF format keeps fractional zeroes");
+        assert(NumericTextMath.Format(double.MaxValue, 4, 2) == "9999.99" &&
+            NumericTextMath.Format(double.MinValue, 4, 2) == "-9999.99",
+            "numeric SDF format clamps extreme finite values before integer conversion");
         assert(UtilityShader.ClockExpression("phase", "1", "period", "offset") == "NXSG_UtilityClockPhase(1,period,offset)", "clock expression preserves period/offset ports");
         var msdf = UtilityShader.MsdfExpression("uv", "_NXSG_P_a", "_NXSG_P_a_TexelSize", "tint", "outline", "width", "softness", "range");
         assert(msdf.Contains("_NXSG_P_a") && msdf.Contains("_NXSG_P_a_TexelSize") && !msdf.Contains("_NXSG_MSDFTex"), "MSDF expression binds the node's own texture resource");

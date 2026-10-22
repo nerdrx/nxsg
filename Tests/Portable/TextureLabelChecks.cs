@@ -6,6 +6,7 @@ public static class TextureLabelChecks
 {
     public static void Run(Action<bool,string> assert)
     {
+        CheckLinearOrdering(assert);
         var ordered=GraphSamples.CreateDefault();var id=ordered.Resources[0].Id;
         ordered.Resources.Add(new GraphResource{Id="aaa",Kind="texture2D",Uri="builtin://white"});
         var label=TextureSlotLabels.DisplayName(ordered,id);
@@ -23,5 +24,42 @@ public static class TextureLabelChecks
             assert(pasted.Graph.Resources.Single().Name=="Body albedo","Clipboard preserves texture name");
             copy.Resources[0].Name="bad\"\n\\name";assert(TextureSlotLabels.DisplayName(copy,copy.Resources[0].Id)=="badname [1]","Shader labels sanitized");
         }
+    }
+
+    static void CheckLinearOrdering(Action<bool,string> assert)
+    {
+        var graph = new ShaderGraph
+        {
+            Resources = new System.Collections.Generic.List<GraphResource>
+            {
+                new GraphResource { Id = "z", Name = "Last" },
+                null,
+                new GraphResource { Id = null, Name = "Null first" },
+                new GraphResource { Id = "dup", Name = "Duplicate first" },
+                new GraphResource { Id = "b", Name = "Middle" },
+                new GraphResource { Id = null, Name = "Null second" },
+                new GraphResource { Id = "dup", Name = "Duplicate second" },
+                new GraphResource { Id = "", Name = "Empty" },
+                new GraphResource { Id = "a", Name = "First" }
+            }
+        };
+        foreach (var id in new[] { null, "", "a", "b", "dup", "z", "missing" })
+            assert(TextureSlotLabels.DisplayName(graph, id) == SortedDisplayName(graph, id),
+                "Linear texture label matches sorted reference for ID " + (id ?? "<null>"));
+        assert(TextureSlotLabels.DisplayName(graph, "dup") == "Duplicate first [6]",
+            "Duplicate IDs keep the first resource in stable sorted order");
+        assert(TextureSlotLabels.DisplayName(graph, null) == "Null first [1]",
+            "Null resource IDs sort first and keep stable order");
+        assert(TextureSlotLabels.DisplayName(new ShaderGraph { Resources = null }, "a") == "Texture (missing)",
+            "Missing resource list returns missing label");
+    }
+
+    static string SortedDisplayName(ShaderGraph graph, string resourceId)
+    {
+        var resources = graph?.Resources?.Where(r => r != null).OrderBy(r => r.Id, StringComparer.Ordinal).ToList();
+        var index = resources?.FindIndex(r => r.Id == resourceId) ?? -1;
+        if (index < 0) return "Texture (missing)";
+        var name = TextureSlotLabels.Clean(resources[index].Name);
+        return name.Length == 0 ? "Texture " + (index + 1) : name + " [" + (index + 1) + "]";
     }
 }

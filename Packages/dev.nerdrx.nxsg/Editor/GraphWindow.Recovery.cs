@@ -46,6 +46,7 @@ namespace NXSG.Editor
             try
             {
                 var recovered=GraphRecovery.Read(path); CheckEditableShape(recovered);
+                var serialized=GraphJson.Serialize(recovered, true);
                 CreateCheckpoint(); // Preserve the current graph before replacing the working copy.
                 autoScene=false; scenePending=false;
                 foreach(var toggle in rootVisualElement.Query<ToolbarToggle>().ToList())if(toggle.text=="Auto scene")toggle.SetValueWithoutNotify(false);
@@ -53,7 +54,7 @@ namespace NXSG.Editor
                 sourcePath=null; diskSource=null; contextMaterial=null; selected=null; selection.Clear();
                 Undo.RegisterCompleteObjectUndo(session, "Restore graph snapshot");
                 graph=recovered;
-                session.json=GraphJson.Serialize(graph, true);
+                session.json=serialized;
                 hasUnsavedChanges=true;
                 EditorUtility.SetDirty(session);
                 Rebuild();

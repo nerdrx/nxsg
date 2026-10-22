@@ -9,7 +9,7 @@ using UnityEngine;
 public static class FeatureNodesRenderSmoke
 {
     static Camera camera; static GameObject quad; static RenderTexture target;
-    static readonly string[] Operations={"parallaxUV","parallaxOcclusion","furMask","flowMapUV","ditherMask","truchet","weave","scales","dots","scratches","cracks","woodRings","marble","clouds","sparkleMask","scanlines","glitchUV","pixelateUV","kaleidoscopeUV","swapUV","spherizeUV","pinchUV","barrelUV","chromaticTexture","normalBlend","normalStrength","normalFromHeight","reflectionDirection","objectScale","objectOrigin","objectRandom","distanceToPoint","sphereMask","boxVolumeMask","capsuleMask","stripes3D","snowMask","wetnessColor","anisotropicHighlight"};
+    static readonly string[] Operations={"parallaxUV","parallaxOcclusion","furMask","flowMapUV","ditherMask","truchet","weave","scales","dots","scratches","cracks","woodRings","marble","clouds","sparkleMask","scanlines","glitchUV","pixelateUV","kaleidoscopeUV","swapUV","spherizeUV","pinchUV","barrelUV","chromaticTexture","normalBlend","normalStrength","normalFromHeight","reflectionDirection","objectScale","objectOrigin","objectRandom","distanceToPoint","sphereMask","boxVolumeMask","capsuleMask","stripes3D","snowMask","wetnessColor","anisotropicHighlight","slopeMask"};
     public static void Run()
     {
         try
@@ -30,6 +30,8 @@ public static class FeatureNodesRenderSmoke
                     var center=pixels[48*96+48];
                     if(operation=="chromaticTexture")
                         if(center.r<.9f||center.g<.9f)throw new Exception(operation+" white default missing");
+                    if(operation=="slopeMask" && (float.IsNaN(center.r)||float.IsInfinity(center.r)||float.IsNaN(center.g)||float.IsInfinity(center.g)||float.IsNaN(center.b)||float.IsInfinity(center.b)||Mathf.Abs(center.r)>.02f||Mathf.Abs(center.g)>.02f||Mathf.Abs(center.b)>.02f))
+                        throw new Exception("Slope Mask zero normal should render finite black: "+center);
                     if(new[]{"furMask","ditherMask","truchet","weave","scales","dots","scratches","cracks","woodRings","marble","clouds","scanlines","sphereMask","boxVolumeMask","capsuleMask","stripes3D"}.Contains(operation))
                     {
                         var bright=pixels.Count(c=>c.r>.1f);var dark=pixels.Count(c=>c.r<.05f);
@@ -51,7 +53,7 @@ public static class FeatureNodesRenderSmoke
                 }
             }
             collage.Apply();System.IO.Directory.CreateDirectory("Library/NXSG");System.IO.File.WriteAllBytes("Library/NXSG/feature-nodes.png",collage.EncodeToPNG());UnityEngine.Object.DestroyImmediate(collage);
-            Debug.Log("NXSG FEATURE NODES RENDER SMOKE PASSED: 39 nodes, finite outputs, patterns, volume masks");EditorApplication.Exit(0);
+            Debug.Log("NXSG FEATURE NODES RENDER SMOKE PASSED: 40 nodes, finite outputs, patterns, volume masks");EditorApplication.Exit(0);
         }
         catch(Exception e){Debug.LogException(e);EditorApplication.Exit(1);}
         finally{RenderTexture.active=null;if(target!=null){target.Release();UnityEngine.Object.DestroyImmediate(target);}if(quad!=null)UnityEngine.Object.DestroyImmediate(quad);if(camera!=null)UnityEngine.Object.DestroyImmediate(camera.gameObject);}
@@ -59,6 +61,8 @@ public static class FeatureNodesRenderSmoke
     static ShaderGraph MakeGraph(string operation)
     {
         var graph=new ShaderGraph {GraphId="visual-node-render"};var node=NodeCatalog.Create("core."+operation);node.Id="test";graph.Nodes.Add(node);
+        if(operation=="slopeMask")
+        {graph.Nodes.Add(new GraphNode {Id="zero-normal",Operation="core.constant",Properties=new JObject { ["valueType"]="vector3", ["value"]=new JArray(0,0,0) }});Wire(graph,"zero-normal","value","test","normal");}
         if(operation=="parallaxOcclusion"||operation=="chromaticTexture")
         {graph.Resources.Add(new GraphResource {Id="texture",Kind="texture2D",Uri="builtin://white"});node.Properties["resourceId"]="texture";}
         graph.Nodes.Add(new GraphNode {Id="surface",Operation="core.unlitSurface"});graph.Nodes.Add(new GraphNode {Id="output",Operation="core.output"});

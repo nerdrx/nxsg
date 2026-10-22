@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using Newtonsoft.Json.Linq;
 using NXSG.Core;
 
@@ -31,5 +32,25 @@ public static class FloatHashChecks
         roundTrip.Nodes[0].Properties["smoothness"] = .4f;
         assert(GraphJson.ComputeSemanticHash(graph) != GraphJson.ComputeSemanticHash(roundTrip),
             "changed float changes semantic hash");
+
+        foreach (var number in new[] { double.NaN, double.PositiveInfinity, double.NegativeInfinity })
+        {
+            graph.Nodes[0].Properties["nested"] = new JArray(new JArray(number));
+            foreach (var indented in new[] { false, true })
+            {
+                var rejected = false;
+                try { GraphJson.Serialize(graph, indented); }
+                catch (InvalidDataException exception) { rejected = exception.Message.Contains("nested"); }
+                assert(rejected, "serialization rejects nested nonfinite numbers without changing their type");
+            }
+            assert(GraphJson.ComputeSemanticHash(graph) == GraphJson.ComputeSemanticHash(graph) &&
+                !GraphValidator.Validate(graph).IsValid,
+                "invalid numeric drafts can still be tracked and diagnosed without saving");
+        }
+        graph.Nodes[0].Properties["nested"] = new JArray(double.MaxValue, double.MinValue);
+        var extremes = GraphJson.Parse(GraphJson.Serialize(graph, true));
+        assert((double)extremes.Nodes[0].Properties["nested"][0] == double.MaxValue &&
+            (double)extremes.Nodes[0].Properties["nested"][1] == double.MinValue,
+            "finite double extremes still round trip");
     }
 }

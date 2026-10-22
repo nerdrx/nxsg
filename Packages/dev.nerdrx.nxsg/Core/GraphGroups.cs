@@ -18,7 +18,8 @@ namespace NXSG.Core
 
         public static string[] Members(ShaderGraph graph, JObject group)
         {
-            var ids = new HashSet<string>(graph.Nodes.Select(n => n.Id));
+            if (graph?.Nodes == null || group == null) return Array.Empty<string>();
+            var ids = new HashSet<string>(graph.Nodes.Where(n => n != null).Select(n => n.Id));
             return (group["members"] as JArray ?? new JArray()).Where(t => t.Type == JTokenType.String).Values<string>().Where(id => id != null && ids.Contains(id)).Distinct().ToArray();
         }
 

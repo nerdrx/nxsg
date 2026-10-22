@@ -7,10 +7,24 @@ namespace NXSG.Core
     {
         public static string DisplayName(ShaderGraph graph, string resourceId)
         {
-            var resources = graph?.Resources?.Where(r => r != null).OrderBy(r => r.Id, StringComparer.Ordinal).ToList();
-            var index = resources?.FindIndex(r => r.Id == resourceId) ?? -1;
-            if (index < 0) return "Texture (missing)";
-            var name = Clean(resources[index].Name);
+            var resources = graph?.Resources;
+            if (resources == null) return "Texture (missing)";
+            GraphResource match = null;
+            var index = 0;
+            foreach (var resource in resources)
+            {
+                if (resource == null) continue;
+                if (StringComparer.Ordinal.Equals(resource.Id, resourceId))
+                {
+                    if (match == null) match = resource;
+                }
+                else if (StringComparer.Ordinal.Compare(resource.Id, resourceId) < 0)
+                {
+                    index++;
+                }
+            }
+            if (match == null) return "Texture (missing)";
+            var name = Clean(match.Name);
             return name.Length == 0 ? "Texture " + (index + 1) : name + " [" + (index + 1) + "]";
         }
 

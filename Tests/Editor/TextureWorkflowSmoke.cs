@@ -15,25 +15,43 @@ public static class TextureWorkflowSmoke
     public static void Run()
     {
         Texture2D source = null, normal = null, emission = null, result = null;
+        Texture2D transientSource = null, transientNormal = null, transientEmission = null;
         Material input = null, pack = null;
+        Material transientInput = null;
         RenderTexture target = null;
         UnityEngine.Object review = null;
         var previous = RenderTexture.active;
         try
         {
+            var nested = typeof(GraphWindow).GetNestedType("TextureSetReviewWindow", BindingFlags.NonPublic);
+            if (nested == null) throw new Exception("Material review window missing");
+            review = ScriptableObject.CreateInstance(nested);
+            transientSource = new Texture2D(2, 2);
+            transientNormal = new Texture2D(2, 2);
+            transientEmission = new Texture2D(2, 2);
+            transientInput = new Material(Shader.Find("Standard"));
+            transientInput.SetTexture("_MainTex", transientSource);
+            transientInput.SetTexture("_BumpMap", transientNormal);
+            transientInput.SetTexture("_EmissionMap", transientEmission);
+            nested.GetMethod("AssignMaterial", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(review, new object[] { transientInput });
+            var assigned = (IDictionary)nested.GetField("assigned", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(review);
+            if (assigned.Count != 0) throw new Exception("Transient material textures should be skipped");
+
+            Directory.CreateDirectory(Path.Combine(Application.dataPath, "NXSGTextureWorkflowSmoke"));
+            AssetDatabase.Refresh();
             source = new Texture2D(2, 2, TextureFormat.RGBA32, false, true) { filterMode = FilterMode.Point };
             source.SetPixels32(new[] { new Color32(51, 102, 153, 204), new Color32(200, 30, 80, 255), new Color32(10, 220, 40, 125), new Color32(90, 70, 240, 0) });
             source.Apply();
             normal = new Texture2D(2, 2); emission = new Texture2D(2, 2);
+            AssetDatabase.CreateAsset(source, "Assets/NXSGTextureWorkflowSmoke/Source.asset");
+            AssetDatabase.CreateAsset(normal, "Assets/NXSGTextureWorkflowSmoke/Normal.asset");
+            AssetDatabase.CreateAsset(emission, "Assets/NXSGTextureWorkflowSmoke/Emission.asset");
+            AssetDatabase.SaveAssets();
             input = new Material(Shader.Find("Standard"));
             input.SetTexture("_MainTex", source); input.SetTexture("_BumpMap", normal); input.SetTexture("_EmissionMap", emission);
-            var nested = typeof(GraphWindow).GetNestedType("TextureSetReviewWindow", BindingFlags.NonPublic);
-            if (nested == null) throw new Exception("Material review window missing");
-            review = ScriptableObject.CreateInstance(nested);
             nested.GetMethod("AssignMaterial", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(review, new object[] { input });
-            var assigned = (IDictionary)nested.GetField("assigned", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(review);
-            if (assigned[TextureSetSlot.Albedo] != source || assigned[TextureSetSlot.Normal] != normal || assigned[TextureSetSlot.Emission] != emission)
-                throw new Exception("Material texture slots mapped incorrectly");
+            if ((Texture2D)assigned[TextureSetSlot.Albedo] != source || (Texture2D)assigned[TextureSetSlot.Normal] != normal || (Texture2D)assigned[TextureSetSlot.Emission] != emission)
+                throw new Exception("Material texture slots mapped incorrectly: albedo=" + Describe(assigned, TextureSetSlot.Albedo) + ", normal=" + Describe(assigned, TextureSetSlot.Normal) + ", emission=" + Describe(assigned, TextureSetSlot.Emission));
 
             var shader = Shader.Find("Hidden/NXSG/PackChannels");
             if (shader == null || !shader.isSupported) throw new Exception("Channel packing shader unavailable");
@@ -63,8 +81,14 @@ public static class TextureWorkflowSmoke
             RenderTexture.active = previous;
             if (target != null) RenderTexture.ReleaseTemporary(target);
             if (review != null) UnityEngine.Object.DestroyImmediate(review);
-            foreach (var item in new UnityEngine.Object[] { source, normal, emission, result, input, pack }) if (item != null) UnityEngine.Object.DestroyImmediate(item);
             AssetDatabase.DeleteAsset("Assets/NXSGTextureWorkflowSmoke");
+            foreach (var item in new UnityEngine.Object[] { transientInput, transientSource, transientNormal, transientEmission, source, normal, emission, result, input, pack }) if (item != null) UnityEngine.Object.DestroyImmediate(item);
         }
+    }
+
+    static string Describe(IDictionary assigned, TextureSetSlot slot)
+    {
+        var texture = assigned.Contains(slot) ? assigned[slot] as Texture2D : null;
+        return texture == null ? "<missing>" : texture.name + " (" + AssetDatabase.GetAssetPath(texture) + ", id=" + texture.GetInstanceID() + ")";
     }
 }

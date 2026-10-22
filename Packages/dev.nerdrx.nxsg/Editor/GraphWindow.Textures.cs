@@ -203,9 +203,13 @@ namespace NXSG.Editor
                 var normalImporter=AssetImporter.GetAtPath(AssetDatabase.GetAssetPath(preview)) as TextureImporter;
                 channelMaterial.SetFloat("_DecodeNormal", previewSlot == TextureSetSlot.Normal && normalImporter!=null && normalImporter.textureType==TextureImporterType.NormalMap ? 1 : 0);
                 var rendered = RenderTexture.GetTemporary(256, 256, 0, RenderTextureFormat.ARGB32);
-                Graphics.Blit(preview, rendered, channelMaterial);
-                EditorGUI.DrawPreviewTexture(rect, rendered, null, ScaleMode.ScaleToFit);
-                RenderTexture.ReleaseTemporary(rendered);
+                var previous = RenderTexture.active;
+                try
+                {
+                    Graphics.Blit(preview, rendered, channelMaterial);
+                    EditorGUI.DrawPreviewTexture(rect, rendered, null, ScaleMode.ScaleToFit);
+                }
+                finally { RenderTexture.active = previous; RenderTexture.ReleaseTemporary(rendered); }
                 EditorGUILayout.LabelField(previewChannel == 0 ? "R  G  B  A" : new[] { "RGBA", "R", "G", "B", "A" }[previewChannel], EditorStyles.centeredGreyMiniLabel);
             }
 

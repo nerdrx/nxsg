@@ -14,6 +14,8 @@ public static class SocketInteractionSmoke
     static GraphWindow window;
     static int ticks, phase;
     static string previousClipboard, copiedText;
+    static string deferredMenuClick;
+    static bool deferredMenuButtonScrolled;
     static int beforePaste;
     const BindingFlags Private = BindingFlags.Instance | BindingFlags.NonPublic;
     static object Field(string name) => typeof(GraphWindow).GetField(name, Private).GetValue(window);
@@ -42,10 +44,43 @@ public static class SocketInteractionSmoke
     static void ClickMenu(string text)
     {
         var menu = (VisualElement)Field("spawnMenu");
-        var button = menu.Query<Button>().ToList().First(b => b.text == text);
+        var scroll = menu.Query<ScrollView>().First();
+        var ready = deferredMenuClick == text;
+        var button = menu.Query<Button>().ToList().FirstOrDefault(b => b.text == text);
+        if (button == null)
+        {
+            var separator = text.LastIndexOf(" · ", StringComparison.Ordinal);
+            var title = separator >= 0 ? text.Substring(0, separator) : text;
+            var option = separator >= 0 ? "Connect to " + text.Substring(separator + 3) : text;
+            var foldout = menu.Query<Foldout>().ToList().First(f => f.text == title);
+            if (!foldout.value)
+            {
+                foldout.value = true;
+                scroll.ScrollTo(foldout);
+                deferredMenuClick = text;
+                deferredMenuButtonScrolled = false;
+                return;
+            }
+            button = foldout.Query<Button>().ToList().First(b => b.text == option);
+        }
+        if (!ready)
+        {
+            scroll.ScrollTo(button);
+            deferredMenuClick = text;
+            deferredMenuButtonScrolled = true;
+            return;
+        }
+        if (!deferredMenuButtonScrolled)
+        {
+            scroll.ScrollTo(button);
+            deferredMenuButtonScrolled = true;
+            return;
+        }
         var position = button.worldBound.center;
         Down(button);
         using (var e = PointerUpEvent.GetPooled(new Event { type = EventType.MouseUp, button = 0, mousePosition = position })) button.SendEvent(e);
+        deferredMenuClick = null;
+        deferredMenuButtonScrolled = false;
     }
     static void Key(KeyCode key)
     {
@@ -79,8 +114,13 @@ public static class SocketInteractionSmoke
             else if (phase == 1)
             {
                 var count = Graph.Connections.Count;
-                Down(Socket("uv0", "uv", true)); Up(Socket("toon", "albedo", false).worldBound.center);
-                Require(Graph.Connections.Count == count && !Graph.Connections.Any(e => e.From.NodeId == "uv0" && e.To.NodeId == "toon"), "Type mismatch mutated graph");
+                Down(Socket("uv0", "uv", true));
+                Require((string)Field("pendingNode") == "uv0" && (bool)Field("pendingOutput"),
+                    "Output pointer down started the wrong wire: " + Field("pendingNode") + "." + Field("pendingPort") + " output=" + Field("pendingOutput"));
+                Up(Socket("toon", "albedo", false).worldBound.center);
+                Require(Graph.Connections.Count == count && !Graph.Connections.Any(e => e.From.NodeId == "uv0" && e.To.NodeId == "toon"),
+                    "Type mismatch mutated graph: before=" + count + " after=" + Graph.Connections.Count + " edges=" +
+                    string.Join(", ", Graph.Connections.Select(e => e.From.NodeId + "." + e.From.PortId + " -> " + e.To.NodeId + "." + e.To.PortId)));
                 Down(Socket("texture", "color", true)); Up(new Vector2(100, 400));
                 Require(Field("spawnMenu") != null && !(bool)Field("wiring") && Graph.Connections.Count == count, "Empty drop did not open menu safely");
                 using (var e = KeyDownEvent.GetPooled(new Event { type = EventType.KeyDown, keyCode = KeyCode.Escape })) Canvas.SendEvent(e);
@@ -98,7 +138,10 @@ public static class SocketInteractionSmoke
             {
                 Down(Socket("texture", "color", true));
                 var nodes = (System.Collections.Generic.Dictionary<string, VisualElement>)Field("nodes");
-                Require(nodes["texture"].style.borderLeftColor.value.a == 1 && nodes["toon"].style.borderLeftColor.value.a == 0, "Selected-node outline did not follow selection");
+                var selectedBorder = nodes["texture"].style.borderLeftColor.value;
+                var otherBorder = nodes["toon"].style.borderLeftColor.value;
+                Require(selectedBorder.a > .95f && selectedBorder.r > otherBorder.r + .2f,
+                    "Selected-node outline did not visibly distinguish the selection");
                 using (var e = KeyDownEvent.GetPooled(new Event { type = EventType.KeyDown, keyCode = KeyCode.Escape })) Canvas.SendEvent(e);
                 Require(Field("pendingNode") == null && !(bool)Field("wiring"), "Escape did not cancel");
             }
@@ -138,9 +181,9 @@ public static class SocketInteractionSmoke
             }
             else if (phase == 8)
             {
-                Down(Socket("toon", "albedo", false)); Up(new Vector2(150, 400));
+                Down(Socket("toon", "emission", false)); Up(new Vector2(150, 400));
                 var menu = (VisualElement)Field("spawnMenu");
-                Require(menu != null, "Reverse drag did not open menu");
+                Require(menu != null, "Unconnected input drag did not open menu");
             }
             else if (phase == 9)
             {
@@ -148,12 +191,17 @@ public static class SocketInteractionSmoke
             }
             else if (phase == 10)
             {
-                Require(Graph.Nodes.Count == 5 && Graph.Connections.Any(e => e.To.NodeId == "toon" && Graph.Nodes.Any(n => n.Id == e.From.NodeId && n.Operation == "core.constant")), "Spawn from input did not connect new Color");
+                if (deferredMenuClick != null)
+                {
+                    ClickMenu(deferredMenuClick);
+                    if (deferredMenuClick != null) { phase--; return; }
+                }
+                Require(Graph.Nodes.Count == 5 && Graph.Connections.Any(e => e.To.NodeId == "toon" && e.To.PortId == "emission" && Graph.Nodes.Any(n => n.Id == e.From.NodeId && n.Operation == "core.constant")), "Spawn from input did not connect new Color to emission: nodes=" + string.Join(",", Graph.Nodes.Select(n => n.Id + ":" + n.Operation)) + " edges=" + string.Join(",", Graph.Connections.Select(e => e.From.NodeId + "." + e.From.PortId + "->" + e.To.NodeId + "." + e.To.PortId)));
                 Undo.PerformUndo();
             }
             else if (phase == 11)
             {
-                Require(Graph.Nodes.Count == 4 && Graph.Connections.Any(e => e.To.NodeId == "toon" && e.From.NodeId == "texture"), "Spawn undo failed to restore old connection");
+                Require(Graph.Nodes.Count == 4 && Graph.Connections.Any(e => e.To.NodeId == "toon" && e.To.PortId == "albedo" && e.From.NodeId == "texture") && !Graph.Connections.Any(e => e.To.NodeId == "toon" && e.To.PortId == "emission"), "Spawn undo removed the old albedo connection or retained emission");
                 Require(Field("pendingNode") == null, "Pending endpoint survived Undo: " + Field("pendingNode"));
                 Down(Socket("texture", "color", true)); Up(new Vector2(150, 400));
                 Require(Field("spawnMenu") != null, "Forward menu missing immediately; pending=" + Field("pendingNode") + " wiring=" + Field("wiring") + " canvas=" + Canvas.worldBound + " status=" + ((Label)Field("status")).text + " toonInput=" + Socket("toon", "albedo", false).worldBound + " textureInput=" + Socket("texture", "uv", false).worldBound);
@@ -164,7 +212,12 @@ public static class SocketInteractionSmoke
             }
             else if (phase == 13)
             {
-                Require(Graph.Nodes.Count == 5 && Graph.Connections.Any(e => e.From.NodeId == "texture" && e.To.PortId == "a"), "Spawn from output failed");
+                if (deferredMenuClick != null)
+                {
+                    ClickMenu(deferredMenuClick);
+                    if (deferredMenuClick != null) { phase--; return; }
+                }
+                Require(Graph.Nodes.Count == 5 && Graph.Connections.Any(e => e.From.NodeId == "texture" && e.To.PortId == "a"), "Spawn from output failed: nodes=" + string.Join(",", Graph.Nodes.Select(n => n.Id + ":" + n.Operation)) + " edges=" + string.Join(",", Graph.Connections.Select(e => e.From.NodeId + "." + e.From.PortId + "->" + e.To.NodeId + "." + e.To.PortId)) + " menu=" + Field("spawnMenu"));
                 typeof(GraphWindow).GetMethod("SelectNode", Private).Invoke(window, new object[] { "uv0", false });
                 typeof(GraphWindow).GetMethod("SelectNode", Private).Invoke(window, new object[] { "texture", true });
                 previousClipboard = EditorGUIUtility.systemCopyBuffer;
